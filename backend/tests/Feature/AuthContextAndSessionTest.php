@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\CreatesGovernanceFixtures;
 use Tests\TestCase;
 
@@ -69,7 +70,7 @@ class AuthContextAndSessionTest extends TestCase
         $user = User::factory()->create(['status' => User::STATUS_ACTIVE]);
         $this->attachUserToTenant($user, $tenant, $role);
 
-        \Laravel\Sanctum\Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
         $this->getJson("/api/v1/auth/context?tenant_id={$tenant->id}")
             ->assertStatus(200)
@@ -82,7 +83,7 @@ class AuthContextAndSessionTest extends TestCase
         $this->seedGovernanceBaseline();
         $tenant = $this->makeTenant();
         $user = User::factory()->create(['status' => User::STATUS_ACTIVE]);
-        \Laravel\Sanctum\Sanctum::actingAs($user);
+        Sanctum::actingAs($user);
 
         $this->getJson("/api/v1/auth/context?tenant_id={$tenant->id}")
             ->assertStatus(403)

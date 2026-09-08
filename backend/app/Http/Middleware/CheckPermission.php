@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\AuditService;
 use App\Services\AuthorizationService;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
@@ -26,7 +27,10 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class CheckPermission
 {
-    public function __construct(private readonly AuthorizationService $authorization) {}
+    public function __construct(
+        private readonly AuthorizationService $authorization,
+        private readonly AuditService $audit,
+    ) {}
 
     public function handle(Request $request, Closure $next, string $permissionKey, ?string $tenantParam = null): Response
     {
@@ -47,6 +51,14 @@ class CheckPermission
 
         if (! $this->authorization->userHasPermission($user, $permissionKey, $tenantId)) {
             $code = $tenantParam ? 'TENANT_ACCESS_DENIED' : 'UNAUTHORIZED';
+
+            $this->audit->record(
+                'authorization.denied',
+                $request,
+                actor: $user,
+                tenantId: $tenantId,
+                metadata: ['permission' => $permissionKey, 'route' => $request->path(), 'method' => $request->method()],
+            );
 
             return response()->json([
                 'success' => false,

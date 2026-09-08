@@ -8,6 +8,7 @@ use App\Http\Requests\V1\LoginRequest;
 use App\Http\Resources\V1\RoleResource;
 use App\Http\Resources\V1\TenantResource;
 use App\Http\Resources\V1\UserResource;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\AuditService;
 use App\Services\AuthorizationService;
@@ -15,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -110,7 +112,7 @@ class AuthController extends Controller
             'user' => new UserResource($user),
             'active_tenant_id' => $tenantId,
             'available_tenants' => TenantResource::collection($user->tenants),
-            'roles' => RoleResource::collection(\App\Models\Role::query()->whereIn('id', $roleIds)->get()),
+            'roles' => RoleResource::collection(Role::query()->whereIn('id', $roleIds)->get()),
             'effective_permissions' => $permissions->map(fn ($v, $key) => ['permission_key' => $key, 'scope' => $v['scope']])->values(),
         ]);
     }
@@ -123,7 +125,7 @@ class AuthController extends Controller
     public function introspect(Request $request): JsonResponse
     {
         $token = (string) $request->input('token');
-        $model = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+        $model = PersonalAccessToken::findToken($token);
 
         if (! $model || ($model->expires_at && $model->expires_at->isPast())) {
             return $this->ok(['active' => false]);

@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class TenantController extends Controller
 {
@@ -112,7 +113,7 @@ class TenantController extends Controller
             return $this->fail('DUPLICATE_RESOURCE', 'This application is already assigned to the tenant.', 409);
         }
 
-        $tenant->applications()->attach($application->id, ['id' => (string) \Illuminate\Support\Str::uuid(), 'status' => 'ACTIVE']);
+        $tenant->applications()->attach($application->id, ['id' => (string) Str::uuid(), 'status' => 'ACTIVE']);
 
         $this->audit->record('tenant.application_assigned', $request, resourceType: 'Tenant', resourceId: $tenant->id, newValue: ['application_id' => $application->id], tenantId: $tenant->id, applicationId: $application->id);
 

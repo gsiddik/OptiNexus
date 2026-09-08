@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\AuditLog;
 use App\Models\ServiceAccount;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\ClientRepository;
+use Laravel\Sanctum\Sanctum;
 use RuntimeException;
 use Tests\Concerns\CreatesGovernanceFixtures;
 use Tests\TestCase;
@@ -13,6 +15,19 @@ use Tests\TestCase;
 class AuditLogTest extends TestCase
 {
     use CreatesGovernanceFixtures, RefreshDatabase;
+
+    public function test_denied_admin_api_request_generates_an_audit_event(): void
+    {
+        $user = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/v1/customers', ['customer_code' => 'X', 'legal_name' => 'X'])->assertStatus(403);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'authorization.denied',
+            'actor_user_id' => $user->id,
+        ]);
+    }
 
     public function test_customer_creation_generates_an_audit_event(): void
     {

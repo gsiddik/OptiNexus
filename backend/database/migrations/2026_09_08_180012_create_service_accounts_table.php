@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -30,8 +31,8 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        \Illuminate\Support\Facades\DB::statement('CREATE UNIQUE INDEX service_account_roles_global_unique ON service_account_roles (service_account_id, role_id) WHERE tenant_id IS NULL');
-        \Illuminate\Support\Facades\DB::statement('CREATE UNIQUE INDEX service_account_roles_tenant_unique ON service_account_roles (service_account_id, role_id, tenant_id) WHERE tenant_id IS NOT NULL');
+        DB::statement('CREATE UNIQUE INDEX service_account_roles_global_unique ON service_account_roles (service_account_id, role_id) WHERE tenant_id IS NULL');
+        DB::statement('CREATE UNIQUE INDEX service_account_roles_tenant_unique ON service_account_roles (service_account_id, role_id, tenant_id) WHERE tenant_id IS NOT NULL');
     }
 
     public function down(): void

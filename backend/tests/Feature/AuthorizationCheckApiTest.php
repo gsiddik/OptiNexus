@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Role;
 use App\Models\ServiceAccount;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Laravel\Passport\ClientRepository;
 use Tests\Concerns\CreatesGovernanceFixtures;
 use Tests\TestCase;
@@ -40,12 +42,12 @@ class AuthorizationCheckApiTest extends TestCase
         $tenant = $this->makeTenant();
         $this->grantApplicationAccess(($user = User::factory()->create(['status' => User::STATUS_ACTIVE])), $tenant, $application);
 
-        $role = \App\Models\Role::create([
+        $role = Role::create([
             'tenant_id' => $tenant->id, 'application_id' => $application->id, 'name' => 'App Admin', 'code' => 'APPADM1',
-            'role_type' => \App\Models\Role::TYPE_APPLICATION, 'status' => \App\Models\Role::STATUS_ACTIVE,
+            'role_type' => Role::TYPE_APPLICATION, 'status' => Role::STATUS_ACTIVE,
         ]);
         $permission = $this->makePermission($application, 'optifleet.vehicle.update');
-        $role->permissions()->attach($permission->id, ['id' => (string) \Illuminate\Support\Str::uuid()]);
+        $role->permissions()->attach($permission->id, ['id' => (string) Str::uuid()]);
         $this->attachUserToTenant($user, $tenant, $role);
 
         $token = $this->issueServiceAccountToken($application->id);
@@ -69,12 +71,12 @@ class AuthorizationCheckApiTest extends TestCase
         $user = User::factory()->create(['status' => User::STATUS_ACTIVE]);
         $this->grantApplicationAccess($user, $tenantA, $application);
 
-        $role = \App\Models\Role::create([
+        $role = Role::create([
             'tenant_id' => $tenantA->id, 'application_id' => $application->id, 'name' => 'App Admin', 'code' => 'APPADM2',
-            'role_type' => \App\Models\Role::TYPE_APPLICATION, 'status' => \App\Models\Role::STATUS_ACTIVE,
+            'role_type' => Role::TYPE_APPLICATION, 'status' => Role::STATUS_ACTIVE,
         ]);
         $permission = $this->makePermission($application, 'optifleet.vehicle.update');
-        $role->permissions()->attach($permission->id, ['id' => (string) \Illuminate\Support\Str::uuid()]);
+        $role->permissions()->attach($permission->id, ['id' => (string) Str::uuid()]);
         $this->attachUserToTenant($user, $tenantA, $role);
 
         $token = $this->issueServiceAccountToken($application->id);
@@ -93,7 +95,7 @@ class AuthorizationCheckApiTest extends TestCase
     public function test_check_without_token_is_rejected(): void
     {
         $this->postJson('/api/v1/authorization/check', [
-            'user_id' => (string) \Illuminate\Support\Str::uuid(),
+            'user_id' => (string) Str::uuid(),
             'application_code' => 'optifleet',
             'permission' => 'optifleet.vehicle.update',
         ])->assertStatus(401);
@@ -106,7 +108,7 @@ class AuthorizationCheckApiTest extends TestCase
 
         $this->withHeader('Authorization', "Bearer {$token}")
             ->postJson('/api/v1/authorization/check', [
-                'user_id' => (string) \Illuminate\Support\Str::uuid(),
+                'user_id' => (string) Str::uuid(),
                 'application_code' => 'optifleet',
                 'permission' => 'optifleet.vehicle.update',
             ])->assertStatus(403);

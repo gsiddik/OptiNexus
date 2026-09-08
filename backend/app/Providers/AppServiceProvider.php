@@ -14,7 +14,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Must happen in register(), not boot(): PassportServiceProvider
+        // registers its own routes during ITS boot(), which runs before
+        // this provider's boot() in the normal provider lifecycle - by
+        // then it would be too late to suppress them. CGO only uses the
+        // OAuth2 client-credentials grant (M2M service accounts), issued
+        // via our own versioned /api/v1/oauth/token route. Passport's
+        // built-in interactive routes (authorization_code, device code,
+        // session-based /oauth/token, etc.) are unused, unversioned
+        // attack surface for this API-only platform and are disabled
+        // outright rather than merely left unlinked.
+        Passport::ignoreRoutes();
     }
 
     /**

@@ -15,6 +15,7 @@ use App\Services\AuditService;
 use App\Services\PrivilegeEscalationGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class RoleController extends Controller
 {
@@ -132,7 +133,7 @@ class RoleController extends Controller
         }
 
         $role->permissions()->attach($permission->id, [
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'id' => (string) Str::uuid(),
             'granted_by' => $request->user()?->id,
         ]);
 

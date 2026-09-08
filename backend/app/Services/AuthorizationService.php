@@ -3,9 +3,13 @@
 namespace App\Services;
 
 use App\Models\Application;
+use App\Models\Customer;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Tenant;
+use App\Models\TenantMembership;
 use App\Models\User;
+use App\Models\UserApplicationAccess;
 use App\Models\UserRole;
 use Illuminate\Support\Collection;
 
@@ -31,7 +35,7 @@ class AuthorizationService
 {
     /**
      * @return Collection<string, array{scope: string, role_id: string}>
-     *         keyed by permission_key
+     *                                                                   keyed by permission_key
      */
     public function effectivePermissions(User $user, ?string $tenantId = null, ?string $applicationId = null): Collection
     {
@@ -76,7 +80,7 @@ class AuthorizationService
             $scope = $this->scopeForRole($role);
 
             foreach ($role->permissions as $permission) {
-                if ($permission->status !== \App\Models\Permission::STATUS_ACTIVE) {
+                if ($permission->status !== Permission::STATUS_ACTIVE) {
                     continue;
                 }
 
@@ -146,7 +150,7 @@ class AuthorizationService
 
         $customer = $tenant->customer;
 
-        return $customer && $customer->status === \App\Models\Customer::STATUS_ACTIVE;
+        return $customer && $customer->status === Customer::STATUS_ACTIVE;
     }
 
     public function applicationIsUsable(Application $application): bool
@@ -195,7 +199,7 @@ class AuthorizationService
 
         $membership = $user->tenantMemberships()
             ->where('tenant_id', $tenant->id)
-            ->where('status', \App\Models\TenantMembership::STATUS_ACTIVE)
+            ->where('status', TenantMembership::STATUS_ACTIVE)
             ->first();
 
         if (! $membership) {
@@ -216,7 +220,7 @@ class AuthorizationService
             $access = $user->applicationAccess()
                 ->where('tenant_id', $tenant->id)
                 ->where('application_id', $applicationIdToCheck)
-                ->where('status', \App\Models\UserApplicationAccess::STATUS_ACTIVE)
+                ->where('status', UserApplicationAccess::STATUS_ACTIVE)
                 ->first();
 
             if (! $access) {

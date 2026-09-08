@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1\Concerns;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\JsonResource;
 
 trait ApiResponses
 {

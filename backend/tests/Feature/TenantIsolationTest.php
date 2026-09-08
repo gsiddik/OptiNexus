@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\AuthorizationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\CreatesGovernanceFixtures;
@@ -46,7 +47,7 @@ class TenantIsolationTest extends TestCase
         $user = User::factory()->create(['status' => User::STATUS_ACTIVE]);
         $this->attachUserToTenant($user, $tenantA, $roleA);
 
-        $authorization = app(\App\Services\AuthorizationService::class);
+        $authorization = app(AuthorizationService::class);
 
         $this->assertTrue($authorization->userHasPermission($user, 'cgo.user.view', $tenantA->id));
         $this->assertFalse($authorization->userHasPermission($user, 'cgo.user.view', $tenantB->id));

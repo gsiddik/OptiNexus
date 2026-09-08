@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesGovernanceFixtures;
 use Tests\TestCase;
@@ -71,7 +72,7 @@ class TenantLifecycleTest extends TestCase
     {
         $this->actingAsSuperAdmin();
         $tenant = $this->makeTenant();
-        $user = \App\Models\User::factory()->create(['status' => \App\Models\User::STATUS_ACTIVE]);
+        $user = User::factory()->create(['status' => User::STATUS_ACTIVE]);
 
         $this->postJson("/api/v1/tenants/{$tenant->id}/admins/{$user->id}")->assertStatus(201);
 

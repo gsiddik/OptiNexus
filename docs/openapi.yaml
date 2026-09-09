@@ -1,15 +1,21 @@
 openapi: 3.0.3
 info:
-  title: CGO Governance Core API
-  version: "1.0.0"
+  title: CGO Governance & Commercial Core API
+  version: "1.1.0"
   description: |
-    Central Governance & Orchestration (CGO) Phase 1 — Governance Core REST API.
+    Central Governance & Orchestration (CGO) API — Phase 1 Governance Core plus
+    Phase 2 SaaS Commercial Core.
 
     CGO is the central control plane for customer, tenant, application, capability,
-    permission, role, user, and audit governance across the OptiNexus platform.
-    Integrated applications (OptiFleet, OptiAccounting, Vehicle Maintenance System,
-    Taxi Management, and future systems) use this API to validate tenants, register
-    applications/capabilities, resolve identities, and check authorization.
+    permission, role, user, and audit governance across the OptiNexus platform, and
+    (as of Phase 2) the commercial system of record for what each tenant has bought
+    (Product/Plan/Add-on/Subscription), what is enabled for them (Entitlement,
+    deliberately independent of RBAC Permission), how much they owe (Pricing/Usage/
+    Billing), and what they are invoiced (Invoice). Integrated applications
+    (OptiFleet, OptiAccounting, Vehicle Maintenance System, Taxi Management, and
+    future systems) use this API to validate tenants, register applications/
+    capabilities, resolve identities, check authorization, check entitlements, read
+    a tenant's commercial context, and report metered usage.
 
     ## Authentication
     Two distinct authentication mechanisms are supported:
@@ -20,7 +26,8 @@ info:
     - **Machine-to-machine / integrated applications** authenticate using the
       OAuth 2.0 **Client Credentials** grant against `POST /api/v1/oauth/token`
       and receive a short-lived JWT bearer token scoped to specific capabilities
-      (`authorization.check`, `governance.read`, `audit.write`, `introspect`).
+      (`authorization.check`, `governance.read`, `audit.write`, `introspect`, and
+      as of Phase 2: `entitlement.check`, `commercial.read`, `usage.write`).
 
     ## Response envelope
     Every response uses a consistent envelope:
@@ -61,6 +68,24 @@ tags:
     description: Immutable audit trail
   - name: Service Accounts
     description: OAuth2 client-credentials M2M credential management
+  - name: Products
+    description: "Phase 2 — commercial product catalog (bundles Applications + Capabilities)"
+  - name: Plans
+    description: "Phase 2 — pricing/limits/capability tiers under a Product"
+  - name: Add-ons
+    description: "Phase 2 — optional purchasable extensions to a Plan"
+  - name: Pricing
+    description: "Phase 2 — versioned prices, tiers, custom tenant overrides, and price simulation"
+  - name: Subscriptions
+    description: "Phase 2 — the tenant-level commercial contract and its lifecycle"
+  - name: Entitlements
+    description: "Phase 2 — what is enabled for a tenant, independent of RBAC Permission"
+  - name: Usage
+    description: "Phase 2 — metered usage ingestion (M2M) and query"
+  - name: Billing
+    description: "Phase 2 — deterministic billing calculation, review, finalization, and adjustments"
+  - name: Invoices
+    description: "Phase 2 — invoice generation from finalized billing and payment lifecycle"
 
 security:
   - BearerAuth: []
@@ -665,7 +690,7 @@ paths:
       responses:
         '201': { description: Recorded }
         '401': { $ref: '#/components/responses/Unauthenticated' }
-        '403': { description: Application not assigned to the given tenant, or inactive service account }
+        '403': { description: "Application not assigned to the given tenant, or inactive service account" }
 
   # --------------------------------------------------------- Service Accounts
   /service-accounts:
@@ -703,6 +728,688 @@ paths:
     parameters: [{ name: serviceAccount, in: path, required: true, schema: { type: string, format: uuid } }]
     post: { tags: [Service Accounts], summary: Revoke credentials (revokes client + all outstanding tokens), responses: { '200': { description: Revoked } } }
 
+
+  # ================================================================
+  # Phase 2 — SaaS Commercial Core
+  # ================================================================
+
+  # ----------------------------------------------------------- Products
+  /products:
+    get:
+      tags: [Products]
+      summary: List products
+      parameters:
+        - $ref: '#/components/parameters/Status'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/PerPage'
+      responses: { '200': { $ref: '#/components/responses/ProductList' }, '401': { $ref: '#/components/responses/Unauthenticated' } }
+    post:
+      tags: [Products]
+      summary: Create a product (DRAFT)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProductInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/ProductItem' }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /products/{product}:
+    parameters: [{ name: product, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Products], summary: Get a product, responses: { '200': { $ref: '#/components/responses/ProductItem' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    put:
+      tags: [Products]
+      summary: Update a product
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/ProductInput' } } } }
+      responses: { '200': { $ref: '#/components/responses/ProductItem' } }
+  /products/{product}/activate:
+    parameters: [{ name: product, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [Products], summary: Activate (from DRAFT/INACTIVE), responses: { '200': { $ref: '#/components/responses/ProductItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /products/{product}/deactivate:
+    parameters: [{ name: product, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [Products], summary: Deactivate (from ACTIVE), responses: { '200': { $ref: '#/components/responses/ProductItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /products/{product}/retire:
+    parameters: [{ name: product, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [Products], summary: "Retire (from ACTIVE/INACTIVE, terminal)", responses: { '200': { $ref: '#/components/responses/ProductItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /products/{product}/applications:
+    parameters: [{ name: product, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Products], summary: List applications bundled into this product, responses: { '200': { description: OK } } }
+  /products/{product}/applications/{application}:
+    parameters:
+      - { name: product, in: path, required: true, schema: { type: string, format: uuid } }
+      - { $ref: '#/components/parameters/ApplicationId' }
+    post: { tags: [Products], summary: Assign an application to the product, responses: { '201': { description: Assigned }, '409': { $ref: '#/components/responses/Duplicate' } } }
+    delete: { tags: [Products], summary: Revoke an application from the product, responses: { '200': { description: Revoked } } }
+  /products/{product}/capabilities:
+    parameters: [{ name: product, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Products], summary: List capabilities bundled into this product, responses: { '200': { description: OK } } }
+  /products/{product}/capabilities/{capability}:
+    parameters:
+      - { name: product, in: path, required: true, schema: { type: string, format: uuid } }
+      - { $ref: '#/components/parameters/CapabilityId' }
+    post: { tags: [Products], summary: Assign a capability to the product, responses: { '201': { description: Assigned }, '409': { $ref: '#/components/responses/Duplicate' } } }
+    delete: { tags: [Products], summary: Revoke a capability from the product, responses: { '200': { description: Revoked } } }
+
+  # -------------------------------------------------------------- Plans
+  /plans:
+    get:
+      tags: [Plans]
+      summary: List plans
+      parameters:
+        - { name: product_id, in: query, schema: { type: string, format: uuid } }
+        - $ref: '#/components/parameters/Status'
+        - { name: billing_interval, in: query, schema: { type: string } }
+        - $ref: '#/components/parameters/PerPage'
+      responses: { '200': { $ref: '#/components/responses/PlanList' } }
+    post:
+      tags: [Plans]
+      summary: Create a plan (DRAFT)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/PlanInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/PlanItem' }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /plans/{plan}:
+    parameters: [{ name: plan, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Plans], summary: Get a plan, responses: { '200': { $ref: '#/components/responses/PlanItem' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    put:
+      tags: [Plans]
+      summary: Update a plan
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/PlanInput' } } } }
+      responses: { '200': { $ref: '#/components/responses/PlanItem' } }
+  /plans/{plan}/clone:
+    parameters: [{ name: plan, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      tags: [Plans]
+      summary: Clone a plan (new DRAFT copy, including capabilities and limits)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [name, plan_code], properties: { name: { type: string }, plan_code: { type: string } } }
+      responses: { '201': { $ref: '#/components/responses/PlanItem' } }
+  /plans/{plan}/activate:
+    parameters: [{ name: plan, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [Plans], summary: Activate (from DRAFT/INACTIVE), responses: { '200': { $ref: '#/components/responses/PlanItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /plans/{plan}/deactivate:
+    parameters: [{ name: plan, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [Plans], summary: Deactivate (from ACTIVE), responses: { '200': { $ref: '#/components/responses/PlanItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /plans/{plan}/retire:
+    parameters: [{ name: plan, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [Plans], summary: "Retire (from ACTIVE/INACTIVE, terminal)", responses: { '200': { $ref: '#/components/responses/PlanItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /plans/{plan}/capabilities:
+    parameters: [{ name: plan, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Plans], summary: List capabilities included in this plan, responses: { '200': { description: OK } } }
+  /plans/{plan}/capabilities/{capability}:
+    parameters:
+      - { name: plan, in: path, required: true, schema: { type: string, format: uuid } }
+      - { $ref: '#/components/parameters/CapabilityId' }
+    post: { tags: [Plans], summary: Include a capability in the plan, responses: { '201': { description: Assigned }, '409': { $ref: '#/components/responses/Duplicate' } } }
+    delete: { tags: [Plans], summary: Remove a capability from the plan, responses: { '200': { description: Removed } } }
+  /plans/{plan}/limits:
+    parameters: [{ name: plan, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Plans], summary: List the plan's base limits, responses: { '200': { description: OK } } }
+    post:
+      tags: [Plans]
+      summary: Configure (create or update) a base limit for this plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [limit_key]
+              properties:
+                limit_key: { type: string }
+                limit_value: { type: number, nullable: true, description: "Required unless is_unlimited=true" }
+                is_unlimited: { type: boolean, default: false }
+                unit: { type: string, nullable: true }
+      responses: { '200': { description: Limit configured, content: { application/json: { schema: { $ref: '#/components/schemas/PlanLimit' } } } } }
+  /plans/{plan}/limits/{limit}:
+    parameters:
+      - { name: plan, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: limit, in: path, required: true, schema: { type: string, format: uuid } }
+    delete: { tags: [Plans], summary: Remove a limit from the plan, responses: { '200': { description: Removed }, '404': { $ref: '#/components/responses/NotFound' } } }
+
+  # ------------------------------------------------------------ Add-ons
+  /addons:
+    get:
+      tags: [Add-ons]
+      summary: List add-ons
+      parameters:
+        - { name: product_id, in: query, schema: { type: string, format: uuid } }
+        - $ref: '#/components/parameters/Status'
+        - $ref: '#/components/parameters/PerPage'
+      responses: { '200': { $ref: '#/components/responses/AddonList' } }
+    post:
+      tags: [Add-ons]
+      summary: Create an add-on (DRAFT)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AddonInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/AddonItem' }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /addons/{addon}:
+    parameters: [{ name: addon, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Add-ons], summary: Get an add-on, responses: { '200': { $ref: '#/components/responses/AddonItem' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    put:
+      tags: [Add-ons]
+      summary: Update an add-on
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/AddonInput' } } } }
+      responses: { '200': { $ref: '#/components/responses/AddonItem' } }
+  /addons/{addon}/activate:
+    parameters: [{ name: addon, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [Add-ons], summary: Activate (from DRAFT/INACTIVE), responses: { '200': { $ref: '#/components/responses/AddonItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /addons/{addon}/deactivate:
+    parameters: [{ name: addon, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [Add-ons], summary: Deactivate (from ACTIVE), responses: { '200': { $ref: '#/components/responses/AddonItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /addons/{addon}/retire:
+    parameters: [{ name: addon, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [Add-ons], summary: "Retire (from ACTIVE/INACTIVE, terminal)", responses: { '200': { $ref: '#/components/responses/AddonItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /addons/{addon}/capabilities:
+    parameters: [{ name: addon, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Add-ons], summary: List capabilities included in this add-on, responses: { '200': { description: OK } } }
+  /addons/{addon}/capabilities/{capability}:
+    parameters:
+      - { name: addon, in: path, required: true, schema: { type: string, format: uuid } }
+      - { $ref: '#/components/parameters/CapabilityId' }
+    post: { tags: [Add-ons], summary: Include a capability in the add-on, responses: { '201': { description: Assigned }, '409': { $ref: '#/components/responses/Duplicate' } } }
+    delete: { tags: [Add-ons], summary: Remove a capability from the add-on, responses: { '200': { description: Removed } } }
+  /addons/{addon}/limits:
+    parameters: [{ name: addon, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Add-ons], summary: List the add-on's limit deltas, responses: { '200': { description: OK } } }
+    post:
+      tags: [Add-ons]
+      summary: Configure (create or update) a limit delta for this add-on
+      description: "Deltas are summed with the plan's base limit during effective-entitlement resolution (e.g. +50 vehicles)."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [limit_key, limit_delta]
+              properties:
+                limit_key: { type: string }
+                limit_delta: { type: number, description: "Signed delta, e.g. 50 or -10" }
+                unit: { type: string, nullable: true }
+      responses: { '200': { description: Limit configured, content: { application/json: { schema: { $ref: '#/components/schemas/AddonLimit' } } } } }
+
+  # ------------------------------------------------------------ Pricing
+  /prices:
+    get:
+      tags: [Pricing]
+      summary: List prices
+      description: "Ordered by effective_from descending. A price row is never overwritten - corrections are new, separately-effective rows."
+      parameters:
+        - { name: plan_id, in: query, schema: { type: string, format: uuid } }
+        - { name: addon_id, in: query, schema: { type: string, format: uuid } }
+        - { name: tenant_id, in: query, schema: { type: string, format: uuid }, description: "Filter to a tenant's custom override prices" }
+        - $ref: '#/components/parameters/Status'
+        - { name: price_type, in: query, schema: { $ref: '#/components/schemas/PriceType' } }
+        - $ref: '#/components/parameters/PerPage'
+      responses: { '200': { $ref: '#/components/responses/PriceList' } }
+    post:
+      tags: [Pricing]
+      summary: Create a new global price version for a plan or add-on
+      description: >
+        Exactly one of plan_id/addon_id is required. Global prices (no
+        tenant_id) are auto-approved. Use POST /pricing/overrides instead to
+        create a tenant-specific custom price, which requires a separate
+        approval step by a different user (segregation of duties).
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/PriceInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/PriceItem' }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /prices/{price}:
+    parameters: [{ name: price, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Pricing], summary: "Get a price (with its tiers, if TIERED)", responses: { '200': { $ref: '#/components/responses/PriceItem' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    put:
+      tags: [Pricing]
+      summary: Update a price's effective_until / metadata only
+      description: "Amount and type are immutable once created - prices are versioned, not mutated. Issue a new price to correct an amount."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { effective_until: { type: string, format: date-time, nullable: true }, metadata: { type: object, nullable: true } }
+      responses: { '200': { $ref: '#/components/responses/PriceItem' } }
+  /prices/{price}/activate:
+    parameters: [{ name: price, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      tags: [Pricing]
+      summary: Approve a pending custom tenant price override
+      description: >
+        Segregation of duties: the approver must be a different user than the
+        price's creator, enforced server-side (403 UNAUTHORIZED otherwise,
+        not merely a UI hint).
+      responses:
+        '200': { $ref: '#/components/responses/PriceItem' }
+        '403': { description: "Approver is the same user as the creator", content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '409': { description: Already approved, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+  /prices/{price}/retire:
+    parameters: [{ name: price, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [Pricing], summary: Retire an active price (closes effective_until), responses: { '200': { $ref: '#/components/responses/PriceItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /pricing/simulate:
+    post:
+      tags: [Pricing]
+      summary: Quote a plan/add-on combination without creating any billing record
+      description: >
+        Read-only. Shares the same rating engine as the real Billing
+        Calculation Engine, so a quote here and the eventual charge for
+        identical inputs always agree. Never writes a Billing or Invoice row.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_id]
+              properties:
+                plan_id: { type: string, format: uuid }
+                tenant_id: { type: string, format: uuid, nullable: true, description: "Resolves that tenant's custom price overrides, if any" }
+                addon_ids: { type: array, items: { type: string, format: uuid } }
+                quantities: { type: object, description: "meter_key/unit_name -> quantity, e.g. { vehicles: 125 }", additionalProperties: { type: number } }
+      responses:
+        '200':
+          description: Simulated quote
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SimulationResult' }
+              example:
+                success: true
+                data:
+                  currency: IDR
+                  subtotal: "2750000.00"
+                  components:
+                    - { code: platform_fee, price_id: "...", amount: "2000000.00" }
+                    - { code: vehicles_fee, price_id: "...", amount: "750000.00", quantity: "125", included_quantity: "100.0000", billable_quantity: "25.0000", unit_amount: "30000.00" }
+                  tax: "0.00"
+                  total: "2750000.00"
+  /pricing/overrides:
+    post:
+      tags: [Pricing]
+      summary: Create a custom tenant-specific price override
+      description: >
+        Same shape as POST /prices, but tenant_id is required. Never modifies
+        the global plan/add-on price - this always inserts a new row scoped
+        to the tenant. Created as approval_status=PENDING_APPROVAL; a
+        different user must approve it via POST /prices/{price}/activate.
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/PriceInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/PriceItem' }, '422': { $ref: '#/components/responses/ValidationError' } }
+
+  # ------------------------------------------------------- Subscriptions
+  /subscriptions:
+    get:
+      tags: [Subscriptions]
+      summary: List subscriptions
+      parameters:
+        - { name: tenant_id, in: query, schema: { type: string, format: uuid } }
+        - { name: customer_id, in: query, schema: { type: string, format: uuid } }
+        - { name: plan_id, in: query, schema: { type: string, format: uuid } }
+        - $ref: '#/components/parameters/Status'
+        - $ref: '#/components/parameters/PerPage'
+      responses: { '200': { $ref: '#/components/responses/SubscriptionList' } }
+    post:
+      tags: [Subscriptions]
+      summary: Create a subscription (DRAFT)
+      description: >
+        Idempotent: a repeat POST carrying the same (tenant_id,
+        idempotency_key) pair returns the original subscription (200) instead
+        of creating a duplicate (201).
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SubscriptionInput' } } } }
+      responses:
+        '201': { $ref: '#/components/responses/SubscriptionItem' }
+        '200': { description: "Idempotent replay - returns the existing subscription", content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Subscription' } } } ] } } } }
+        '422':
+          description: "PLAN_NOT_ACTIVE / PRODUCT_NOT_ACTIVE / TENANT_CUSTOMER_MISMATCH"
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+  /subscriptions/{subscription}:
+    parameters: [{ $ref: '#/components/parameters/SubscriptionId' }]
+    get: { tags: [Subscriptions], summary: Get a subscription (with items), responses: { '200': { $ref: '#/components/responses/SubscriptionItem' }, '403': { $ref: '#/components/responses/TenantAccessDenied' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    put:
+      tags: [Subscriptions]
+      summary: Update auto_renew / metadata only
+      description: "Status, plan, and period fields are never editable here - only the explicit transition endpoints below may change them."
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { auto_renew: { type: boolean }, metadata: { type: object, nullable: true } } }
+      responses: { '200': { $ref: '#/components/responses/SubscriptionItem' } }
+  /subscriptions/{subscription}/start-trial:
+    parameters: [{ $ref: '#/components/parameters/SubscriptionId' }]
+    post: { tags: [Subscriptions], summary: Start trial (from DRAFT; requires the plan to have trial_days configured), responses: { '200': { $ref: '#/components/responses/SubscriptionItem' }, '422': { $ref: '#/components/responses/SubscriptionTransitionError' } } }
+  /subscriptions/{subscription}/activate:
+    parameters: [{ $ref: '#/components/parameters/SubscriptionId' }]
+    post:
+      tags: [Subscriptions]
+      summary: Activate (from DRAFT/TRIAL/SUSPENDED)
+      description: "Generates (or restores) the tenant's PLAN/ADDON-sourced entitlements transactionally."
+      responses: { '200': { $ref: '#/components/responses/SubscriptionItem' }, '409': { $ref: '#/components/responses/SubscriptionTransitionError' } }
+  /subscriptions/{subscription}/upgrade:
+    parameters: [{ $ref: '#/components/parameters/SubscriptionId' }]
+    post:
+      tags: [Subscriptions]
+      summary: Change to a higher plan (from TRIAL/ACTIVE, same product only)
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [plan_id], properties: { plan_id: { type: string, format: uuid } } } } } }
+      responses: { '200': { $ref: '#/components/responses/SubscriptionItem' }, '409': { $ref: '#/components/responses/SubscriptionTransitionError' } }
+  /subscriptions/{subscription}/downgrade:
+    parameters: [{ $ref: '#/components/parameters/SubscriptionId' }]
+    post:
+      tags: [Subscriptions]
+      summary: Change to a lower plan (from TRIAL/ACTIVE, same product only)
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [plan_id], properties: { plan_id: { type: string, format: uuid } } } } } }
+      responses: { '200': { $ref: '#/components/responses/SubscriptionItem' }, '409': { $ref: '#/components/responses/SubscriptionTransitionError' } }
+  /subscriptions/{subscription}/renew:
+    parameters: [{ $ref: '#/components/parameters/SubscriptionId' }]
+    post: { tags: [Subscriptions], summary: Renew for the next billing period (from ACTIVE/PAST_DUE/GRACE_PERIOD), responses: { '200': { $ref: '#/components/responses/SubscriptionItem' }, '409': { $ref: '#/components/responses/SubscriptionTransitionError' } } }
+  /subscriptions/{subscription}/cancel:
+    parameters: [{ $ref: '#/components/parameters/SubscriptionId' }]
+    post:
+      tags: [Subscriptions]
+      summary: Cancel (from any active-like status; terminal)
+      description: "Revokes all PLAN/ADDON-sourced entitlements transactionally."
+      responses: { '200': { $ref: '#/components/responses/SubscriptionItem' }, '409': { $ref: '#/components/responses/SubscriptionTransitionError' } }
+  /subscriptions/{subscription}/suspend:
+    parameters: [{ $ref: '#/components/parameters/SubscriptionId' }]
+    post:
+      tags: [Subscriptions]
+      summary: Suspend (from ACTIVE/PAST_DUE/GRACE_PERIOD)
+      description: "Suspends (does not revoke) the tenant's entitlements - reactivate restores them."
+      responses: { '200': { $ref: '#/components/responses/SubscriptionItem' }, '409': { $ref: '#/components/responses/SubscriptionTransitionError' } }
+  /subscriptions/{subscription}/reactivate:
+    parameters: [{ $ref: '#/components/parameters/SubscriptionId' }]
+    post: { tags: [Subscriptions], summary: Reactivate (from SUSPENDED only), responses: { '200': { $ref: '#/components/responses/SubscriptionItem' }, '409': { $ref: '#/components/responses/SubscriptionTransitionError' } } }
+  /subscriptions/{subscription}/expire:
+    parameters: [{ $ref: '#/components/parameters/SubscriptionId' }]
+    post: { tags: [Subscriptions], summary: Expire (from TRIAL/ACTIVE/PAST_DUE/GRACE_PERIOD; terminal), responses: { '200': { $ref: '#/components/responses/SubscriptionItem' }, '409': { $ref: '#/components/responses/SubscriptionTransitionError' } } }
+  /subscriptions/{subscription}/terminate:
+    parameters: [{ $ref: '#/components/parameters/SubscriptionId' }]
+    post: { tags: [Subscriptions], summary: "Terminate (from any non-terminal status; terminal, immediate)", responses: { '200': { $ref: '#/components/responses/SubscriptionItem' }, '409': { $ref: '#/components/responses/SubscriptionTransitionError' } } }
+
+  # ------------------------------------------------------- Entitlements
+  /entitlements:
+    get:
+      tags: [Entitlements]
+      summary: List entitlements (admin, cross-tenant)
+      parameters:
+        - { name: tenant_id, in: query, schema: { type: string, format: uuid } }
+        - { name: subscription_id, in: query, schema: { type: string, format: uuid } }
+        - { name: entitlement_type, in: query, schema: { type: string, enum: [APPLICATION, CAPABILITY, LIMIT] } }
+        - $ref: '#/components/parameters/Status'
+        - { name: source_type, in: query, schema: { type: string, enum: [PLAN, ADDON, MANUAL_OVERRIDE, SYSTEM] } }
+        - $ref: '#/components/parameters/PerPage'
+      responses: { '200': { $ref: '#/components/responses/EntitlementList' } }
+  /entitlements/{entitlement}/suspend:
+    parameters: [{ name: entitlement, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [Entitlements], summary: Suspend an entitlement (from ACTIVE), responses: { '200': { $ref: '#/components/responses/EntitlementItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /entitlements/{entitlement}/restore:
+    parameters: [{ name: entitlement, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [Entitlements], summary: Restore a suspended entitlement (from SUSPENDED), responses: { '200': { $ref: '#/components/responses/EntitlementItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /entitlements/check:
+    post:
+      tags: [Entitlements]
+      summary: Ask CGO whether a tenant is entitled to an application/feature/limit (M2M only)
+      description: >
+        Machine-to-machine only. Requires a client-credentials token carrying
+        the `entitlement.check` scope. This is deliberately independent of
+        RBAC: Subscription answers "what was bought", Entitlement answers
+        "what is enabled", Permission (see POST /authorization/check) answers
+        "what a user may do". Returns a decision, never an error, for an
+        unentitled tenant (allowed:false).
+      security: [{ OAuth2ClientCredentials: [entitlement.check] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenant_id, application_code, entitlement_key]
+              properties:
+                tenant_id: { type: string, format: uuid }
+                application_code: { type: string }
+                entitlement_key: { type: string, example: vehicle_limit }
+      responses:
+        '200':
+          description: Entitlement decision
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EntitlementCheckResponse' }
+              example: { success: true, data: { allowed: true, entitlement_key: vehicle_limit, value: 100, source: PLAN } }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Unauthorized' }
+  /tenants/{tenant}/entitlements:
+    parameters: [{ $ref: '#/components/parameters/TenantId' }]
+    get: { tags: [Entitlements], summary: List a tenant's raw entitlement rows, responses: { '200': { $ref: '#/components/responses/EntitlementList' }, '403': { $ref: '#/components/responses/TenantAccessDenied' } } }
+  /tenants/{tenant}/effective-entitlements:
+    parameters: [{ $ref: '#/components/parameters/TenantId' }]
+    get:
+      tags: [Entitlements]
+      summary: The tenant's merged, effective entitlements
+      description: >
+        Merges PLAN (base) + ADDON (delta, summed for LIMIT / OR'd for
+        boolean types) + MANUAL_OVERRIDE (wins outright when present) sourced
+        rows, respecting effective_from/until windows and ACTIVE status, into
+        one row per (entitlement_type, entitlement_key).
+      parameters: [{ name: application_code, in: query, schema: { type: string } }]
+      responses:
+        '200':
+          description: Effective entitlements
+          content: { application/json: { schema: { $ref: '#/components/schemas/EffectiveEntitlementsResponse' } } }
+        '403': { $ref: '#/components/responses/TenantAccessDenied' }
+  /tenants/{tenant}/entitlement-overrides:
+    parameters: [{ $ref: '#/components/parameters/TenantId' }]
+    post:
+      tags: [Entitlements]
+      summary: Grant a manual entitlement override for a tenant
+      description: "A manual override always wins over PLAN/ADDON-sourced entitlements for the same key, until effective_until (if set)."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/EntitlementOverrideInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/EntitlementItem' }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /tenants/{tenant}/commercial-context:
+    parameters: [{ $ref: '#/components/parameters/TenantId' }]
+    get:
+      tags: [Entitlements]
+      summary: A tenant's authoritative commercial state (M2M only)
+      description: >
+        Machine-to-machine only. Requires a client-credentials token carrying
+        the `commercial.read` scope. Returns the tenant's active-like
+        subscriptions, which applications are enabled, and the full effective
+        entitlement set - the single source of truth an integrated
+        application should poll/cache instead of re-deriving commercial state
+        itself.
+      security: [{ OAuth2ClientCredentials: [commercial.read] }]
+      responses:
+        '200': { description: Commercial context, content: { application/json: { schema: { $ref: '#/components/schemas/CommercialContextResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Unauthorized' }
+
+  # -------------------------------------------------------------- Usage
+  /usage:
+    get:
+      tags: [Usage]
+      summary: List usage events (admin, cross-tenant)
+      parameters:
+        - { name: tenant_id, in: query, schema: { type: string, format: uuid } }
+        - { name: meter_key, in: query, schema: { type: string } }
+        - { name: subscription_id, in: query, schema: { type: string, format: uuid } }
+        - $ref: '#/components/parameters/PerPage'
+      responses: { '200': { $ref: '#/components/responses/UsageEventList' } }
+  /tenants/{tenant}/usage:
+    parameters: [{ $ref: '#/components/parameters/TenantId' }]
+    get: { tags: [Usage], summary: List a tenant's usage events, responses: { '200': { $ref: '#/components/responses/UsageEventList' }, '403': { $ref: '#/components/responses/TenantAccessDenied' } } }
+  /usage-events:
+    post:
+      tags: [Usage]
+      summary: Report a metered usage event (M2M only)
+      description: >
+        Machine-to-machine only. Requires a client-credentials token carrying
+        the `usage.write` scope, issued to a service account whose
+        application_id matches application_code (or is unscoped) and whose
+        tenant has that application assigned. Idempotent: a repeat POST
+        carrying the same idempotency_key returns the original event (200)
+        instead of creating a duplicate charge-generating record (201) - this
+        is what guarantees a duplicated/retried usage report never double-
+        bills a tenant.
+      security: [{ OAuth2ClientCredentials: [usage.write] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/UsageEventInput' } } } }
+      responses:
+        '201': { description: Recorded, content: { application/json: { schema: { $ref: '#/components/schemas/UsageEventResponse' } } } }
+        '200': { description: "Idempotent replay - returns the existing event", content: { application/json: { schema: { $ref: '#/components/schemas/UsageEventResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { description: "Application/tenant scope mismatch", content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  # ------------------------------------------------------------ Billing
+  /billings:
+    get:
+      tags: [Billing]
+      summary: List billings
+      parameters:
+        - { name: tenant_id, in: query, schema: { type: string, format: uuid } }
+        - { name: customer_id, in: query, schema: { type: string, format: uuid } }
+        - { name: subscription_id, in: query, schema: { type: string, format: uuid } }
+        - $ref: '#/components/parameters/Status'
+        - $ref: '#/components/parameters/PerPage'
+      responses: { '200': { $ref: '#/components/responses/BillingList' } }
+  /billings/{billing}:
+    parameters: [{ $ref: '#/components/parameters/BillingId' }]
+    get: { tags: [Billing], summary: Get a billing (with items and adjustments), responses: { '200': { $ref: '#/components/responses/BillingItem' }, '403': { $ref: '#/components/responses/TenantAccessDenied' }, '404': { $ref: '#/components/responses/NotFound' } } }
+  /billing-runs:
+    post:
+      tags: [Billing]
+      summary: Run the billing calculation engine for one subscription, or every active-like subscription (optionally scoped to a tenant)
+      description: >
+        Deterministic and auditable: flat/recurring, addon-recurring, and
+        usage-metered (included/overage/tiered) charges are all computed
+        through the shared rating engine and PostgreSQL NUMERIC arithmetic -
+        never floating point. Re-running for the same subscription+period
+        while not yet finalized recalculates the same DRAFT/CALCULATED
+        billing row rather than creating a duplicate. Returns 201 with one
+        result per matched subscription (a Billing, or {subscription_id,
+        error} for one that failed, e.g. already finalized).
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subscription_id: { type: string, format: uuid }
+                tenant_id: { type: string, format: uuid }
+                period_start: { type: string, format: date-time }
+                period_end: { type: string, format: date-time }
+      responses:
+        '201':
+          description: Billing run results
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BillingRunResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /billings/{billing}/recalculate:
+    parameters: [{ $ref: '#/components/parameters/BillingId' }]
+    post:
+      tags: [Billing]
+      summary: Recalculate a not-yet-finalized billing for the same period
+      responses:
+        '200': { $ref: '#/components/responses/BillingItem' }
+        '409': { description: BILLING_ALREADY_FINALIZED, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+  /billings/{billing}/review:
+    parameters: [{ $ref: '#/components/parameters/BillingId' }]
+    post: { tags: [Billing], summary: Mark reviewed (from DRAFT/CALCULATED), responses: { '200': { $ref: '#/components/responses/BillingItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /billings/{billing}/finalize:
+    parameters: [{ $ref: '#/components/parameters/BillingId' }]
+    post:
+      tags: [Billing]
+      summary: Finalize a billing (from CALCULATED/REVIEWED)
+      description: >
+        Segregation of duties: requires cgo.billing.finalize, held by
+        BILLING_APPROVER but not BILLING_ADMIN (the same role that creates/
+        adjusts billing). Once FINALIZED, a billing is immutable - it can
+        never be recalculated, cancelled, or have its total changed again;
+        corrections after this point are explicit BillingAdjustment records
+        via POST /billings/{billing}/adjustments, or a full reversal via a
+        new period's billing.
+      responses: { '200': { $ref: '#/components/responses/BillingItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } }
+  /billings/{billing}/cancel:
+    parameters: [{ $ref: '#/components/parameters/BillingId' }]
+    post:
+      tags: [Billing]
+      summary: Cancel a not-yet-finalized billing
+      responses:
+        '200': { $ref: '#/components/responses/BillingItem' }
+        '409': { description: BILLING_ALREADY_FINALIZED, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+  /billings/{billing}/adjustments:
+    parameters: [{ $ref: '#/components/parameters/BillingId' }]
+    post:
+      tags: [Billing]
+      summary: Add a correction/discount/credit/debit adjustment to a billing
+      description: "The only way to correct a billing's total after calculation - never a direct field edit. Rejected once the billing is CANCELLED."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/BillingAdjustmentInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/BillingItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } }
+
+  # ----------------------------------------------------------- Invoices
+  /invoices:
+    get:
+      tags: [Invoices]
+      summary: List invoices
+      parameters:
+        - { name: tenant_id, in: query, schema: { type: string, format: uuid } }
+        - { name: customer_id, in: query, schema: { type: string, format: uuid } }
+        - { name: subscription_id, in: query, schema: { type: string, format: uuid } }
+        - $ref: '#/components/parameters/Status'
+        - $ref: '#/components/parameters/PerPage'
+      responses: { '200': { $ref: '#/components/responses/InvoiceList' } }
+  /invoices/{invoice}:
+    parameters: [{ $ref: '#/components/parameters/InvoiceId' }]
+    get: { tags: [Invoices], summary: Get an invoice (with items and payments), responses: { '200': { $ref: '#/components/responses/InvoiceItem' }, '403': { $ref: '#/components/responses/TenantAccessDenied' }, '404': { $ref: '#/components/responses/NotFound' } } }
+  /invoices/generate-from-billing/{billing}:
+    parameters: [{ $ref: '#/components/parameters/BillingId' }]
+    post:
+      tags: [Invoices]
+      summary: Generate an invoice from a finalized billing
+      description: >
+        Only a FINALIZED billing may become an invoice. The invoice number is
+        always server-generated from a PostgreSQL sequence (never client-
+        supplied, never colliding under concurrency) and every financial
+        field is copied/snapshotted from the billing at generation time, so
+        the invoice is immutable even if the billing or its prices change
+        later. At most one invoice per billing.
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { net_days: { type: integer, default: 30 } } }
+      responses:
+        '201': { $ref: '#/components/responses/InvoiceItem' }
+        '422': { description: BILLING_NOT_FINALIZED, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '409': { $ref: '#/components/responses/Duplicate' }
+  /invoices/{invoice}/issue:
+    parameters: [{ $ref: '#/components/parameters/InvoiceId' }]
+    post:
+      tags: [Invoices]
+      summary: Issue a draft invoice (from DRAFT)
+      description: "Once issued, the invoice's financial snapshot is frozen - never mutated even if the source billing changes afterward."
+      responses: { '200': { $ref: '#/components/responses/InvoiceItem' }, '409': { $ref: '#/components/responses/InvoiceTransitionError' } }
+  /invoices/{invoice}/mark-paid:
+    parameters: [{ $ref: '#/components/parameters/InvoiceId' }]
+    post:
+      tags: [Invoices]
+      summary: Record full payment of the remaining balance (from ISSUED/PARTIALLY_PAID/OVERDUE)
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { method: { type: string, nullable: true }, reference: { type: string, nullable: true } } }
+      responses: { '200': { $ref: '#/components/responses/InvoiceItem' }, '422': { $ref: '#/components/responses/InvoiceTransitionError' } }
+  /invoices/{invoice}/mark-partially-paid:
+    parameters: [{ $ref: '#/components/parameters/InvoiceId' }]
+    post:
+      tags: [Invoices]
+      summary: Record a partial payment (from ISSUED/PARTIALLY_PAID/OVERDUE)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties: { amount: { type: number }, method: { type: string, nullable: true }, reference: { type: string, nullable: true } }
+      responses:
+        '200': { $ref: '#/components/responses/InvoiceItem' }
+        '422': { description: "Amount exceeds the outstanding balance due, or invalid transition", content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+  /invoices/{invoice}/void:
+    parameters: [{ $ref: '#/components/parameters/InvoiceId' }]
+    post:
+      tags: [Invoices]
+      summary: Void an issued invoice (from ISSUED/PARTIALLY_PAID/OVERDUE)
+      description: "Segregation of duties: requires cgo.invoice.void, held by BILLING_APPROVER but not BILLING_ADMIN (the same role that generates/records payments)."
+      responses: { '200': { $ref: '#/components/responses/InvoiceItem' }, '409': { $ref: '#/components/responses/InvoiceTransitionError' } }
+  /invoices/{invoice}/cancel:
+    parameters: [{ $ref: '#/components/parameters/InvoiceId' }]
+    post: { tags: [Invoices], summary: Cancel a draft invoice before it is ever issued (from DRAFT only), responses: { '200': { $ref: '#/components/responses/InvoiceItem' }, '409': { $ref: '#/components/responses/InvoiceTransitionError' } } }
 components:
   securitySchemes:
     BearerAuth:
@@ -720,6 +1427,9 @@ components:
             governance.read: Read tenant/application/capability/permission/user directory data
             audit.write: Submit audit events on behalf of an integrated application
             introspect: Validate CGO-issued tokens
+            entitlement.check: "Phase 2 — evaluate entitlement decisions for a tenant"
+            commercial.read: "Phase 2 — read a tenant's commercial context (plan, status, entitlements, billing period)"
+            usage.write: "Phase 2 — submit metered usage events on behalf of an integrated application"
 
   parameters:
     CustomerId: { name: customer, in: path, required: true, schema: { type: string, format: uuid } }
@@ -733,6 +1443,9 @@ components:
     Search: { name: search, in: query, schema: { type: string } }
     Sort: { name: sort, in: query, schema: { type: string }, description: "Prefix with - for descending, e.g. -created_at" }
     PerPage: { name: per_page, in: query, schema: { type: integer, default: 15, maximum: 100 } }
+    SubscriptionId: { name: subscription, in: path, required: true, schema: { type: string, format: uuid } }
+    BillingId: { name: billing, in: path, required: true, schema: { type: string, format: uuid } }
+    InvoiceId: { name: invoice, in: path, required: true, schema: { type: string, format: uuid } }
 
   responses:
     Unauthenticated:
@@ -769,6 +1482,29 @@ components:
     UserList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedUsers' } } } }
     UserItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/User' } } } ] } } } }
 
+    SubscriptionTransitionError:
+      description: "PLAN_NOT_ACTIVE / PRODUCT_NOT_ACTIVE / PLAN_HAS_NO_TRIAL / INVALID_SUBSCRIPTION_TRANSITION"
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' }, example: { success: false, error: { code: INVALID_SUBSCRIPTION_TRANSITION, message: "This transition is not allowed from the subscription's current state." } } } }
+    InvoiceTransitionError:
+      description: INVALID_INVOICE_TRANSITION
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' }, example: { success: false, error: { code: INVALID_INVOICE_TRANSITION, message: "Only a draft invoice can be issued." } } } }
+    ProductList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedProducts' } } } }
+    ProductItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Product' } } } ] } } } }
+    PlanList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedPlans' } } } }
+    PlanItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Plan' } } } ] } } } }
+    AddonList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedAddons' } } } }
+    AddonItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Addon' } } } ] } } } }
+    PriceList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedPrices' } } } }
+    PriceItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Price' } } } ] } } } }
+    SubscriptionList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedSubscriptions' } } } }
+    SubscriptionItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Subscription' } } } ] } } } }
+    EntitlementList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedEntitlements' } } } }
+    EntitlementItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Entitlement' } } } ] } } } }
+    UsageEventList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedUsageEvents' } } } }
+    BillingList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedBillings' } } } }
+    BillingItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Billing' } } } ] } } } }
+    InvoiceList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedInvoices' } } } }
+    InvoiceItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Invoice' } } } ] } } } }
   schemas:
     SuccessEnvelope:
       type: object
@@ -798,6 +1534,14 @@ components:
                 - CONFLICT
                 - RATE_LIMITED
                 - INTERNAL_ERROR
+                - PRODUCT_NOT_ACTIVE
+                - PLAN_NOT_ACTIVE
+                - TENANT_CUSTOMER_MISMATCH
+                - PLAN_HAS_NO_TRIAL
+                - INVALID_SUBSCRIPTION_TRANSITION
+                - BILLING_ALREADY_FINALIZED
+                - BILLING_NOT_FINALIZED
+                - INVALID_INVOICE_TRANSITION
             message: { type: string }
             details: { nullable: true }
 
@@ -1068,3 +1812,498 @@ components:
             per_page: { type: integer }
             total: { type: integer }
             last_page: { type: integer }
+
+    Product:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        product_code: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        status: { type: string, enum: [DRAFT, ACTIVE, INACTIVE, RETIRED] }
+        currency: { type: string, nullable: true }
+        metadata: { type: object, nullable: true }
+        created_at: { type: string, format: date-time }
+    ProductInput:
+      type: object
+      required: [product_code, name]
+      properties:
+        product_code: { type: string }
+        name: { type: string }
+        description: { type: string }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        metadata: { type: object }
+    PaginatedProducts:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/Product' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } }
+
+    PlanLimit:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        plan_id: { type: string, format: uuid }
+        limit_key: { type: string }
+        limit_value: { type: string, nullable: true }
+        is_unlimited: { type: boolean }
+        unit: { type: string, nullable: true }
+    Plan:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        product_id: { type: string, format: uuid }
+        plan_code: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        billing_interval: { type: string, enum: [MONTHLY, QUARTERLY, SEMI_ANNUAL, ANNUAL, CUSTOM] }
+        status: { type: string, enum: [DRAFT, ACTIVE, INACTIVE, RETIRED] }
+        trial_days: { type: integer, nullable: true }
+        currency: { type: string }
+        metadata: { type: object, nullable: true }
+        capabilities_count: { type: integer, nullable: true }
+    PlanInput:
+      type: object
+      required: [product_id, plan_code, name, billing_interval, currency]
+      properties:
+        product_id: { type: string, format: uuid }
+        plan_code: { type: string }
+        name: { type: string }
+        description: { type: string }
+        billing_interval: { type: string, enum: [MONTHLY, QUARTERLY, SEMI_ANNUAL, ANNUAL, CUSTOM] }
+        trial_days: { type: integer, minimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        metadata: { type: object }
+    PaginatedPlans:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/Plan' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } }
+
+    AddonLimit:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        addon_id: { type: string, format: uuid }
+        limit_key: { type: string }
+        limit_delta: { type: string, description: "Signed delta summed with the plan's base limit" }
+        unit: { type: string, nullable: true }
+    Addon:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        product_id: { type: string, format: uuid, nullable: true }
+        addon_code: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        status: { type: string, enum: [DRAFT, ACTIVE, INACTIVE, RETIRED] }
+        metadata: { type: object, nullable: true }
+    AddonInput:
+      type: object
+      required: [addon_code, name]
+      properties:
+        product_id: { type: string, format: uuid, nullable: true }
+        addon_code: { type: string }
+        name: { type: string }
+        description: { type: string }
+        metadata: { type: object }
+    PaginatedAddons:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/Addon' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } }
+
+    PriceType:
+      type: string
+      enum: [FLAT, PER_USER, PER_DEVICE, PER_VEHICLE, PER_TRANSACTION, PER_API_CALL, USAGE, TIERED]
+    PricingTier:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        tier_order: { type: integer }
+        from_quantity: { type: string }
+        to_quantity: { type: string, nullable: true }
+        unit_amount: { type: string }
+        flat_amount: { type: string, nullable: true }
+    Price:
+      type: object
+      description: "Amounts/quantities are decimal strings (PostgreSQL NUMERIC) - never floats."
+      properties:
+        id: { type: string, format: uuid }
+        plan_id: { type: string, format: uuid, nullable: true }
+        addon_id: { type: string, format: uuid, nullable: true }
+        tenant_id: { type: string, format: uuid, nullable: true, description: "Set only for a tenant-specific custom price override" }
+        price_type: { $ref: '#/components/schemas/PriceType' }
+        currency: { type: string }
+        unit_amount: { type: string, nullable: true, description: "Null for TIERED (see tiers)" }
+        billing_interval: { type: string }
+        unit_name: { type: string, nullable: true }
+        meter_key: { type: string, nullable: true }
+        minimum_quantity: { type: string, nullable: true }
+        included_quantity: { type: string, nullable: true }
+        tax_code_id: { type: string, format: uuid, nullable: true }
+        status: { type: string, enum: [ACTIVE, RETIRED] }
+        approval_status: { type: string, enum: [DRAFT, PENDING_APPROVAL, APPROVED, REJECTED] }
+        effective_from: { type: string, format: date-time }
+        effective_until: { type: string, format: date-time, nullable: true }
+        created_by: { type: string, format: uuid, nullable: true }
+        approved_by: { type: string, format: uuid, nullable: true }
+        metadata: { type: object, nullable: true }
+        tiers: { type: array, items: { $ref: '#/components/schemas/PricingTier' } }
+    PriceInput:
+      type: object
+      required: [price_type, currency, billing_interval]
+      description: "Exactly one of plan_id/addon_id is required. unit_amount is required unless price_type=TIERED, in which case tiers is required instead."
+      properties:
+        plan_id: { type: string, format: uuid }
+        addon_id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid, nullable: true }
+        price_type: { $ref: '#/components/schemas/PriceType' }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        unit_amount: { type: string, nullable: true }
+        billing_interval: { type: string }
+        unit_name: { type: string, nullable: true }
+        meter_key: { type: string, nullable: true }
+        minimum_quantity: { type: string, nullable: true }
+        included_quantity: { type: string, nullable: true }
+        tax_code_id: { type: string, format: uuid, nullable: true }
+        effective_from: { type: string, format: date-time, nullable: true }
+        effective_until: { type: string, format: date-time, nullable: true }
+        metadata: { type: object }
+        tiers:
+          type: array
+          description: "Required when price_type=TIERED"
+          items:
+            type: object
+            required: [from_quantity, unit_amount]
+            properties:
+              from_quantity: { type: string }
+              to_quantity: { type: string, nullable: true }
+              unit_amount: { type: string }
+              flat_amount: { type: string, nullable: true }
+    PaginatedPrices:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/Price' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } }
+    SimulationComponent:
+      type: object
+      properties:
+        code: { type: string }
+        price_id: { type: string, format: uuid }
+        amount: { type: string }
+        quantity: { type: string, nullable: true }
+        included_quantity: { type: string, nullable: true }
+        billable_quantity: { type: string, nullable: true }
+        unit_amount: { type: string, nullable: true }
+        tax: { type: string, nullable: true }
+        tier_breakdown: { type: array, items: { type: object }, nullable: true }
+    SimulationResult:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                currency: { type: string }
+                subtotal: { type: string }
+                components: { type: array, items: { $ref: '#/components/schemas/SimulationComponent' } }
+                tax: { type: string }
+                total: { type: string }
+
+    SubscriptionLineItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        subscription_id: { type: string, format: uuid }
+        item_type: { type: string, enum: [PLAN, ADDON] }
+        plan_id: { type: string, format: uuid, nullable: true }
+        addon_id: { type: string, format: uuid, nullable: true }
+        price_id: { type: string, format: uuid, nullable: true }
+        quantity: { type: string }
+        unit_price: { type: string, nullable: true }
+        currency: { type: string }
+        start_at: { type: string, format: date-time }
+        end_at: { type: string, format: date-time, nullable: true }
+    Subscription:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        subscription_number: { type: string, description: "Server-generated, never client-supplied" }
+        customer_id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid }
+        product_id: { type: string, format: uuid }
+        plan_id: { type: string, format: uuid }
+        status: { type: string, enum: [DRAFT, PENDING, TRIAL, ACTIVE, PAST_DUE, GRACE_PERIOD, SUSPENDED, EXPIRED, CANCELLED, TERMINATED] }
+        start_at: { type: string, format: date-time, nullable: true }
+        current_period_start: { type: string, format: date-time, nullable: true }
+        current_period_end: { type: string, format: date-time, nullable: true }
+        trial_end_at: { type: string, format: date-time, nullable: true }
+        grace_end_at: { type: string, format: date-time, nullable: true }
+        cancel_at: { type: string, format: date-time, nullable: true }
+        cancelled_at: { type: string, format: date-time, nullable: true }
+        currency: { type: string }
+        billing_interval: { type: string }
+        auto_renew: { type: boolean }
+        metadata: { type: object, nullable: true }
+        items: { type: array, items: { $ref: '#/components/schemas/SubscriptionLineItem' } }
+    SubscriptionInput:
+      type: object
+      required: [customer_id, tenant_id, plan_id]
+      properties:
+        customer_id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid }
+        plan_id: { type: string, format: uuid }
+        addon_ids: { type: array, items: { type: string, format: uuid } }
+        auto_renew: { type: boolean, default: true }
+        idempotency_key: { type: string, nullable: true }
+        metadata: { type: object }
+    PaginatedSubscriptions:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/Subscription' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } }
+
+    Entitlement:
+      type: object
+      description: "Deliberately independent of RBAC: Subscription = what was bought, Entitlement = what is enabled, Permission = what a user may do."
+      properties:
+        id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid }
+        subscription_id: { type: string, format: uuid, nullable: true }
+        application_id: { type: string, format: uuid, nullable: true }
+        capability_id: { type: string, format: uuid, nullable: true }
+        entitlement_type: { type: string, enum: [APPLICATION, CAPABILITY, LIMIT] }
+        entitlement_key: { type: string }
+        value: {}
+        status: { type: string, enum: [ACTIVE, SUSPENDED, EXPIRED, REVOKED] }
+        source_type: { type: string, enum: [PLAN, ADDON, MANUAL_OVERRIDE, SYSTEM] }
+        source_reference_id: { type: string, nullable: true }
+        effective_from: { type: string, format: date-time }
+        effective_until: { type: string, format: date-time, nullable: true }
+        reason: { type: string, nullable: true }
+        created_by: { type: string, format: uuid, nullable: true }
+    EntitlementOverrideInput:
+      type: object
+      required: [entitlement_type, entitlement_key, value, reason]
+      properties:
+        entitlement_type: { type: string, enum: [APPLICATION, CAPABILITY, LIMIT] }
+        entitlement_key: { type: string }
+        value: {}
+        application_id: { type: string, format: uuid, nullable: true }
+        capability_id: { type: string, format: uuid, nullable: true }
+        effective_from: { type: string, format: date-time, nullable: true }
+        effective_until: { type: string, format: date-time, nullable: true }
+        reason: { type: string, description: "Required - manual overrides are always audited with a reason" }
+    PaginatedEntitlements:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/Entitlement' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } }
+    EffectiveEntitlement:
+      type: object
+      properties:
+        entitlement_type: { type: string }
+        entitlement_key: { type: string }
+        value: {}
+        source: { type: string, enum: [PLAN, ADDON, MANUAL_OVERRIDE, SYSTEM] }
+    EffectiveEntitlementsResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                tenant_id: { type: string, format: uuid }
+                entitlements: { type: array, items: { $ref: '#/components/schemas/EffectiveEntitlement' } }
+    EntitlementCheckResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                allowed: { type: boolean }
+                entitlement_key: { type: string }
+                value: {}
+                source: { type: string, nullable: true }
+    CommercialContextResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                tenant_id: { type: string, format: uuid }
+                tenant_status: { type: string }
+                subscriptions: { type: array, items: { $ref: '#/components/schemas/Subscription' } }
+                applications_enabled: { type: array, items: { type: string } }
+                effective_entitlements: { type: array, items: { $ref: '#/components/schemas/EffectiveEntitlement' } }
+
+    UsageEvent:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid }
+        application_id: { type: string, format: uuid }
+        subscription_id: { type: string, format: uuid, nullable: true }
+        meter_key: { type: string }
+        quantity: { type: string }
+        usage_timestamp: { type: string, format: date-time }
+        period_start: { type: string, format: date-time }
+        period_end: { type: string, format: date-time }
+        source: { type: string, nullable: true }
+        external_reference: { type: string, nullable: true }
+        idempotency_key: { type: string, nullable: true }
+        metadata: { type: object, nullable: true }
+    UsageEventInput:
+      type: object
+      required: [tenant_id, application_code, meter_key, quantity]
+      properties:
+        tenant_id: { type: string, format: uuid }
+        application_code: { type: string }
+        subscription_id: { type: string, format: uuid, nullable: true }
+        meter_key: { type: string }
+        quantity: { type: number, minimum: 0 }
+        usage_timestamp: { type: string, format: date-time, nullable: true }
+        period_start: { type: string, format: date-time, nullable: true }
+        period_end: { type: string, format: date-time, nullable: true }
+        external_reference: { type: string, nullable: true }
+        idempotency_key: { type: string, nullable: true, description: "Guarantees a retried/duplicated report never double-bills" }
+        metadata: { type: object, nullable: true }
+    UsageEventResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/UsageEvent' } }
+    PaginatedUsageEvents:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/UsageEvent' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } }
+
+    BillingItemLine:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        subscription_item_id: { type: string, format: uuid, nullable: true }
+        charge_type: { type: string, enum: [RECURRING, ADDON, USAGE, OVERAGE] }
+        description: { type: string }
+        quantity: { type: string }
+        unit_amount: { type: string }
+        subtotal: { type: string }
+        discount_amount: { type: string }
+        tax_amount: { type: string }
+        total: { type: string }
+        pricing_snapshot: { type: object, nullable: true, description: "The exact price definition used at calculation time - preserves historical accuracy even if the Price/Plan rows change later" }
+    BillingAdjustment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        adjustment_type: { type: string, enum: [DISCOUNT, CREDIT, DEBIT, CORRECTION, ROUNDING] }
+        reason: { type: string }
+        amount: { type: string }
+        status: { type: string }
+        created_by: { type: string, format: uuid, nullable: true }
+    BillingAdjustmentInput:
+      type: object
+      required: [adjustment_type, reason, amount]
+      properties:
+        adjustment_type: { type: string, enum: [DISCOUNT, CREDIT, DEBIT, CORRECTION, ROUNDING] }
+        reason: { type: string }
+        amount: { type: string, description: "Signed decimal string, e.g. -100000.00 for a credit" }
+    Billing:
+      type: object
+      description: "Immutable once FINALIZED - corrections are explicit BillingAdjustment records only."
+      properties:
+        id: { type: string, format: uuid }
+        billing_number: { type: string }
+        customer_id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid }
+        subscription_id: { type: string, format: uuid }
+        period_start: { type: string, format: date-time }
+        period_end: { type: string, format: date-time }
+        currency: { type: string }
+        subtotal: { type: string }
+        discount_total: { type: string }
+        tax_total: { type: string }
+        adjustment_total: { type: string }
+        total: { type: string }
+        status: { type: string, enum: [DRAFT, CALCULATED, REVIEWED, FINALIZED, CANCELLED] }
+        calculated_at: { type: string, format: date-time, nullable: true }
+        finalized_at: { type: string, format: date-time, nullable: true }
+        metadata: { type: object, nullable: true }
+        items: { type: array, items: { $ref: '#/components/schemas/BillingItemLine' } }
+        adjustments: { type: array, items: { $ref: '#/components/schemas/BillingAdjustment' } }
+    PaginatedBillings:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/Billing' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } }
+    BillingRunResult:
+      oneOf:
+        - $ref: '#/components/schemas/Billing'
+        - type: object
+          properties: { subscription_id: { type: string, format: uuid }, error: { type: string } }
+    BillingRunResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { type: object, properties: { results: { type: array, items: { $ref: '#/components/schemas/BillingRunResult' } } } } }
+
+    InvoiceItemLine:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        description: { type: string }
+        quantity: { type: string }
+        unit_amount: { type: string }
+        subtotal: { type: string }
+        discount_amount: { type: string }
+        tax_amount: { type: string }
+        total: { type: string }
+        source_billing_item_id: { type: string, format: uuid, nullable: true }
+    InvoicePayment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        amount: { type: string }
+        paid_at: { type: string, format: date-time }
+        method: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+        recorded_by: { type: string, format: uuid, nullable: true }
+    Invoice:
+      type: object
+      description: "A frozen financial snapshot of its source Billing, immutable once issued. invoice_number is always server-generated (PostgreSQL sequence), never client-supplied."
+      properties:
+        id: { type: string, format: uuid }
+        invoice_number: { type: string }
+        billing_id: { type: string, format: uuid }
+        customer_id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid }
+        subscription_id: { type: string, format: uuid }
+        issue_date: { type: string, format: date, nullable: true }
+        due_date: { type: string, format: date }
+        currency: { type: string }
+        subtotal: { type: string }
+        discount_total: { type: string }
+        tax_total: { type: string }
+        adjustment_total: { type: string }
+        total: { type: string }
+        balance_due: { type: string }
+        status: { type: string, enum: [DRAFT, ISSUED, PARTIALLY_PAID, PAID, OVERDUE, VOID, CANCELLED] }
+        issued_at: { type: string, format: date-time, nullable: true }
+        paid_at: { type: string, format: date-time, nullable: true }
+        cancelled_at: { type: string, format: date-time, nullable: true }
+        metadata: { type: object, nullable: true }
+        items: { type: array, items: { $ref: '#/components/schemas/InvoiceItemLine' } }
+        payments: { type: array, items: { $ref: '#/components/schemas/InvoicePayment' } }
+    PaginatedInvoices:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { type: array, items: { $ref: '#/components/schemas/Invoice' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } }

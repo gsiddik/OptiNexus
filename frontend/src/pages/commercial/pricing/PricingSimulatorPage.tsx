@@ -4,25 +4,47 @@ import { ErrorAlert } from '../../../components/ErrorAlert';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import { unwrapError } from '../../../api/client';
 
+interface MeterRow {
+  key: string;
+  value: string;
+}
+
 export function PricingSimulatorPage() {
   const [planId, setPlanId] = useState('');
   const [tenantId, setTenantId] = useState('');
   const [addonIds, setAddonIds] = useState('');
-  const [quantitiesJson, setQuantitiesJson] = useState('{}');
+  const [meterRows, setMeterRows] = useState<MeterRow[]>([{ key: '', value: '' }]);
   const [result, setResult] = useState<PricingSimulationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  function updateRow(index: number, field: keyof MeterRow, value: string) {
+    setMeterRows((rows) => rows.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+  }
+
+  function addRow() {
+    setMeterRows((rows) => [...rows, { key: '', value: '' }]);
+  }
+
+  function removeRow(index: number) {
+    setMeterRows((rows) => rows.filter((_, i) => i !== index));
+  }
+
   async function simulate() {
     setError(null);
     setResult(null);
-    let quantities: Record<string, string | number> | undefined;
-    try {
-      quantities = quantitiesJson.trim() ? JSON.parse(quantitiesJson) : undefined;
-    } catch {
-      setError('Quantities must be valid JSON, e.g. {"api_calls": 1000}');
-      return;
+
+    const quantities: Record<string, number> = {};
+    for (const row of meterRows) {
+      if (!row.key.trim()) continue;
+      const parsed = Number(row.value);
+      if (row.value.trim() === '' || Number.isNaN(parsed)) {
+        setError(`Quantity for meter "${row.key}" must be a number.`);
+        return;
+      }
+      quantities[row.key.trim()] = parsed;
     }
+
     setLoading(true);
     try {
       const res = await pricingApi.simulate({
@@ -57,10 +79,17 @@ export function PricingSimulatorPage() {
           <label>Plan ID<input value={planId} onChange={(e) => setPlanId(e.target.value)} /></label>
           <label>Tenant ID (optional, applies tenant-specific overrides)<input value={tenantId} onChange={(e) => setTenantId(e.target.value)} /></label>
           <label>Addon IDs (comma-separated, optional)<input value={addonIds} onChange={(e) => setAddonIds(e.target.value)} /></label>
-          <label>
-            Quantities (JSON, meter_key -&gt; quantity)
-            <textarea rows={4} value={quantitiesJson} onChange={(e) => setQuantitiesJson(e.target.value)} placeholder='{"api_calls": 1000}' />
-          </label>
+
+          <label>Usage quantities (meter_key -&gt; quantity)</label>
+          {meterRows.map((row, i) => (
+            <div className="toolbar" key={i}>
+              <input placeholder="meter_key, e.g. vehicles" value={row.key} onChange={(e) => updateRow(i, 'key', e.target.value)} />
+              <input placeholder="quantity" value={row.value} onChange={(e) => updateRow(i, 'value', e.target.value)} />
+              <button className="btn btn-ghost" onClick={() => removeRow(i)} disabled={meterRows.length === 1} aria-label="Remove meter row">×</button>
+            </div>
+          ))}
+          <button className="btn btn-secondary" onClick={addRow} style={{ alignSelf: 'flex-start' }}>+ Add Meter</button>
+
           <div className="modal-actions">
             <button className="btn btn-primary" onClick={simulate} disabled={loading || !planId}>Simulate</button>
           </div>

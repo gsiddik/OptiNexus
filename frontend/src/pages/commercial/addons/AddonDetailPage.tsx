@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { addonsApi } from '../../../api/endpoints';
+import { addonsApi, applicationsApi, productsApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import { ErrorAlert } from '../../../components/ErrorAlert';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { LifecycleActions } from '../../../components/LifecycleActions';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
+import { CapabilityPicker } from '../../../components/CapabilityPicker';
 import { PermissionGuard } from '../../../auth/PermissionGuard';
 import { useAuth } from '../../../auth/useAuth';
 import { unwrapError } from '../../../api/client';
-import type { Addon, AddonLimit } from '../../../api/types';
+import type { Addon, AddonLimit, Application, Capability } from '../../../api/types';
 
 export function AddonDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -74,7 +76,91 @@ export function AddonDetailPage() {
             <AddLimitForm addonId={addon.id} onAdded={reloadLimits} />
           </PermissionGuard>
         </div>
+
+        <AddonCapabilities addonId={addon.id} productId={addon.product_id} />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Add-ons have no direct Application relationship of their own. When the
+ * add-on belongs to a product, the picker is scoped to that product's
+ * attached applications (mirroring PlanCapabilities); an unassigned
+ * add-on falls back to the full published application list so it still
+ * has something to attach from.
+ */
+function AddonCapabilities({ addonId, productId }: { addonId: string; productId: string | null }) {
+  const { data: capabilities, loading, error, reload } = useApiResource<Capability[]>(() => addonsApi.capabilities(addonId), [addonId]);
+  const { data: productApplications } = useApiResource<Application[]>(
+    () => (productId ? productsApi.applications(productId) : Promise.resolve([])),
+    [productId],
+  );
+  const { data: allApplications } = useApiResource(
+    () => (productId ? Promise.resolve([]) : applicationsApi.list({ per_page: 100 }).then((e) => e.data)),
+    [productId],
+  );
+  const [pendingDetach, setPendingDetach] = useState<Capability | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const applications = productId ? (productApplications ?? []) : ((allApplications as Application[] | null) ?? []);
+
+  async function attach(capabilityId: string) {
+    setActionError(null);
+    try {
+      await addonsApi.attachCapability(addonId, capabilityId);
+      reload();
+    } catch (err) {
+      setActionError(unwrapError(err).message);
+    }
+  }
+
+  async function confirmDetach() {
+    if (!pendingDetach) return;
+    setActionError(null);
+    try {
+      await addonsApi.detachCapability(addonId, pendingDetach.id);
+      reload();
+    } catch (err) {
+      setActionError(unwrapError(err).message);
+    } finally {
+      setPendingDetach(null);
+    }
+  }
+
+  return (
+    <div className="card">
+      <h3>Capabilities</h3>
+      <ErrorAlert message={error ?? actionError} />
+      {loading ? (
+        <LoadingSpinner />
+      ) : (
+        <ul className="chip-list">
+          {(capabilities ?? []).map((c) => (
+            <li key={c.id} className="chip removable">
+              {c.name} <code>{c.code}</code>
+              <PermissionGuard permission="cgo.addon.capability.revoke">
+                <button onClick={() => setPendingDetach(c)} aria-label={`Detach ${c.name}`}>×</button>
+              </PermissionGuard>
+            </li>
+          ))}
+          {!capabilities?.length && <span className="muted">No capabilities included.</span>}
+        </ul>
+      )}
+
+      <PermissionGuard permission="cgo.addon.capability.assign">
+        <CapabilityPicker applications={applications} onAttach={attach} />
+      </PermissionGuard>
+
+      <ConfirmDialog
+        open={!!pendingDetach}
+        title="Detach Capability"
+        message={`Remove "${pendingDetach?.name}" from this add-on?`}
+        confirmLabel="Detach"
+        danger
+        onConfirm={confirmDetach}
+        onCancel={() => setPendingDetach(null)}
+      />
     </div>
   );
 }

@@ -36,6 +36,47 @@ info:
     { "success": true, "data": { }, "meta": { } }
     { "success": false, "error": { "code": "VALIDATION_ERROR", "message": "...", "details": {} } }
     ```
+
+    ## Error Code Compliance Mapping (Phase 2 closure review)
+    Five Phase 2 error codes from the original specification were reviewed
+    against the shipped implementation. None represent a client-facing
+    condition not already communicated by an existing code, so none were
+    added - adding a same-meaning alias would be redundant, not compliant:
+
+    - **SUBSCRIPTION_ALREADY_ACTIVE** -> `INVALID_SUBSCRIPTION_TRANSITION`
+      (409). Activating an already-ACTIVE subscription is one case of "the
+      transition isn't allowed from the current status" - the same 409
+      contract as every other disallowed subscription transition.
+    - **SUBSCRIPTION_EXPIRED** -> `INVALID_SUBSCRIPTION_TRANSITION` (409)
+      for lifecycle actions on an EXPIRED subscription (e.g. renew); for
+      entitlement checks it is not an error at all - `POST
+      /entitlements/check` correctly returns `200 {"allowed": false}`,
+      never a rejection, because a check is a decision query, not a
+      guarded mutation.
+    - **PRICE_NOT_EFFECTIVE** -> no error is raised by design. Effective
+      price resolution (`plan_id`/`addon_id` + tenant override + point in
+      time) automatically excludes any price outside its
+      effective_from/effective_until window when selecting which price to
+      rate against; an ineffective price is never the one used, so there is
+      no client request that could reference one and be rejected for it.
+      Price Simulation and the Billing Calculation Engine share this same
+      resolution logic, so a plan/add-on with no currently-effective price
+      component simply omits that charge (or returns a 0.00 quote) rather
+      than erroring.
+    - **BILLING_CALCULATION_ERROR** -> `INTERNAL_ERROR` (500). Every
+      arithmetic step in the Billing Calculation Engine runs through
+      `App\Support\Money` (integer minor units, no floats), which cannot
+      raise a domain-level calculation error; an unexpected failure here is
+      a server bug, and - as with every other unhandled exception in this
+      API - is deliberately reported as a generic 500 `INTERNAL_ERROR`
+      rather than a specific code, so internal failure detail is never
+      leaked to a client.
+    - **FINANCIAL_RECORD_LOCKED** -> `BILLING_ALREADY_FINALIZED` (409) for
+      Billing, `INVALID_INVOICE_TRANSITION` (409) for Invoice. Both are
+      structurally reinforced: neither resource has a generic update
+      endpoint at all (only specific, individually-guarded lifecycle
+      transitions), so "locked" is enforced by the absence of a mutation
+      path, not merely by a runtime check.
   contact:
     name: Platform Engineering
 
@@ -1483,10 +1524,20 @@ components:
     UserItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/User' } } } ] } } } }
 
     SubscriptionTransitionError:
-      description: "PLAN_NOT_ACTIVE / PRODUCT_NOT_ACTIVE / PLAN_HAS_NO_TRIAL / INVALID_SUBSCRIPTION_TRANSITION"
+      description: >
+        PLAN_NOT_ACTIVE / PRODUCT_NOT_ACTIVE / PLAN_HAS_NO_TRIAL /
+        INVALID_SUBSCRIPTION_TRANSITION. INVALID_SUBSCRIPTION_TRANSITION
+        covers every "wrong current state" case uniformly, including what a
+        client might expect as SUBSCRIPTION_ALREADY_ACTIVE (activating an
+        already-ACTIVE subscription) or SUBSCRIPTION_EXPIRED (acting on an
+        EXPIRED one) - see the Error Code Compliance Mapping note above.
       content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' }, example: { success: false, error: { code: INVALID_SUBSCRIPTION_TRANSITION, message: "This transition is not allowed from the subscription's current state." } } } }
     InvoiceTransitionError:
-      description: INVALID_INVOICE_TRANSITION
+      description: >
+        INVALID_INVOICE_TRANSITION - also the code returned for any
+        mutation attempted on an already-issued (financially locked)
+        invoice, since no generic update endpoint exists for Invoice; see
+        the Error Code Compliance Mapping note above (FINANCIAL_RECORD_LOCKED).
       content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' }, example: { success: false, error: { code: INVALID_INVOICE_TRANSITION, message: "Only a draft invoice can be issued." } } } }
     ProductList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedProducts' } } } }
     ProductItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Product' } } } ] } } } }

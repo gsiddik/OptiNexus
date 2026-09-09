@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { plansApi } from '../../../api/endpoints';
+import { plansApi, productsApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import { ErrorAlert } from '../../../components/ErrorAlert';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { LifecycleActions } from '../../../components/LifecycleActions';
 import { Modal } from '../../../components/Modal';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
+import { CapabilityPicker } from '../../../components/CapabilityPicker';
 import { PermissionGuard } from '../../../auth/PermissionGuard';
 import { useAuth } from '../../../auth/useAuth';
 import { unwrapError } from '../../../api/client';
-import type { Plan, PlanLimit } from '../../../api/types';
+import type { Application, Capability, Plan, PlanLimit } from '../../../api/types';
 
 export function PlanDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -86,11 +88,85 @@ export function PlanDetailPage() {
             <AddLimitForm planId={plan.id} onAdded={reloadLimits} />
           </PermissionGuard>
         </div>
+
+        <PlanCapabilities planId={plan.id} productId={plan.product_id} />
       </div>
 
       <Modal open={showClone} title="Clone Plan" onClose={() => setShowClone(false)}>
         <ClonePlanForm planId={plan.id} onCloned={() => setShowClone(false)} />
       </Modal>
+    </div>
+  );
+}
+
+/**
+ * Plans have no direct Application relationship of their own (only
+ * Products bundle Applications, per the Phase 2 domain model) - the
+ * capability picker is scoped to the applications already attached to the
+ * plan's parent product.
+ */
+function PlanCapabilities({ planId, productId }: { planId: string; productId: string }) {
+  const { data: capabilities, loading, error, reload } = useApiResource<Capability[]>(() => plansApi.capabilities(planId), [planId]);
+  const { data: applications } = useApiResource<Application[]>(() => productsApi.applications(productId), [productId]);
+  const [pendingDetach, setPendingDetach] = useState<Capability | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function attach(capabilityId: string) {
+    setActionError(null);
+    try {
+      await plansApi.attachCapability(planId, capabilityId);
+      reload();
+    } catch (err) {
+      setActionError(unwrapError(err).message);
+    }
+  }
+
+  async function confirmDetach() {
+    if (!pendingDetach) return;
+    setActionError(null);
+    try {
+      await plansApi.detachCapability(planId, pendingDetach.id);
+      reload();
+    } catch (err) {
+      setActionError(unwrapError(err).message);
+    } finally {
+      setPendingDetach(null);
+    }
+  }
+
+  return (
+    <div className="card">
+      <h3>Capabilities</h3>
+      <ErrorAlert message={error ?? actionError} />
+      {loading ? (
+        <LoadingSpinner />
+      ) : (
+        <ul className="chip-list">
+          {(capabilities ?? []).map((c) => (
+            <li key={c.id} className="chip removable">
+              {c.name} <code>{c.code}</code>
+              <PermissionGuard permission="cgo.plan.capability.revoke">
+                <button onClick={() => setPendingDetach(c)} aria-label={`Detach ${c.name}`}>×</button>
+              </PermissionGuard>
+            </li>
+          ))}
+          {!capabilities?.length && <span className="muted">No capabilities included.</span>}
+        </ul>
+      )}
+
+      <PermissionGuard permission="cgo.plan.capability.assign">
+        <CapabilityPicker applications={applications ?? []} onAttach={attach} />
+      </PermissionGuard>
+
+      <ConfirmDialog
+        open={!!pendingDetach}
+        title="Detach Capability"
+        message={`Remove "${pendingDetach?.name}" from this plan?`}
+        confirmLabel="Detach"
+        danger
+        onConfirm={confirmDetach}
+        onCancel={() => setPendingDetach(null)}
+      />
     </div>
   );
 }

@@ -12,6 +12,15 @@ const NAV_ITEMS = [
   { to: '/users', label: 'Users' },
   { to: '/audit-logs', label: 'Audit Logs' },
   { to: '/service-accounts', label: 'Service Accounts' },
+  { to: '/products', label: 'Products' },
+  { to: '/plans', label: 'Plans' },
+  { to: '/addons', label: 'Add-ons' },
+  { to: '/prices', label: 'Pricing' },
+  { to: '/pricing/simulate', label: 'Simulate Price' },
+  { to: '/subscriptions', label: 'Subscriptions' },
+  { to: '/usage', label: 'Usage' },
+  { to: '/billings', label: 'Billing' },
+  { to: '/invoices', label: 'Invoices' },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {

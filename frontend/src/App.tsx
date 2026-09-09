@@ -18,6 +18,23 @@ import { UsersListPage } from './pages/users/UsersListPage';
 import { UserDetailPage } from './pages/users/UserDetailPage';
 import { AuditLogsPage } from './pages/audit/AuditLogsPage';
 import { ServiceAccountsPage } from './pages/service-accounts/ServiceAccountsPage';
+import { ProductsListPage } from './pages/commercial/products/ProductsListPage';
+import { ProductDetailPage } from './pages/commercial/products/ProductDetailPage';
+import { PlansListPage } from './pages/commercial/plans/PlansListPage';
+import { PlanDetailPage } from './pages/commercial/plans/PlanDetailPage';
+import { AddonsListPage } from './pages/commercial/addons/AddonsListPage';
+import { AddonDetailPage } from './pages/commercial/addons/AddonDetailPage';
+import { PricesListPage } from './pages/commercial/pricing/PricesListPage';
+import { PriceDetailPage } from './pages/commercial/pricing/PriceDetailPage';
+import { PricingSimulatorPage } from './pages/commercial/pricing/PricingSimulatorPage';
+import { SubscriptionsListPage } from './pages/commercial/subscriptions/SubscriptionsListPage';
+import { SubscriptionDetailPage } from './pages/commercial/subscriptions/SubscriptionDetailPage';
+import { TenantEntitlementsPage } from './pages/commercial/entitlements/TenantEntitlementsPage';
+import { UsageEventsPage } from './pages/commercial/usage/UsageEventsPage';
+import { BillingsListPage } from './pages/commercial/billing/BillingsListPage';
+import { BillingDetailPage } from './pages/commercial/billing/BillingDetailPage';
+import { InvoicesListPage } from './pages/commercial/invoices/InvoicesListPage';
+import { InvoiceDetailPage } from './pages/commercial/invoices/InvoiceDetailPage';
 
 function Protected({ children }: { children: ReactNode }) {
   return (
@@ -47,6 +64,23 @@ export default function App() {
           <Route path="/users/:id" element={<Protected><UserDetailPage /></Protected>} />
           <Route path="/audit-logs" element={<Protected><AuditLogsPage /></Protected>} />
           <Route path="/service-accounts" element={<Protected><ServiceAccountsPage /></Protected>} />
+          <Route path="/products" element={<Protected><ProductsListPage /></Protected>} />
+          <Route path="/products/:id" element={<Protected><ProductDetailPage /></Protected>} />
+          <Route path="/plans" element={<Protected><PlansListPage /></Protected>} />
+          <Route path="/plans/:id" element={<Protected><PlanDetailPage /></Protected>} />
+          <Route path="/addons" element={<Protected><AddonsListPage /></Protected>} />
+          <Route path="/addons/:id" element={<Protected><AddonDetailPage /></Protected>} />
+          <Route path="/prices" element={<Protected><PricesListPage /></Protected>} />
+          <Route path="/prices/:id" element={<Protected><PriceDetailPage /></Protected>} />
+          <Route path="/pricing/simulate" element={<Protected><PricingSimulatorPage /></Protected>} />
+          <Route path="/subscriptions" element={<Protected><SubscriptionsListPage /></Protected>} />
+          <Route path="/subscriptions/:id" element={<Protected><SubscriptionDetailPage /></Protected>} />
+          <Route path="/tenants/:tenantId/entitlements" element={<Protected><TenantEntitlementsPage /></Protected>} />
+          <Route path="/usage" element={<Protected><UsageEventsPage /></Protected>} />
+          <Route path="/billings" element={<Protected><BillingsListPage /></Protected>} />
+          <Route path="/billings/:id" element={<Protected><BillingDetailPage /></Protected>} />
+          <Route path="/invoices" element={<Protected><InvoicesListPage /></Protected>} />
+          <Route path="/invoices/:id" element={<Protected><InvoiceDetailPage /></Protected>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

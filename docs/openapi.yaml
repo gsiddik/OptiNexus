@@ -77,6 +77,32 @@ info:
       endpoint at all (only specific, individually-guarded lifecycle
       transitions), so "locked" is enforced by the absence of a mutation
       path, not merely by a runtime check.
+
+    ## Phase 3 Error Code Compliance Mapping
+    Every mandated Phase 3 error code is emitted exactly as named, with
+    three narrow exceptions where the shipped behavior is more specific
+    (never less informative) than the mandated code:
+
+    - **POLICY_DENIED** -> policy evaluation returns a `reason_code` of
+      `POLICY_EXPLICIT_DENY` (an explicit DENY policy matched) or
+      `POLICY_NO_MATCH` (no policy had an opinion) rather than one generic
+      "denied" code, so a caller of `POST /policies/simulate` or
+      `POST /access/evaluate` can distinguish "something explicitly
+      forbade this" from "nothing granted it either" - useful information
+      the single mandated code would have discarded.
+    - **INTEGRATION_AUTH_FAILED** -> not distinguished from
+      `INTEGRATION_DELIVERY_FAILED` today. The outbound HTTP client
+      reports success/failure by status code family; a 401/403 from the
+      target system is recorded in the `IntegrationLog` as a normal
+      failed delivery. Reserved in the schema for a future release that
+      inspects response status to separate "the target rejected our
+      credential" from "the target call failed for any other reason."
+    - **IDEMPOTENCY_CONFLICT** -> event replay uses `EVENT_DUPLICATE`
+      specifically (same `event_id`, different payload); Workflow
+      instance triggering and Notification dispatch instead replay the
+      *existing* resource with a 200/201 rather than erroring at all,
+      since a same-key retry that reproduces the original result is the
+      correct idempotent behavior, not a conflict to report.
   contact:
     name: Platform Engineering
 
@@ -127,6 +153,28 @@ tags:
     description: "Phase 2 — deterministic billing calculation, review, finalization, and adjustments"
   - name: Invoices
     description: "Phase 2 — invoice generation from finalized billing and payment lifecycle"
+  - name: Policies
+    description: "Phase 3 — declarative contextual authorization/routing conditions, evaluated with explicit-deny precedence"
+  - name: Workflows
+    description: "Phase 3 — versioned process definitions (steps/transitions) that orchestrate approvals, integrations, and internal actions"
+  - name: Workflow Instances
+    description: "Phase 3 — running/completed executions of a Workflow, with full step history and correlation"
+  - name: Approval Definitions
+    description: "Phase 3 — the approval matrix (levels, approver resolution, rule type) for a business decision"
+  - name: Approval Requests
+    description: "Phase 3 — individual human-decision requests raised against an Approval Definition, plus delegation"
+  - name: Integrations
+    description: "Phase 3 — registry of how CGO communicates with external applications (endpoints, credentials, delivery logs)"
+  - name: Events
+    description: "Phase 3 — the event catalog (schema registry) and trusted M2M event ingestion"
+  - name: Event Deliveries
+    description: "Phase 3 — outbox-style fan-out of an ingested event to its Workflow/Notification consumers"
+  - name: Feature Flags
+    description: "Phase 3 — active capability/config toggles, independent of Entitlement/Permission/Capability Registry"
+  - name: Notifications
+    description: "Phase 3 — templates, trigger rules, and queued delivery across EMAIL/IN_APP/WEBHOOK channels"
+  - name: Access
+    description: "Phase 3 — aggregated effective-access evaluation (entitlement + permission + policy + feature flag)"
 
 security:
   - BearerAuth: []
@@ -1451,6 +1499,388 @@ paths:
   /invoices/{invoice}/cancel:
     parameters: [{ $ref: '#/components/parameters/InvoiceId' }]
     post: { tags: [Invoices], summary: Cancel a draft invoice before it is ever issued (from DRAFT only), responses: { '200': { $ref: '#/components/responses/InvoiceItem' }, '409': { $ref: '#/components/responses/InvoiceTransitionError' } } }
+
+  # ------------------------------------------------------------- Policies
+  /policies:
+    get:
+      tags: [Policies]
+      summary: List policies
+      parameters: [{ $ref: '#/components/parameters/Status' }, { name: policy_type, in: query, schema: { type: string } }, { $ref: '#/components/parameters/PerPage' }]
+      responses: { '200': { $ref: '#/components/responses/PolicyList' }, '401': { $ref: '#/components/responses/Unauthenticated' } }
+    post:
+      tags: [Policies]
+      summary: Create a policy (DRAFT)
+      description: "condition_definition is validated for structural safety server-side (no eval/PHP/JS/SQL/shell) - a violation is rejected as POLICY_INVALID, not a generic VALIDATION_ERROR."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/PolicyInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/PolicyItem' }, '422': { $ref: '#/components/responses/PolicyInvalid' } }
+  /policies/simulate:
+    post:
+      tags: [Policies]
+      summary: Simulate policy evaluation (no side effects)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/PolicySimulateInput' } } } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/PolicySimulationResult' } } } ] } } } } }
+  /policies/{policy}:
+    parameters: [{ $ref: '#/components/parameters/PolicyId' }]
+    get: { tags: [Policies], summary: Get a policy, responses: { '200': { $ref: '#/components/responses/PolicyItem' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    put:
+      tags: [Policies]
+      summary: Update a policy (bumps version when effect/condition/priority change)
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/PolicyInput' } } } }
+      responses: { '200': { $ref: '#/components/responses/PolicyItem' }, '422': { $ref: '#/components/responses/PolicyInvalid' } }
+  /policies/{policy}/activate:
+    parameters: [{ $ref: '#/components/parameters/PolicyId' }]
+    post: { tags: [Policies], summary: Activate (from DRAFT/INACTIVE), responses: { '200': { $ref: '#/components/responses/PolicyItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /policies/{policy}/deactivate:
+    parameters: [{ $ref: '#/components/parameters/PolicyId' }]
+    post: { tags: [Policies], summary: Deactivate (from ACTIVE), responses: { '200': { $ref: '#/components/responses/PolicyItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /policies/{policy}/deprecate:
+    parameters: [{ $ref: '#/components/parameters/PolicyId' }]
+    post: { tags: [Policies], summary: "Deprecate (from ACTIVE/INACTIVE, terminal)", responses: { '200': { $ref: '#/components/responses/PolicyItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /policies/{policy}/clone:
+    parameters: [{ $ref: '#/components/parameters/PolicyId' }]
+    post:
+      tags: [Policies]
+      summary: Clone into a new DRAFT policy
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [policy_code], properties: { policy_code: { type: string }, name: { type: string } } } } } }
+      responses: { '201': { $ref: '#/components/responses/PolicyItem' } }
+
+  # ------------------------------------------------------------ Workflows
+  /workflows:
+    get:
+      tags: [Workflows]
+      summary: List workflows
+      parameters: [{ $ref: '#/components/parameters/Status' }, { name: trigger_type, in: query, schema: { type: string } }, { $ref: '#/components/parameters/PerPage' }]
+      responses: { '200': { $ref: '#/components/responses/WorkflowList' }, '401': { $ref: '#/components/responses/Unauthenticated' } }
+    post:
+      tags: [Workflows]
+      summary: Create a workflow with its initial DRAFT definition (version 1)
+      description: "Structural validation: unique non-empty step_key, exactly one START, at least one END, valid step_type, valid per-type config, no dangling non-END step, every step reachable from START, no invalid transition reference."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/WorkflowInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/WorkflowItem' }, '422': { $ref: '#/components/responses/WorkflowInvalid' } }
+  /workflows/{workflow}:
+    parameters: [{ $ref: '#/components/parameters/WorkflowId' }]
+    get: { tags: [Workflows], summary: Get a workflow (includes its draft version/steps/transitions), responses: { '200': { $ref: '#/components/responses/WorkflowItem' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    put:
+      tags: [Workflows]
+      summary: Replace the DRAFT version's steps/transitions
+      description: "The ACTIVE version is immutable; this always writes to (or creates) the DRAFT version, current_version + 1."
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/WorkflowInput' } } } }
+      responses: { '200': { $ref: '#/components/responses/WorkflowItem' }, '422': { $ref: '#/components/responses/WorkflowInvalid' } }
+  /workflows/{workflow}/clone:
+    parameters: [{ $ref: '#/components/parameters/WorkflowId' }]
+    post:
+      tags: [Workflows]
+      summary: Clone into a new DRAFT workflow
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [workflow_code], properties: { workflow_code: { type: string }, name: { type: string } } } } } }
+      responses: { '201': { $ref: '#/components/responses/WorkflowItem' } }
+  /workflows/{workflow}/validate:
+    parameters: [{ $ref: '#/components/parameters/WorkflowId' }]
+    post: { tags: [Workflows], summary: Validate the DRAFT version's structure without activating it, responses: { '200': { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: object, properties: { valid: { type: boolean }, errors: { type: array, items: { type: string } } } } } } ] } } } } } }
+  /workflows/{workflow}/activate:
+    parameters: [{ $ref: '#/components/parameters/WorkflowId' }]
+    post:
+      tags: [Workflows]
+      summary: Activate the DRAFT version
+      description: "Re-validates the draft; on success, retires any existing ACTIVE version and promotes the draft atomically. The newly-ACTIVE version becomes immutable."
+      responses: { '200': { $ref: '#/components/responses/WorkflowItem' }, '422': { $ref: '#/components/responses/WorkflowInvalid' } }
+  /workflows/{workflow}/deactivate:
+    parameters: [{ $ref: '#/components/parameters/WorkflowId' }]
+    post: { tags: [Workflows], summary: Deactivate (from ACTIVE), responses: { '200': { $ref: '#/components/responses/WorkflowItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /workflows/{workflow}/execute:
+    parameters: [{ $ref: '#/components/parameters/WorkflowId' }]
+    post:
+      tags: [Workflows]
+      summary: Manually trigger a workflow instance
+      description: "Requires cgo.workflow.execute. idempotency_key (if supplied) makes a repeated call with the same key return the existing instance rather than creating a duplicate."
+      requestBody: { content: { application/json: { schema: { type: object, properties: { payload: { type: object }, idempotency_key: { type: string }, correlation_id: { type: string } } } } } }
+      responses: { '201': { $ref: '#/components/responses/WorkflowInstanceItem' }, '422': { $ref: '#/components/responses/WorkflowNotActive' } }
+  /workflow-instances:
+    get:
+      tags: [Workflow Instances]
+      summary: List workflow instances (correlation-aware observability view)
+      parameters: [{ name: workflow_id, in: query, schema: { type: string, format: uuid } }, { $ref: '#/components/parameters/Status' }, { $ref: '#/components/parameters/CorrelationId' }, { $ref: '#/components/parameters/PerPage' }]
+      responses: { '200': { $ref: '#/components/responses/WorkflowInstanceList' }, '401': { $ref: '#/components/responses/Unauthenticated' } }
+  /workflow-instances/{workflowInstance}:
+    parameters: [{ $ref: '#/components/parameters/WorkflowInstanceId' }]
+    get: { tags: [Workflow Instances], summary: Get an instance and its full step history, responses: { '200': { $ref: '#/components/responses/WorkflowInstanceItem' }, '404': { $ref: '#/components/responses/NotFound' } } }
+  /workflow-instances/{workflowInstance}/retry:
+    parameters: [{ $ref: '#/components/parameters/WorkflowInstanceId' }]
+    post: { tags: [Workflow Instances], summary: Retry the latest FAILED step (only from FAILED), responses: { '200': { $ref: '#/components/responses/WorkflowInstanceItem' }, '409': { description: Only a FAILED instance can be retried, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } } } }
+  /workflow-instances/{workflowInstance}/cancel:
+    parameters: [{ $ref: '#/components/parameters/WorkflowInstanceId' }]
+    post: { tags: [Workflow Instances], summary: Cancel an open instance, responses: { '200': { $ref: '#/components/responses/WorkflowInstanceItem' }, '409': { description: Only an open (non-terminal) instance can be cancelled, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } } } }
+
+  # ------------------------------------------------------------ Approvals
+  /approval-definitions:
+    get:
+      tags: [Approval Definitions]
+      summary: List approval definitions
+      parameters: [{ $ref: '#/components/parameters/Status' }, { $ref: '#/components/parameters/PerPage' }]
+      responses: { '200': { $ref: '#/components/responses/ApprovalDefinitionList' }, '401': { $ref: '#/components/responses/Unauthenticated' } }
+    post:
+      tags: [Approval Definitions]
+      summary: Create an approval definition (DRAFT)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ApprovalDefinitionInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/ApprovalDefinitionItem' }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /approval-definitions/{approvalDefinition}:
+    parameters: [{ $ref: '#/components/parameters/ApprovalDefinitionId' }]
+    get: { tags: [Approval Definitions], summary: Get an approval definition and its levels, responses: { '200': { $ref: '#/components/responses/ApprovalDefinitionItem' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    put:
+      tags: [Approval Definitions]
+      summary: Update an approval definition (including status)
+      requestBody: { content: { application/json: { schema: { type: object, properties: { name: { type: string }, description: { type: string }, status: { type: string, enum: [DRAFT, ACTIVE, INACTIVE] }, self_approval_allowed: { type: boolean }, expires_after_hours: { type: integer, nullable: true } } } } } }
+      responses: { '200': { $ref: '#/components/responses/ApprovalDefinitionItem' } }
+  /approval-requests:
+    get:
+      tags: [Approval Requests]
+      summary: List approval requests (correlation-aware observability view)
+      parameters: [{ $ref: '#/components/parameters/Status' }, { $ref: '#/components/parameters/CorrelationId' }, { $ref: '#/components/parameters/PerPage' }]
+      responses: { '200': { $ref: '#/components/responses/ApprovalRequestList' }, '401': { $ref: '#/components/responses/Unauthenticated' } }
+  /approval-requests/{approvalRequest}:
+    parameters: [{ $ref: '#/components/parameters/ApprovalRequestId' }]
+    get: { tags: [Approval Requests], summary: Get an approval request and its decision history, responses: { '200': { $ref: '#/components/responses/ApprovalRequestItem' }, '404': { $ref: '#/components/responses/NotFound' } } }
+  /approval-requests/{approvalRequest}/approve:
+    parameters: [{ $ref: '#/components/parameters/ApprovalRequestId' }]
+    post:
+      tags: [Approval Requests]
+      summary: Approve the active level
+      description: "Rejects self-approval (unless the definition allows it), decisions from an actor not resolved/role-matched to the active level, replay of an already-decided step, and decisions after expiry. Decisions are immutable once recorded."
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/ApprovalDecisionInput' } } } }
+      responses: { '200': { $ref: '#/components/responses/ApprovalRequestItem' }, '403': { $ref: '#/components/responses/ApprovalDecisionError' }, '409': { $ref: '#/components/responses/ApprovalDecisionError' } }
+  /approval-requests/{approvalRequest}/reject:
+    parameters: [{ $ref: '#/components/parameters/ApprovalRequestId' }]
+    post:
+      tags: [Approval Requests]
+      summary: Reject (terminates the whole request, regardless of rule_type)
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/ApprovalDecisionInput' } } } }
+      responses: { '200': { $ref: '#/components/responses/ApprovalRequestItem' }, '403': { $ref: '#/components/responses/ApprovalDecisionError' }, '409': { $ref: '#/components/responses/ApprovalDecisionError' } }
+  /approval-requests/{approvalRequest}/return:
+    parameters: [{ $ref: '#/components/parameters/ApprovalRequestId' }]
+    post:
+      tags: [Approval Requests]
+      summary: Return (terminates the whole request, regardless of rule_type)
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/ApprovalDecisionInput' } } } }
+      responses: { '200': { $ref: '#/components/responses/ApprovalRequestItem' }, '403': { $ref: '#/components/responses/ApprovalDecisionError' }, '409': { $ref: '#/components/responses/ApprovalDecisionError' } }
+  /approval-delegations:
+    post:
+      tags: [Approval Requests]
+      summary: Create a delegation (act on behalf of another approver)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ApprovalDelegationInput' } } } }
+      responses: { '201': { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/ApprovalDelegation' } } } ] } } } } }
+  /approval-delegations/{approvalDelegation}:
+    parameters: [{ $ref: '#/components/parameters/ApprovalDelegationId' }]
+    delete: { tags: [Approval Requests], summary: Revoke a delegation (only the delegator may revoke their own), responses: { '200': { description: Revoked }, '403': { $ref: '#/components/responses/Unauthorized' } } }
+
+  # --------------------------------------------------------- Integrations
+  /integrations:
+    get:
+      tags: [Integrations]
+      summary: List integrations
+      parameters: [{ $ref: '#/components/parameters/Status' }, { $ref: '#/components/parameters/PerPage' }]
+      responses: { '200': { $ref: '#/components/responses/IntegrationList' }, '401': { $ref: '#/components/responses/Unauthenticated' } }
+    post:
+      tags: [Integrations]
+      summary: Register an integration (DRAFT)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/IntegrationInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/IntegrationItem' }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /integrations/{integration}:
+    parameters: [{ $ref: '#/components/parameters/IntegrationId' }]
+    get: { tags: [Integrations], summary: "Get an integration (endpoints + whether it has an active credential, never the secret)", responses: { '200': { $ref: '#/components/responses/IntegrationItem' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    put:
+      tags: [Integrations]
+      summary: Update an integration
+      requestBody: { content: { application/json: { schema: { type: object, properties: { name: { type: string }, base_url: { type: string }, timeout_seconds: { type: integer }, retry_policy: { type: object }, metadata: { type: object } } } } } }
+      responses: { '200': { $ref: '#/components/responses/IntegrationItem' } }
+  /integrations/{integration}/activate:
+    parameters: [{ $ref: '#/components/parameters/IntegrationId' }]
+    post: { tags: [Integrations], summary: Activate (from DRAFT/INACTIVE), responses: { '200': { $ref: '#/components/responses/IntegrationItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /integrations/{integration}/deactivate:
+    parameters: [{ $ref: '#/components/parameters/IntegrationId' }]
+    post: { tags: [Integrations], summary: Deactivate (from ACTIVE), responses: { '200': { $ref: '#/components/responses/IntegrationItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /integrations/{integration}/test:
+    parameters: [{ $ref: '#/components/parameters/IntegrationId' }]
+    post:
+      tags: [Integrations]
+      summary: Synchronous connectivity test
+      description: "Runs through the same SSRF-protected client as real deliveries (scheme/host allowlist, private/reserved IP blocking, DNS-rebinding-safe IP pinning, redirects disabled). Always returns 200 - ok:false describes the failure, it is not itself an error response."
+      responses: { '200': { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/IntegrationTestResult' } } } ] } } } } }
+  /integrations/{integration}/logs:
+    parameters: [{ $ref: '#/components/parameters/IntegrationId' }]
+    get: { tags: [Integrations], summary: Paginated delivery log, parameters: [{ $ref: '#/components/parameters/PerPage' }], responses: { '200': { $ref: '#/components/responses/IntegrationLogList' } } }
+  /integrations/{integration}/credentials:
+    parameters: [{ $ref: '#/components/parameters/IntegrationId' }]
+    post:
+      tags: [Integrations]
+      summary: Create/replace the active credential
+      description: "Encrypted at rest immediately (AES-256, Laravel's encrypted cast). Never returned in plaintext by this or any other endpoint after this call."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/IntegrationCredentialInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/IntegrationCredentialItem' } }
+  /integrations/{integration}/credentials/rotate:
+    parameters: [{ $ref: '#/components/parameters/IntegrationId' }]
+    post:
+      tags: [Integrations]
+      summary: Rotate the active credential
+      description: "Atomically marks the current ACTIVE credential ROTATED and creates the new one ACTIVE - a DB-level partial unique index guarantees at most one ACTIVE credential per integration at any time."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/IntegrationCredentialInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/IntegrationCredentialItem' } }
+  /integrations/{integration}/credentials/revoke:
+    parameters: [{ $ref: '#/components/parameters/IntegrationId' }]
+    post: { tags: [Integrations], summary: Revoke the active credential, responses: { '200': { $ref: '#/components/responses/IntegrationCredentialItem' }, '409': { $ref: '#/components/responses/Duplicate' } } }
+
+  # -------------------------------------------------------------- Events
+  /event-catalog:
+    get:
+      tags: [Events]
+      summary: List registered event types
+      parameters: [{ $ref: '#/components/parameters/Status' }, { $ref: '#/components/parameters/PerPage' }]
+      responses: { '200': { $ref: '#/components/responses/EventCatalogEntryList' }, '401': { $ref: '#/components/responses/Unauthenticated' } }
+    post:
+      tags: [Events]
+      summary: Register an event type
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/EventCatalogEntryInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/EventCatalogEntryItem' }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /event-catalog/{eventCatalogEntry}:
+    parameters: [{ $ref: '#/components/parameters/EventCatalogEntryId' }]
+    get: { tags: [Events], summary: Get an event type and its payload schema, responses: { '200': { $ref: '#/components/responses/EventCatalogEntryItem' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    put: { tags: [Events], summary: Update an event type (e.g. status), requestBody: { content: { application/json: { schema: { type: object, properties: { name: { type: string }, description: { type: string }, status: { type: string, enum: [ACTIVE, DEPRECATED, DISABLED] } } } } } }, responses: { '200': { $ref: '#/components/responses/EventCatalogEntryItem' } } }
+  /events:
+    post:
+      tags: [Events]
+      summary: Ingest an event (trusted M2M only)
+      description: "Machine-to-machine only, via a client-credentials token with the event.write scope - never a human session, so an arbitrary user can never impersonate a producer. Enforces trusted application identity, tenant-application assignment, schema validation, a 64KB payload limit, and idempotency by event_id."
+      security: [{ OAuth2ClientCredentials: [event.write] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/EventEnvelope' } } } }
+      responses: { '201': { $ref: '#/components/responses/EventItem' }, '200': { description: "Idempotent replay of an already-ingested event_id", content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Event' } } } ] } } } }, '403': { $ref: '#/components/responses/Unauthorized' }, '409': { $ref: '#/components/responses/EventDuplicate' }, '422': { $ref: '#/components/responses/EventInvalid' } }
+  /event-deliveries:
+    get:
+      tags: [Event Deliveries]
+      summary: List event deliveries (correlation/consumer-aware observability view)
+      parameters: [{ name: event_id, in: query, schema: { type: string, format: uuid } }, { name: consumer_type, in: query, schema: { type: string } }, { $ref: '#/components/parameters/Status' }, { $ref: '#/components/parameters/PerPage' }]
+      responses: { '200': { $ref: '#/components/responses/EventDeliveryList' }, '401': { $ref: '#/components/responses/Unauthenticated' } }
+  /event-deliveries/{delivery}:
+    parameters: [{ $ref: '#/components/parameters/EventDeliveryId' }]
+    get: { tags: [Event Deliveries], summary: Get a delivery, responses: { '200': { $ref: '#/components/responses/EventDeliveryItem' }, '404': { $ref: '#/components/responses/NotFound' } } }
+  /event-deliveries/{delivery}/retry:
+    parameters: [{ $ref: '#/components/parameters/EventDeliveryId' }]
+    post: { tags: [Event Deliveries], summary: Retry a FAILED delivery, responses: { '200': { $ref: '#/components/responses/EventDeliveryItem' }, '409': { description: Only a FAILED delivery can be retried, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } } } }
+  /event-deliveries/{delivery}/discard:
+    parameters: [{ $ref: '#/components/parameters/EventDeliveryId' }]
+    post: { tags: [Event Deliveries], summary: "Discard a delivery (never silent - always an explicit, audited action)", responses: { '200': { $ref: '#/components/responses/EventDeliveryItem' }, '409': { description: "A DELIVERED or already-DISCARDED delivery cannot be discarded", content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } } } }
+
+  # --------------------------------------------------------- Feature Flags
+  /feature-flags:
+    get:
+      tags: [Feature Flags]
+      summary: List feature flags
+      parameters: [{ $ref: '#/components/parameters/Status' }, { $ref: '#/components/parameters/PerPage' }]
+      responses: { '200': { $ref: '#/components/responses/FeatureFlagList' }, '401': { $ref: '#/components/responses/Unauthenticated' } }
+    post:
+      tags: [Feature Flags]
+      summary: Create a feature flag (DRAFT)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/FeatureFlagInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/FeatureFlagItem' }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /feature-flags/evaluate:
+    post:
+      tags: [Feature Flags]
+      summary: Evaluate effective availability for a tenant/user
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/FeatureFlagEvaluateInput' } } } }
+      responses: { '200': { $ref: '#/components/responses/FeatureFlagEvaluation' }, '404': { $ref: '#/components/responses/FeatureFlagNotFound' } }
+  /feature-flags/{featureFlag}:
+    parameters: [{ $ref: '#/components/parameters/FeatureFlagId' }]
+    get: { tags: [Feature Flags], summary: Get a feature flag and its overrides, responses: { '200': { $ref: '#/components/responses/FeatureFlagItem' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    put: { tags: [Feature Flags], summary: Update a feature flag, requestBody: { content: { application/json: { schema: { type: object, properties: { name: { type: string }, description: { type: string }, default_value: {} } } } } }, responses: { '200': { $ref: '#/components/responses/FeatureFlagItem' } } }
+  /feature-flags/{featureFlag}/activate:
+    parameters: [{ $ref: '#/components/parameters/FeatureFlagId' }]
+    post: { tags: [Feature Flags], summary: Activate (from DRAFT/INACTIVE), responses: { '200': { $ref: '#/components/responses/FeatureFlagItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /feature-flags/{featureFlag}/deactivate:
+    parameters: [{ $ref: '#/components/parameters/FeatureFlagId' }]
+    post: { tags: [Feature Flags], summary: "Deactivate (from ACTIVE - always evaluates enabled:false while deactivated)", responses: { '200': { $ref: '#/components/responses/FeatureFlagItem' }, '409': { $ref: '#/components/responses/InvalidStateTransition' } } }
+  /feature-flags/{featureFlag}/overrides:
+    parameters: [{ $ref: '#/components/parameters/FeatureFlagId' }]
+    post:
+      tags: [Feature Flags]
+      summary: Add or replace a scoped override
+      description: "A TENANT-scoped override cannot target a tenant unrelated to the flag's own application (no cross-tenant override leakage)."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/FeatureFlagOverrideInput' } } } }
+      responses: { '201': { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/FeatureFlagOverride' } } } ] } } } }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /feature-flags/{featureFlag}/overrides/{override}:
+    parameters: [{ $ref: '#/components/parameters/FeatureFlagId' }, { $ref: '#/components/parameters/FeatureFlagOverrideId' }]
+    delete: { tags: [Feature Flags], summary: Remove an override, responses: { '200': { description: Removed }, '404': { $ref: '#/components/responses/NotFound' } } }
+
+  # -------------------------------------------------------- Notifications
+  /notification-templates:
+    get:
+      tags: [Notifications]
+      summary: List notification templates
+      parameters: [{ name: channel, in: query, schema: { type: string } }, { $ref: '#/components/parameters/Status' }, { $ref: '#/components/parameters/PerPage' }]
+      responses: { '200': { $ref: '#/components/responses/NotificationTemplateList' }, '401': { $ref: '#/components/responses/Unauthenticated' } }
+    post:
+      tags: [Notifications]
+      summary: Create a template (DRAFT)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/NotificationTemplateInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/NotificationTemplateItem' }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /notification-templates/{notificationTemplate}:
+    parameters: [{ $ref: '#/components/parameters/NotificationTemplateId' }]
+    get: { tags: [Notifications], summary: Get a template, responses: { '200': { $ref: '#/components/responses/NotificationTemplateItem' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    put:
+      tags: [Notifications]
+      summary: Update a template (editing content bumps version)
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/NotificationTemplateUpdateInput' } } } }
+      responses: { '200': { $ref: '#/components/responses/NotificationTemplateItem' } }
+  /notification-rules:
+    get:
+      tags: [Notifications]
+      summary: List notification rules
+      parameters: [{ name: trigger_event_key, in: query, schema: { type: string } }, { $ref: '#/components/parameters/Status' }, { $ref: '#/components/parameters/PerPage' }]
+      responses: { '200': { $ref: '#/components/responses/NotificationRuleList' }, '401': { $ref: '#/components/responses/Unauthenticated' } }
+    post:
+      tags: [Notifications]
+      summary: Create a rule (ACTIVE)
+      description: "channel must match the selected template's channel; EVENT_CONTEXT recipient_reference must start with data. (only the trusted event payload, never actor/context, to prevent an external producer redirecting notifications to unrelated tenants/users)."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/NotificationRuleInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/NotificationRuleItem' }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /notification-rules/{notificationRule}:
+    parameters: [{ $ref: '#/components/parameters/NotificationRuleId' }]
+    get: { tags: [Notifications], summary: Get a rule, responses: { '200': { $ref: '#/components/responses/NotificationRuleItem' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    put: { tags: [Notifications], summary: Update a rule (e.g. status/condition), requestBody: { content: { application/json: { schema: { type: object, properties: { name: { type: string }, condition: { $ref: '#/components/schemas/ConditionDefinition' }, recipient_reference: { type: string }, status: { type: string, enum: [ACTIVE, INACTIVE] } } } } } }, responses: { '200': { $ref: '#/components/responses/NotificationRuleItem' } } }
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications (correlation-aware delivery log)
+      parameters: [{ $ref: '#/components/parameters/Status' }, { name: channel, in: query, schema: { type: string } }, { $ref: '#/components/parameters/CorrelationId' }, { $ref: '#/components/parameters/PerPage' }]
+      responses: { '200': { $ref: '#/components/responses/NotificationList' }, '401': { $ref: '#/components/responses/Unauthenticated' } }
+  /notifications/send:
+    post:
+      tags: [Notifications]
+      summary: Send a notification directly (elevated permission)
+      description: "Bypasses rule/trigger resolution - recipients and tenant are supplied explicitly. Rejects any recipient who does not belong to a supplied tenant_id (no cross-tenant recipient leakage)."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/NotificationSendInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/NotificationSendResult' }, '422': { description: NOTIFICATION_TEMPLATE_INVALID or a rejected recipient, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } } }
+  /notifications/{notification}:
+    parameters: [{ $ref: '#/components/parameters/NotificationId' }]
+    get: { tags: [Notifications], summary: Get a notification and its delivery attempts, responses: { '200': { $ref: '#/components/responses/NotificationItem' }, '404': { $ref: '#/components/responses/NotFound' } } }
+  /notifications/{notification}/retry:
+    parameters: [{ $ref: '#/components/parameters/NotificationId' }]
+    post: { tags: [Notifications], summary: Retry (only from FAILED), responses: { '200': { $ref: '#/components/responses/NotificationItem' }, '409': { description: NOTIFICATION_NOT_RETRYABLE, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } } } }
+  /notifications/{notification}/cancel:
+    parameters: [{ $ref: '#/components/parameters/NotificationId' }]
+    post: { tags: [Notifications], summary: Cancel (only while QUEUED/PROCESSING), responses: { '200': { $ref: '#/components/responses/NotificationItem' }, '409': { description: NOTIFICATION_NOT_CANCELLABLE, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } } } }
+
+  # -------------------------------------------------------------- Access
+  /access/evaluate:
+    post:
+      tags: [Access]
+      summary: Aggregated effective-access evaluation (trusted M2M only)
+      description: >
+        Combines Authentication -> Tenant/App Context -> Subscription/
+        Entitlement -> RBAC Permission -> Policy -> Feature Flag into one
+        decision, reusing each domain's own service. Every sub-check is
+        always computed and reported (never short-circuited); `allowed`
+        is their conjunction. Never exposes matched-policy detail or
+        role/permission internals to the caller.
+      security: [{ OAuth2ClientCredentials: [access.evaluate] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AccessEvaluateInput' } } } }
+      responses: { '200': { $ref: '#/components/responses/AccessEvaluationResult' }, '403': { $ref: '#/components/responses/Unauthorized' } }
 components:
   securitySchemes:
     BearerAuth:
@@ -1471,6 +1901,8 @@ components:
             entitlement.check: "Phase 2 — evaluate entitlement decisions for a tenant"
             commercial.read: "Phase 2 — read a tenant's commercial context (plan, status, entitlements, billing period)"
             usage.write: "Phase 2 — submit metered usage events on behalf of an integrated application"
+            event.write: "Phase 3 — submit orchestration events (facts) on behalf of an integrated application"
+            access.evaluate: "Phase 3 — evaluate aggregated effective access (entitlement + permission + policy + feature flag)"
 
   parameters:
     CustomerId: { name: customer, in: path, required: true, schema: { type: string, format: uuid } }
@@ -1487,6 +1919,21 @@ components:
     SubscriptionId: { name: subscription, in: path, required: true, schema: { type: string, format: uuid } }
     BillingId: { name: billing, in: path, required: true, schema: { type: string, format: uuid } }
     InvoiceId: { name: invoice, in: path, required: true, schema: { type: string, format: uuid } }
+    PolicyId: { name: policy, in: path, required: true, schema: { type: string, format: uuid } }
+    WorkflowId: { name: workflow, in: path, required: true, schema: { type: string, format: uuid } }
+    WorkflowInstanceId: { name: workflowInstance, in: path, required: true, schema: { type: string, format: uuid } }
+    ApprovalDefinitionId: { name: approvalDefinition, in: path, required: true, schema: { type: string, format: uuid } }
+    ApprovalRequestId: { name: approvalRequest, in: path, required: true, schema: { type: string, format: uuid } }
+    ApprovalDelegationId: { name: approvalDelegation, in: path, required: true, schema: { type: string, format: uuid } }
+    IntegrationId: { name: integration, in: path, required: true, schema: { type: string, format: uuid } }
+    EventCatalogEntryId: { name: eventCatalogEntry, in: path, required: true, schema: { type: string, format: uuid } }
+    EventDeliveryId: { name: delivery, in: path, required: true, schema: { type: string, format: uuid } }
+    FeatureFlagId: { name: featureFlag, in: path, required: true, schema: { type: string, format: uuid } }
+    FeatureFlagOverrideId: { name: override, in: path, required: true, schema: { type: string, format: uuid } }
+    NotificationTemplateId: { name: notificationTemplate, in: path, required: true, schema: { type: string, format: uuid } }
+    NotificationRuleId: { name: notificationRule, in: path, required: true, schema: { type: string, format: uuid } }
+    NotificationId: { name: notification, in: path, required: true, schema: { type: string, format: uuid } }
+    CorrelationId: { name: correlation_id, in: query, schema: { type: string } }
 
   responses:
     Unauthenticated:
@@ -1556,6 +2003,53 @@ components:
     BillingItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Billing' } } } ] } } } }
     InvoiceList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedInvoices' } } } }
     InvoiceItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Invoice' } } } ] } } } }
+
+    PolicyList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedPolicies' } } } }
+    PolicyItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Policy' } } } ] } } } }
+    PolicyInvalid: { description: Structurally unsafe or malformed condition_definition, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' }, example: { success: false, error: { code: POLICY_INVALID, message: "The condition_definition is invalid." } } } } }
+    WorkflowList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedWorkflows' } } } }
+    WorkflowItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Workflow' } } } ] } } } }
+    WorkflowInvalid: { description: The workflow definition failed structural validation, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' }, example: { success: false, error: { code: WORKFLOW_INVALID, message: "The workflow definition is invalid.", details: { errors: ["Exactly one START step is required."] } } } } } }
+    WorkflowNotActive: { description: The workflow is not ACTIVE and cannot be triggered, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' }, example: { success: false, error: { code: WORKFLOW_NOT_ACTIVE, message: "This workflow could not be triggered." } } } } }
+    WorkflowInstanceList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedWorkflowInstances' } } } }
+    WorkflowInstanceItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/WorkflowInstance' } } } ] } } } }
+    ApprovalDefinitionList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedApprovalDefinitions' } } } }
+    ApprovalDefinitionItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/ApprovalDefinition' } } } ] } } } }
+    ApprovalRequestList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedApprovalRequests' } } } }
+    ApprovalRequestItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/ApprovalRequest' } } } ] } } } }
+    ApprovalDecisionError: { description: APPROVAL_NOT_PENDING / APPROVAL_NOT_ALLOWED / SELF_APPROVAL_DENIED / APPROVAL_EXPIRED, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' }, example: { success: false, error: { code: SELF_APPROVAL_DENIED, message: "You cannot approve a request you submitted yourself." } } } } }
+    IntegrationList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedIntegrations' } } } }
+    IntegrationItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Integration' } } } ] } } } }
+    IntegrationCredentialItem: { description: "Never includes the secret - metadata only", content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/IntegrationCredential' } } } ] } } } }
+    IntegrationLogList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedIntegrationLogs' } } } }
+    EventCatalogEntryList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedEventCatalogEntries' } } } }
+    EventCatalogEntryItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/EventCatalogEntry' } } } ] } } } }
+    EventItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Event' } } } ] } } } }
+    EventInvalid: { description: EVENT_INVALID / EVENT_SCHEMA_INVALID / EVENT_SOURCE_DENIED, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' }, example: { success: false, error: { code: EVENT_SCHEMA_INVALID, message: "The event payload does not match the registered schema.", details: { errors: ["remaining_days is required."] } } } } } }
+    EventDuplicate: { description: "Same event_id previously used for a different payload", content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' }, example: { success: false, error: { code: EVENT_DUPLICATE, message: "event_id already used for a different event." } } } } }
+    EventDeliveryList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedEventDeliveries' } } } }
+    EventDeliveryItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/EventDelivery' } } } ] } } } }
+    FeatureFlagList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedFeatureFlags' } } } }
+    FeatureFlagItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/FeatureFlag' } } } ] } } } }
+    FeatureFlagNotFound: { description: No feature flag exists for the given flag_key, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' }, example: { success: false, error: { code: FEATURE_FLAG_NOT_FOUND, message: "No feature flag exists for this flag_key." } } } } }
+    FeatureFlagEvaluation: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/FeatureFlagEvaluation' } } } ] } } } }
+    NotificationTemplateList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedNotificationTemplates' } } } }
+    NotificationTemplateItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/NotificationTemplate' } } } ] } } } }
+    NotificationRuleList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedNotificationRules' } } } }
+    NotificationRuleItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/NotificationRule' } } } ] } } } }
+    NotificationList: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedNotifications' } } } }
+    NotificationItem: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Notification' } } } ] } } } }
+    NotificationSendResult: { description: OK, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Notification' } } } } ] } } } }
+    AccessEvaluationResult:
+      description: OK
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties: { data: { $ref: '#/components/schemas/AccessEvaluation' } }
+          example: { success: true, data: { allowed: true, checks: { entitlement: true, permission: true, policy: true, feature_flag: true }, reason_code: null } }
   schemas:
     SuccessEnvelope:
       type: object
@@ -1593,6 +2087,35 @@ components:
                 - BILLING_ALREADY_FINALIZED
                 - BILLING_NOT_FINALIZED
                 - INVALID_INVOICE_TRANSITION
+                - POLICY_INVALID
+                - POLICY_DENIED
+                - POLICY_NOT_ACTIVE
+                - WORKFLOW_INVALID
+                - WORKFLOW_NOT_ACTIVE
+                - WORKFLOW_INSTANCE_FAILED
+                - WORKFLOW_ALREADY_COMPLETED
+                - WORKFLOW_STEP_FAILED
+                - APPROVAL_NOT_PENDING
+                - APPROVAL_NOT_ALLOWED
+                - SELF_APPROVAL_DENIED
+                - APPROVAL_EXPIRED
+                - INTEGRATION_NOT_ACTIVE
+                - INTEGRATION_AUTH_FAILED
+                - INTEGRATION_TIMEOUT
+                - INTEGRATION_DELIVERY_FAILED
+                - EVENT_INVALID
+                - EVENT_SCHEMA_INVALID
+                - EVENT_DUPLICATE
+                - EVENT_SOURCE_DENIED
+                - EVENT_DELIVERY_FAILED
+                - FEATURE_FLAG_NOT_FOUND
+                - FEATURE_FLAG_SCOPE_DENIED
+                - NOTIFICATION_TEMPLATE_INVALID
+                - NOTIFICATION_RECIPIENT_DENIED
+                - NOTIFICATION_DELIVERY_FAILED
+                - NOTIFICATION_NOT_RETRYABLE
+                - NOTIFICATION_NOT_CANCELLABLE
+                - IDEMPOTENCY_CONFLICT
             message: { type: string }
             details: { nullable: true }
 
@@ -2358,3 +2881,601 @@ components:
         - $ref: '#/components/schemas/SuccessEnvelope'
         - type: object
           properties: { data: { type: array, items: { $ref: '#/components/schemas/Invoice' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } }
+
+    # ------------------------------------------------- Phase 3 Orchestration
+    ConditionDefinition:
+      type: object
+      description: >
+        Safe declarative condition grammar shared by Policy and Workflow
+        transitions - no expressions, no code execution. Either a
+        combinator ("all"/"any"/"not" of nested conditions) or a leaf
+        {field, operator, value|eq_context}. operator is one of eq, ne,
+        gt, gte, lt, lte, in, not_in, contains, eq_context, ne_context.
+      example: { field: "context.amount", operator: "lte", value: 100 }
+    Policy:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        policy_code: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        policy_type: { type: string, enum: [AUTHORIZATION, WORKFLOW_ROUTING, APPROVAL, FEATURE, INTEGRATION, COMMERCIAL, SECURITY] }
+        tenant_id: { type: string, format: uuid, nullable: true }
+        application_id: { type: string, format: uuid, nullable: true }
+        priority: { type: integer, default: 100 }
+        effect: { type: string, enum: [ALLOW, DENY, MATCH] }
+        status: { type: string, enum: [DRAFT, ACTIVE, INACTIVE, DEPRECATED] }
+        condition_definition: { $ref: '#/components/schemas/ConditionDefinition' }
+        effective_from: { type: string, format: date-time, nullable: true }
+        effective_until: { type: string, format: date-time, nullable: true }
+        version: { type: integer }
+        created_at: { type: string, format: date-time }
+    PolicyInput:
+      type: object
+      required: [policy_code, name, policy_type, effect, condition_definition]
+      properties:
+        policy_code: { type: string }
+        name: { type: string }
+        description: { type: string }
+        policy_type: { type: string, enum: [AUTHORIZATION, WORKFLOW_ROUTING, APPROVAL, FEATURE, INTEGRATION, COMMERCIAL, SECURITY] }
+        tenant_id: { type: string, format: uuid }
+        application_id: { type: string, format: uuid }
+        priority: { type: integer }
+        effect: { type: string, enum: [ALLOW, DENY, MATCH] }
+        condition_definition: { $ref: '#/components/schemas/ConditionDefinition' }
+        effective_from: { type: string, format: date-time }
+        effective_until: { type: string, format: date-time }
+    PaginatedPolicies:
+      allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Policy' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } } } ]
+    PolicySimulateInput:
+      type: object
+      description: Never executes side effects - a pure read against ACTIVE policies.
+      properties:
+        policy_type: { type: string }
+        tenant_id: { type: string, format: uuid }
+        application_id: { type: string, format: uuid }
+        permission: { type: string }
+        action: { type: string }
+        actor: { type: object }
+        resource: { type: object }
+        context: { type: object }
+    PolicySimulationResult:
+      type: object
+      properties:
+        decision: { type: string, enum: [ALLOW, DENY, NEUTRAL] }
+        effect: { type: string }
+        reason_code: { type: string, enum: [POLICY_EXPLICIT_DENY, POLICY_ALLOW, POLICY_NO_MATCH] }
+        matched_policies:
+          type: array
+          items:
+            type: object
+            properties: { id: { type: string, format: uuid }, policy_code: { type: string }, effect: { type: string }, priority: { type: integer }, version: { type: integer } }
+
+    WorkflowStep:
+      type: object
+      properties:
+        step_key: { type: string, pattern: '^[a-zA-Z0-9_]+$' }
+        step_type: { type: string, enum: [START, CONDITION, TASK, APPROVAL, INTEGRATION, INTERNAL_ACTION, WAIT, END] }
+        name: { type: string, nullable: true }
+        config: { type: object, nullable: true, description: "Per-type: APPROVAL needs approval_definition_code; INTEGRATION needs integration_code+endpoint_key; INTERNAL_ACTION needs action (emit_event|no_op); WAIT needs duration_seconds." }
+        sort_order: { type: integer }
+    WorkflowTransition:
+      type: object
+      properties:
+        from_step_key: { type: string }
+        to_step_key: { type: string }
+        condition: { $ref: '#/components/schemas/ConditionDefinition' }
+        sort_order: { type: integer, description: "First matching transition wins; a transition with no condition always matches (default/fallback branch)." }
+    WorkflowVersion:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: integer }
+        status: { type: string, enum: [DRAFT, ACTIVE, RETIRED] }
+        activated_at: { type: string, format: date-time, nullable: true }
+        steps: { type: array, items: { $ref: '#/components/schemas/WorkflowStep' } }
+        transitions: { type: array, items: { $ref: '#/components/schemas/WorkflowTransition' } }
+    Workflow:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        workflow_code: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        tenant_id: { type: string, format: uuid, nullable: true }
+        application_id: { type: string, format: uuid, nullable: true }
+        status: { type: string, enum: [DRAFT, ACTIVE, INACTIVE, DEPRECATED] }
+        current_version: { type: integer }
+        trigger_type: { type: string, enum: [EVENT, API, MANUAL, SCHEDULED] }
+        trigger_event_key: { type: string, nullable: true }
+        draft_version: { $ref: '#/components/schemas/WorkflowVersion' }
+        created_at: { type: string, format: date-time }
+    WorkflowInput:
+      type: object
+      required: [workflow_code, name, trigger_type, steps]
+      properties:
+        workflow_code: { type: string }
+        name: { type: string }
+        description: { type: string }
+        tenant_id: { type: string, format: uuid }
+        application_id: { type: string, format: uuid }
+        trigger_type: { type: string, enum: [EVENT, API, MANUAL, SCHEDULED] }
+        trigger_event_key: { type: string, description: "Required when trigger_type is EVENT; must reference an existing event_catalog entry." }
+        steps: { type: array, items: { $ref: '#/components/schemas/WorkflowStep' }, minItems: 1 }
+        transitions: { type: array, items: { $ref: '#/components/schemas/WorkflowTransition' } }
+    PaginatedWorkflows:
+      allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Workflow' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } } } ]
+    WorkflowInstanceStep:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        workflow_step_id: { type: string, format: uuid }
+        status: { type: string, enum: [PENDING, RUNNING, WAITING, COMPLETED, FAILED, SKIPPED, CANCELLED] }
+        attempt_count: { type: integer }
+        output: { type: object, nullable: true, description: "Available to downstream CONDITION transitions as steps.<step_key>.*" }
+        last_error_code: { type: string, nullable: true }
+        last_error_message: { type: string, nullable: true, description: Sanitized - long base64-like substrings are redacted before storage. }
+        started_at: { type: string, format: date-time, nullable: true }
+        completed_at: { type: string, format: date-time, nullable: true }
+    WorkflowInstance:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        workflow_id: { type: string, format: uuid }
+        workflow_version_id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid, nullable: true }
+        application_id: { type: string, format: uuid, nullable: true }
+        status: { type: string, enum: [PENDING, RUNNING, WAITING, WAITING_APPROVAL, COMPLETED, FAILED, CANCELLED] }
+        trigger_type: { type: string }
+        trigger_event_id: { type: string, format: uuid, nullable: true }
+        trigger_payload: { type: object, nullable: true }
+        correlation_id: { type: string, nullable: true }
+        causation_id: { type: string, nullable: true }
+        idempotency_key: { type: string, nullable: true }
+        last_error_code: { type: string, nullable: true }
+        last_error_message: { type: string, nullable: true }
+        started_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time, nullable: true }
+        steps: { type: array, items: { $ref: '#/components/schemas/WorkflowInstanceStep' } }
+    PaginatedWorkflowInstances:
+      allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/WorkflowInstance' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } } } ]
+
+    ApprovalLevel:
+      type: object
+      properties:
+        level_order: { type: integer }
+        name: { type: string }
+        approver_type: { type: string, enum: [USER, ROLE, TENANT_ROLE, APPLICATION_ROLE, DYNAMIC] }
+        approver_reference: { type: string, nullable: true, description: "A user id for USER/DYNAMIC; a role code for ROLE/TENANT_ROLE/APPLICATION_ROLE." }
+        condition: { $ref: '#/components/schemas/ConditionDefinition' }
+    ApprovalDefinition:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        definition_code: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        tenant_id: { type: string, format: uuid, nullable: true }
+        application_id: { type: string, format: uuid, nullable: true }
+        rule_type: { type: string, enum: [SEQUENTIAL, ANY_OF, ALL_OF] }
+        self_approval_allowed: { type: boolean }
+        expires_after_hours: { type: integer, nullable: true }
+        status: { type: string, enum: [DRAFT, ACTIVE, INACTIVE] }
+        levels: { type: array, items: { $ref: '#/components/schemas/ApprovalLevel' } }
+        created_at: { type: string, format: date-time }
+    ApprovalDefinitionInput:
+      type: object
+      required: [definition_code, name, levels]
+      properties:
+        definition_code: { type: string }
+        name: { type: string }
+        description: { type: string }
+        tenant_id: { type: string, format: uuid }
+        application_id: { type: string, format: uuid }
+        rule_type: { type: string, enum: [SEQUENTIAL, ANY_OF, ALL_OF], default: SEQUENTIAL }
+        self_approval_allowed: { type: boolean, default: false }
+        expires_after_hours: { type: integer }
+        levels: { type: array, items: { $ref: '#/components/schemas/ApprovalLevel' }, minItems: 1, description: "level_order values must be unique." }
+    PaginatedApprovalDefinitions:
+      allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/ApprovalDefinition' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } } } ]
+    ApprovalDecision:
+      type: object
+      description: Immutable once recorded - update/delete are blocked at the model level.
+      properties:
+        id: { type: string, format: uuid }
+        decision: { type: string, enum: [APPROVE, REJECT, RETURN] }
+        comment: { type: string, nullable: true }
+        decided_by: { type: string, format: uuid, nullable: true }
+        decided_at: { type: string, format: date-time }
+    ApprovalRequestStep:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        level_order: { type: integer }
+        status: { type: string, enum: [PENDING, APPROVED, REJECTED, RETURNED, SKIPPED] }
+        resolved_approver_user_id: { type: string, format: uuid, nullable: true }
+        decision: { $ref: '#/components/schemas/ApprovalDecision' }
+    ApprovalRequest:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        approval_definition_id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid, nullable: true }
+        application_id: { type: string, format: uuid, nullable: true }
+        workflow_instance_id: { type: string, format: uuid, nullable: true }
+        requested_by: { type: string, format: uuid, nullable: true }
+        subject_type: { type: string, nullable: true }
+        subject_id: { type: string, nullable: true }
+        status: { type: string, enum: [PENDING, IN_PROGRESS, APPROVED, REJECTED, RETURNED, CANCELLED, EXPIRED] }
+        current_level: { type: integer }
+        context: { type: object, nullable: true }
+        correlation_id: { type: string, nullable: true }
+        expires_at: { type: string, format: date-time, nullable: true }
+        steps: { type: array, items: { $ref: '#/components/schemas/ApprovalRequestStep' } }
+        created_at: { type: string, format: date-time }
+    PaginatedApprovalRequests:
+      allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/ApprovalRequest' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } } } ]
+    ApprovalDecisionInput:
+      type: object
+      properties: { comment: { type: string, nullable: true } }
+    ApprovalDelegation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        delegator_user_id: { type: string, format: uuid }
+        delegate_user_id: { type: string, format: uuid }
+        approval_definition_id: { type: string, format: uuid, nullable: true, description: "Null delegates across every definition." }
+        status: { type: string, enum: [ACTIVE, REVOKED] }
+        starts_at: { type: string, format: date-time, nullable: true }
+        ends_at: { type: string, format: date-time, nullable: true }
+    ApprovalDelegationInput:
+      type: object
+      required: [delegate_user_id]
+      properties:
+        delegate_user_id: { type: string, format: uuid }
+        approval_definition_id: { type: string, format: uuid }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+
+    IntegrationEndpoint:
+      type: object
+      properties:
+        endpoint_key: { type: string }
+        method: { type: string, enum: [GET, POST, PUT, PATCH, DELETE] }
+        path: { type: string }
+    Integration:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        integration_code: { type: string }
+        name: { type: string }
+        tenant_id: { type: string, format: uuid, nullable: true }
+        source_application_id: { type: string, format: uuid }
+        target_application_id: { type: string, format: uuid, nullable: true }
+        integration_type: { type: string, enum: [REST, WEBHOOK, EVENT, INTERNAL] }
+        status: { type: string, enum: [DRAFT, ACTIVE, INACTIVE] }
+        base_url: { type: string, nullable: true }
+        timeout_seconds: { type: integer }
+        retry_policy: { type: object, nullable: true }
+        metadata: { type: object, nullable: true }
+        endpoints: { type: array, items: { $ref: '#/components/schemas/IntegrationEndpoint' } }
+        has_active_credential: { type: boolean }
+        created_at: { type: string, format: date-time }
+    IntegrationInput:
+      type: object
+      required: [integration_code, name, source_application_id, integration_type]
+      properties:
+        integration_code: { type: string }
+        name: { type: string }
+        source_application_id: { type: string, format: uuid }
+        target_application_id: { type: string, format: uuid }
+        integration_type: { type: string, enum: [REST, WEBHOOK, EVENT, INTERNAL] }
+        base_url: { type: string, description: "HTTPS required for production external endpoints." }
+        timeout_seconds: { type: integer, default: 30 }
+        retry_policy: { type: object }
+        endpoints: { type: array, items: { $ref: '#/components/schemas/IntegrationEndpoint' } }
+    PaginatedIntegrations:
+      allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Integration' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } } } ]
+    IntegrationCredential:
+      type: object
+      description: The plaintext secret is never returned by any endpoint, including this one, after creation.
+      properties:
+        id: { type: string, format: uuid }
+        integration_id: { type: string, format: uuid }
+        credential_type: { type: string, enum: [API_KEY, BEARER, BASIC, OAUTH2] }
+        reference_label: { type: string }
+        status: { type: string, enum: [ACTIVE, ROTATED, REVOKED] }
+        rotated_at: { type: string, format: date-time, nullable: true }
+        revoked_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+    IntegrationCredentialInput:
+      type: object
+      required: [credential_type, secret, reference_label]
+      properties:
+        credential_type: { type: string, enum: [API_KEY, BEARER, BASIC, OAUTH2] }
+        secret: { type: string, format: password, description: "Encrypted at rest immediately; never echoed back." }
+        reference_label: { type: string }
+    IntegrationLog:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        correlation_id: { type: string, nullable: true }
+        direction: { type: string, enum: [OUTBOUND, INBOUND] }
+        request_summary: { type: object, nullable: true }
+        response_status: { type: integer, nullable: true }
+        response_summary: { type: object, nullable: true }
+        duration_ms: { type: integer, nullable: true }
+        status: { type: string, enum: [PENDING, SUCCESS, FAILED, TIMEOUT] }
+        error_code: { type: string, nullable: true }
+        error_message: { type: string, nullable: true }
+        attempt_count: { type: integer }
+        next_retry_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+    PaginatedIntegrationLogs:
+      allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/IntegrationLog' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } } } ]
+    IntegrationTestResult:
+      type: object
+      properties:
+        ok: { type: boolean }
+        status: { type: integer, nullable: true }
+        duration_ms: { type: integer, nullable: true }
+        log_id: { type: string, format: uuid, nullable: true }
+        error: { type: string, nullable: true }
+
+    EventCatalogEntry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        event_key: { type: string, description: "{domain}.{resource}.{event} convention." }
+        application_id: { type: string, format: uuid, nullable: true }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        schema_version: { type: string }
+        payload_schema: { type: object, nullable: true, description: "Minimal JSON-Schema-like: required[] + properties.*.type." }
+        status: { type: string, enum: [ACTIVE, DEPRECATED, DISABLED] }
+    EventCatalogEntryInput:
+      type: object
+      required: [event_key, name, schema_version]
+      properties:
+        event_key: { type: string, pattern: '^[a-z0-9_]+(\.[a-z0-9_]+)+$' }
+        application_id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        schema_version: { type: string }
+        payload_schema: { type: object }
+    PaginatedEventCatalogEntries:
+      allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/EventCatalogEntry' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } } } ]
+    EventEnvelope:
+      type: object
+      description: >
+        Trusted M2M ingestion payload. event_id is client-suppliable for
+        idempotent retries (server-generated if omitted); the same
+        event_id with identical event_key+data replays the original
+        record (200), with different data it is EVENT_DUPLICATE (409).
+      required: [event_key, data]
+      properties:
+        event_id: { type: string, format: uuid }
+        event_key: { type: string }
+        event_version: { type: string }
+        occurred_at: { type: string, format: date-time }
+        tenant_id: { type: string, format: uuid, nullable: true }
+        correlation_id: { type: string }
+        causation_id: { type: string, nullable: true }
+        data: { type: object, description: "Up to 64KB; validated against the catalog entry's payload_schema." }
+    Event:
+      type: object
+      properties:
+        id: { type: string, format: uuid, description: "The primary key IS the event_id." }
+        event_key: { type: string }
+        event_version: { type: string }
+        occurred_at: { type: string, format: date-time }
+        source_application_id: { type: string, format: uuid, nullable: true }
+        tenant_id: { type: string, format: uuid, nullable: true }
+        correlation_id: { type: string, nullable: true }
+        causation_id: { type: string, nullable: true }
+        data: { type: object }
+        created_at: { type: string, format: date-time }
+    EventDelivery:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        event_id: { type: string, format: uuid }
+        consumer_type: { type: string, enum: [WORKFLOW, NOTIFICATION, WEBHOOK, INTEGRATION] }
+        consumer_reference: { type: string, nullable: true }
+        status: { type: string, enum: [PENDING, DELIVERED, FAILED, DISCARDED] }
+        attempt_count: { type: integer }
+        last_error_code: { type: string, nullable: true }
+        last_error_message: { type: string, nullable: true }
+        next_retry_at: { type: string, format: date-time, nullable: true }
+        delivered_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+    PaginatedEventDeliveries:
+      allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/EventDelivery' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } } } ]
+
+    FeatureFlagOverride:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        feature_flag_id: { type: string, format: uuid }
+        scope_type: { type: string, enum: [GLOBAL, APPLICATION, TENANT, USER] }
+        scope_id: { type: string, format: uuid, nullable: true, description: "Null only for GLOBAL scope." }
+        value: {}
+        effective_from: { type: string, format: date-time, nullable: true }
+        effective_until: { type: string, format: date-time, nullable: true }
+    FeatureFlagOverrideInput:
+      type: object
+      required: [scope_type, value]
+      properties:
+        scope_type: { type: string, enum: [GLOBAL, APPLICATION, TENANT, USER] }
+        scope_id: { type: string, format: uuid, description: "Required unless scope_type is GLOBAL. Must not reference a tenant unrelated to the flag's own application." }
+        value: {}
+        effective_from: { type: string, format: date-time }
+        effective_until: { type: string, format: date-time }
+    FeatureFlag:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        flag_key: { type: string }
+        application_id: { type: string, format: uuid, nullable: true }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        flag_type: { type: string, enum: [BOOLEAN, STRING, NUMBER, JSON] }
+        default_value: {}
+        status: { type: string, enum: [DRAFT, ACTIVE, INACTIVE] }
+        overrides: { type: array, items: { $ref: '#/components/schemas/FeatureFlagOverride' } }
+        created_at: { type: string, format: date-time }
+    FeatureFlagInput:
+      type: object
+      required: [flag_key, name, flag_type, default_value]
+      properties:
+        flag_key: { type: string }
+        application_id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        flag_type: { type: string, enum: [BOOLEAN, STRING, NUMBER, JSON] }
+        default_value: {}
+    PaginatedFeatureFlags:
+      allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/FeatureFlag' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } } } ]
+    FeatureFlagEvaluateInput:
+      type: object
+      required: [flag_key]
+      properties:
+        flag_key: { type: string }
+        tenant_id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+    FeatureFlagEvaluation:
+      type: object
+      description: "Precedence: USER > TENANT > APPLICATION > GLOBAL override > GLOBAL default."
+      properties:
+        enabled: { type: boolean }
+        value: {}
+        source: { type: string, enum: [USER, TENANT, APPLICATION, GLOBAL, GLOBAL_DEFAULT, FLAG_INACTIVE] }
+
+    NotificationTemplate:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        template_code: { type: string }
+        name: { type: string }
+        channel: { type: string, enum: [EMAIL, IN_APP, WEBHOOK] }
+        subject_template: { type: string, nullable: true }
+        body_template: { type: string, description: "Only {{ dot.path }} placeholders are substituted as plain text - no server-side code execution." }
+        language: { type: string }
+        version: { type: integer }
+        status: { type: string, enum: [DRAFT, ACTIVE, INACTIVE] }
+        created_at: { type: string, format: date-time }
+    NotificationTemplateInput:
+      type: object
+      required: [template_code, name, channel, body_template]
+      properties:
+        template_code: { type: string }
+        name: { type: string }
+        channel: { type: string, enum: [EMAIL, IN_APP, WEBHOOK] }
+        subject_template: { type: string }
+        body_template: { type: string }
+        language: { type: string, default: en }
+    NotificationTemplateUpdateInput:
+      type: object
+      description: Editing body_template/subject_template bumps version.
+      properties:
+        name: { type: string }
+        subject_template: { type: string, nullable: true }
+        body_template: { type: string }
+        status: { type: string, enum: [DRAFT, ACTIVE, INACTIVE] }
+    PaginatedNotificationTemplates:
+      allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/NotificationTemplate' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } } } ]
+    NotificationRule:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        rule_code: { type: string }
+        name: { type: string }
+        tenant_id: { type: string, format: uuid, nullable: true }
+        application_id: { type: string, format: uuid, nullable: true }
+        trigger_event_key: { type: string, nullable: true }
+        condition: { $ref: '#/components/schemas/ConditionDefinition' }
+        recipient_type: { type: string, enum: [SPECIFIC_USER, ROLE_MEMBERS, TENANT_ADMINS, CUSTOMER_ADMINS, APPLICATION_ADMINS, ACTOR, RESOURCE_OWNER, EVENT_CONTEXT] }
+        recipient_reference: { type: string, nullable: true, description: "A user id, role code, or (EVENT_CONTEXT only) a data.* dot-path into the trusted event payload." }
+        notification_template_id: { type: string, format: uuid }
+        channel: { type: string, enum: [EMAIL, IN_APP, WEBHOOK] }
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+        created_at: { type: string, format: date-time }
+    NotificationRuleInput:
+      type: object
+      required: [rule_code, name, recipient_type, notification_template_id, channel]
+      properties:
+        rule_code: { type: string }
+        name: { type: string }
+        tenant_id: { type: string, format: uuid }
+        application_id: { type: string, format: uuid }
+        trigger_event_key: { type: string }
+        condition: { $ref: '#/components/schemas/ConditionDefinition' }
+        recipient_type: { type: string, enum: [SPECIFIC_USER, ROLE_MEMBERS, TENANT_ADMINS, CUSTOMER_ADMINS, APPLICATION_ADMINS, ACTOR, RESOURCE_OWNER, EVENT_CONTEXT] }
+        recipient_reference: { type: string }
+        notification_template_id: { type: string, format: uuid }
+        channel: { type: string, enum: [EMAIL, IN_APP, WEBHOOK] }
+    PaginatedNotificationRules:
+      allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/NotificationRule' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } } } ]
+    NotificationDelivery:
+      type: object
+      properties:
+        attempt_number: { type: integer }
+        status: { type: string, enum: [SUCCESS, FAILED] }
+        error_message: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+    Notification:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid, nullable: true }
+        application_id: { type: string, format: uuid, nullable: true }
+        notification_rule_id: { type: string, format: uuid, nullable: true }
+        notification_template_id: { type: string, format: uuid, nullable: true }
+        recipient_user_id: { type: string, format: uuid, nullable: true }
+        channel: { type: string, enum: [EMAIL, IN_APP, WEBHOOK] }
+        subject: { type: string, nullable: true }
+        body: { type: string }
+        status: { type: string, enum: [QUEUED, PROCESSING, SENT, FAILED, CANCELLED] }
+        correlation_id: { type: string, nullable: true }
+        causation_id: { type: string, nullable: true }
+        attempt_count: { type: integer }
+        last_error_code: { type: string, nullable: true }
+        last_error_message: { type: string, nullable: true }
+        next_retry_at: { type: string, format: date-time, nullable: true }
+        sent_at: { type: string, format: date-time, nullable: true }
+        deliveries: { type: array, items: { $ref: '#/components/schemas/NotificationDelivery' } }
+        created_at: { type: string, format: date-time }
+    PaginatedNotifications:
+      allOf: [ { $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Notification' } }, meta: { $ref: '#/components/schemas/PaginationMeta' } } } ]
+    NotificationSendInput:
+      type: object
+      required: [template_code, recipient_user_ids]
+      properties:
+        template_code: { type: string }
+        recipient_user_ids: { type: array, items: { type: string, format: uuid }, minItems: 1 }
+        context: { type: object }
+        tenant_id: { type: string, format: uuid, description: "When set, every recipient must already belong to this tenant." }
+        application_id: { type: string, format: uuid }
+        correlation_id: { type: string }
+
+    AccessEvaluateInput:
+      type: object
+      required: [user_id, application_code, permission]
+      properties:
+        user_id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid }
+        application_code: { type: string }
+        permission: { type: string }
+        entitlement_key: { type: string }
+        feature_flag_key: { type: string }
+        action: { type: string }
+        resource_context: { type: object }
+    AccessEvaluation:
+      type: object
+      description: "Never exposes matched policy detail or role/permission internals - only booleans and a reason code."
+      properties:
+        allowed: { type: boolean }
+        checks:
+          type: object
+          properties: { entitlement: { type: boolean }, permission: { type: boolean }, policy: { type: boolean }, feature_flag: { type: boolean } }
+        reason_code: { type: string, nullable: true }

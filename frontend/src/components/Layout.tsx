@@ -21,6 +21,18 @@ const NAV_ITEMS = [
   { to: '/usage', label: 'Usage' },
   { to: '/billings', label: 'Billing' },
   { to: '/invoices', label: 'Invoices' },
+  { to: '/policies', label: 'Policies' },
+  { to: '/workflows', label: 'Workflows' },
+  { to: '/workflow-instances', label: 'Workflow Instances' },
+  { to: '/approval-definitions', label: 'Approval Definitions' },
+  { to: '/approval-requests', label: 'Approval Requests' },
+  { to: '/integrations', label: 'Integrations' },
+  { to: '/event-catalog', label: 'Event Catalog' },
+  { to: '/event-deliveries', label: 'Event Deliveries' },
+  { to: '/feature-flags', label: 'Feature Flags' },
+  { to: '/notification-templates', label: 'Notification Templates' },
+  { to: '/notification-rules', label: 'Notification Rules' },
+  { to: '/notifications', label: 'Notifications' },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {

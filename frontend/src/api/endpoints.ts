@@ -1,7 +1,11 @@
 import { apiClient, type ApiEnvelope } from './client';
 import type {
+  AccessEvaluation,
   Addon,
   AddonLimit,
+  ApprovalDefinition,
+  ApprovalDelegation,
+  ApprovalRequest,
   Application,
   AuditLog,
   AuthContext,
@@ -11,10 +15,22 @@ import type {
   EffectiveEntitlement,
   EffectivePermission,
   Entitlement,
+  EventCatalogEntry,
+  EventDelivery,
+  FeatureFlag,
+  FeatureFlagEvaluation,
+  Integration,
+  IntegrationCredential,
+  IntegrationLog,
   Invoice,
+  Notification,
+  NotificationRule,
+  NotificationTemplate,
   Permission,
   Plan,
   PlanLimit,
+  Policy,
+  PolicySimulationResult,
   Price,
   Product,
   Role,
@@ -23,6 +39,8 @@ import type {
   Tenant,
   UsageEvent,
   User,
+  Workflow,
+  WorkflowInstance,
 } from './types';
 
 async function unwrap<T>(promise: Promise<{ data: ApiEnvelope<T> }>): Promise<T> {
@@ -356,4 +374,134 @@ export const invoicesApi = {
     unwrap<Invoice>(apiClient.post(`/invoices/${id}/mark-paid`, payload)),
   markPartiallyPaid: (id: string, payload: { amount: string; method?: string; reference?: string }) =>
     unwrap<Invoice>(apiClient.post(`/invoices/${id}/mark-partially-paid`, payload)),
+};
+
+// ------------------------------------------------------------------ Policies
+export const policiesApi = {
+  list: (params?: ListParams) => unwrapFull<Policy[]>(apiClient.get('/policies', { params })),
+  get: (id: string) => unwrap<Policy>(apiClient.get(`/policies/${id}`)),
+  create: (payload: Partial<Policy>) => unwrap<Policy>(apiClient.post('/policies', payload)),
+  update: (id: string, payload: Partial<Policy>) => unwrap<Policy>(apiClient.put(`/policies/${id}`, payload)),
+  activate: (id: string) => unwrap<Policy>(apiClient.post(`/policies/${id}/activate`)),
+  deactivate: (id: string) => unwrap<Policy>(apiClient.post(`/policies/${id}/deactivate`)),
+  deprecate: (id: string) => unwrap<Policy>(apiClient.post(`/policies/${id}/deprecate`)),
+  clone: (id: string, payload: { policy_code: string; name?: string }) => unwrap<Policy>(apiClient.post(`/policies/${id}/clone`, payload)),
+  simulate: (payload: Record<string, unknown>) => unwrap<PolicySimulationResult>(apiClient.post('/policies/simulate', payload)),
+};
+
+// ----------------------------------------------------------------- Workflows
+export const workflowsApi = {
+  list: (params?: ListParams) => unwrapFull<Workflow[]>(apiClient.get('/workflows', { params })),
+  get: (id: string) => unwrap<Workflow>(apiClient.get(`/workflows/${id}`)),
+  create: (payload: Record<string, unknown>) => unwrap<Workflow>(apiClient.post('/workflows', payload)),
+  update: (id: string, payload: Record<string, unknown>) => unwrap<Workflow>(apiClient.put(`/workflows/${id}`, payload)),
+  clone: (id: string, payload: { workflow_code: string; name?: string }) => unwrap<Workflow>(apiClient.post(`/workflows/${id}/clone`, payload)),
+  validate: (id: string) => unwrap<{ valid: boolean; errors: string[] }>(apiClient.post(`/workflows/${id}/validate`)),
+  activate: (id: string) => unwrap<Workflow>(apiClient.post(`/workflows/${id}/activate`)),
+  deactivate: (id: string) => unwrap<Workflow>(apiClient.post(`/workflows/${id}/deactivate`)),
+  execute: (id: string, payload?: { payload?: Record<string, unknown>; idempotency_key?: string }) =>
+    unwrap<WorkflowInstance>(apiClient.post(`/workflows/${id}/execute`, payload)),
+};
+
+export const workflowInstancesApi = {
+  list: (params?: ListParams) => unwrapFull<WorkflowInstance[]>(apiClient.get('/workflow-instances', { params })),
+  get: (id: string) => unwrap<WorkflowInstance>(apiClient.get(`/workflow-instances/${id}`)),
+  retry: (id: string) => unwrap<WorkflowInstance>(apiClient.post(`/workflow-instances/${id}/retry`)),
+  cancel: (id: string) => unwrap<WorkflowInstance>(apiClient.post(`/workflow-instances/${id}/cancel`)),
+};
+
+// ---------------------------------------------------------------- Approvals
+export const approvalDefinitionsApi = {
+  list: (params?: ListParams) => unwrapFull<ApprovalDefinition[]>(apiClient.get('/approval-definitions', { params })),
+  get: (id: string) => unwrap<ApprovalDefinition>(apiClient.get(`/approval-definitions/${id}`)),
+  create: (payload: Record<string, unknown>) => unwrap<ApprovalDefinition>(apiClient.post('/approval-definitions', payload)),
+  update: (id: string, payload: Record<string, unknown>) => unwrap<ApprovalDefinition>(apiClient.put(`/approval-definitions/${id}`, payload)),
+};
+
+export const approvalRequestsApi = {
+  list: (params?: ListParams) => unwrapFull<ApprovalRequest[]>(apiClient.get('/approval-requests', { params })),
+  get: (id: string) => unwrap<ApprovalRequest>(apiClient.get(`/approval-requests/${id}`)),
+  approve: (id: string, comment?: string) => unwrap<ApprovalRequest>(apiClient.post(`/approval-requests/${id}/approve`, { comment })),
+  reject: (id: string, comment?: string) => unwrap<ApprovalRequest>(apiClient.post(`/approval-requests/${id}/reject`, { comment })),
+  return: (id: string, comment?: string) => unwrap<ApprovalRequest>(apiClient.post(`/approval-requests/${id}/return`, { comment })),
+};
+
+export const approvalDelegationsApi = {
+  create: (payload: { delegate_user_id: string; approval_definition_id?: string; starts_at?: string; ends_at?: string }) =>
+    unwrap<ApprovalDelegation>(apiClient.post('/approval-delegations', payload)),
+  revoke: (id: string) => apiClient.delete(`/approval-delegations/${id}`),
+};
+
+// -------------------------------------------------------------- Integrations
+export const integrationsApi = {
+  list: (params?: ListParams) => unwrapFull<Integration[]>(apiClient.get('/integrations', { params })),
+  get: (id: string) => unwrap<Integration>(apiClient.get(`/integrations/${id}`)),
+  create: (payload: Record<string, unknown>) => unwrap<Integration>(apiClient.post('/integrations', payload)),
+  update: (id: string, payload: Record<string, unknown>) => unwrap<Integration>(apiClient.put(`/integrations/${id}`, payload)),
+  activate: (id: string) => unwrap<Integration>(apiClient.post(`/integrations/${id}/activate`)),
+  deactivate: (id: string) => unwrap<Integration>(apiClient.post(`/integrations/${id}/deactivate`)),
+  test: (id: string) => unwrap<{ ok: boolean; status?: number; duration_ms?: number; error?: string }>(apiClient.post(`/integrations/${id}/test`)),
+  logs: (id: string, params?: ListParams) => unwrapFull<IntegrationLog[]>(apiClient.get(`/integrations/${id}/logs`, { params })),
+  storeCredential: (id: string, payload: { credential_type: string; secret: string; reference_label: string }) =>
+    unwrap<IntegrationCredential>(apiClient.post(`/integrations/${id}/credentials`, payload)),
+  rotateCredential: (id: string, payload: { credential_type: string; secret: string; reference_label: string }) =>
+    unwrap<IntegrationCredential>(apiClient.post(`/integrations/${id}/credentials/rotate`, payload)),
+  revokeCredential: (id: string) => unwrap<IntegrationCredential>(apiClient.post(`/integrations/${id}/credentials/revoke`)),
+};
+
+// -------------------------------------------------------------------- Events
+export const eventCatalogApi = {
+  list: (params?: ListParams) => unwrapFull<EventCatalogEntry[]>(apiClient.get('/event-catalog', { params })),
+  get: (id: string) => unwrap<EventCatalogEntry>(apiClient.get(`/event-catalog/${id}`)),
+  create: (payload: Record<string, unknown>) => unwrap<EventCatalogEntry>(apiClient.post('/event-catalog', payload)),
+  update: (id: string, payload: Record<string, unknown>) => unwrap<EventCatalogEntry>(apiClient.put(`/event-catalog/${id}`, payload)),
+};
+
+export const eventDeliveriesApi = {
+  list: (params?: ListParams) => unwrapFull<EventDelivery[]>(apiClient.get('/event-deliveries', { params })),
+  get: (id: string) => unwrap<EventDelivery>(apiClient.get(`/event-deliveries/${id}`)),
+  retry: (id: string) => unwrap<EventDelivery>(apiClient.post(`/event-deliveries/${id}/retry`)),
+  discard: (id: string) => unwrap<EventDelivery>(apiClient.post(`/event-deliveries/${id}/discard`)),
+};
+
+// ------------------------------------------------------------- Feature Flags
+export const featureFlagsApi = {
+  list: (params?: ListParams) => unwrapFull<FeatureFlag[]>(apiClient.get('/feature-flags', { params })),
+  get: (id: string) => unwrap<FeatureFlag>(apiClient.get(`/feature-flags/${id}`)),
+  create: (payload: Record<string, unknown>) => unwrap<FeatureFlag>(apiClient.post('/feature-flags', payload)),
+  update: (id: string, payload: Record<string, unknown>) => unwrap<FeatureFlag>(apiClient.put(`/feature-flags/${id}`, payload)),
+  activate: (id: string) => unwrap<FeatureFlag>(apiClient.post(`/feature-flags/${id}/activate`)),
+  deactivate: (id: string) => unwrap<FeatureFlag>(apiClient.post(`/feature-flags/${id}/deactivate`)),
+  addOverride: (id: string, payload: Record<string, unknown>) => apiClient.post(`/feature-flags/${id}/overrides`, payload),
+  removeOverride: (id: string, overrideId: string) => apiClient.delete(`/feature-flags/${id}/overrides/${overrideId}`),
+  evaluate: (payload: { flag_key: string; tenant_id?: string; user_id?: string }) =>
+    unwrap<FeatureFlagEvaluation>(apiClient.post('/feature-flags/evaluate', payload)),
+};
+
+// ------------------------------------------------------------- Notifications
+export const notificationTemplatesApi = {
+  list: (params?: ListParams) => unwrapFull<NotificationTemplate[]>(apiClient.get('/notification-templates', { params })),
+  get: (id: string) => unwrap<NotificationTemplate>(apiClient.get(`/notification-templates/${id}`)),
+  create: (payload: Record<string, unknown>) => unwrap<NotificationTemplate>(apiClient.post('/notification-templates', payload)),
+  update: (id: string, payload: Record<string, unknown>) => unwrap<NotificationTemplate>(apiClient.put(`/notification-templates/${id}`, payload)),
+};
+
+export const notificationRulesApi = {
+  list: (params?: ListParams) => unwrapFull<NotificationRule[]>(apiClient.get('/notification-rules', { params })),
+  get: (id: string) => unwrap<NotificationRule>(apiClient.get(`/notification-rules/${id}`)),
+  create: (payload: Record<string, unknown>) => unwrap<NotificationRule>(apiClient.post('/notification-rules', payload)),
+  update: (id: string, payload: Record<string, unknown>) => unwrap<NotificationRule>(apiClient.put(`/notification-rules/${id}`, payload)),
+};
+
+export const notificationsApi = {
+  list: (params?: ListParams) => unwrapFull<Notification[]>(apiClient.get('/notifications', { params })),
+  get: (id: string) => unwrap<Notification>(apiClient.get(`/notifications/${id}`)),
+  send: (payload: Record<string, unknown>) => unwrap<Notification[]>(apiClient.post('/notifications/send', payload)),
+  retry: (id: string) => unwrap<Notification>(apiClient.post(`/notifications/${id}/retry`)),
+  cancel: (id: string) => unwrap<Notification>(apiClient.post(`/notifications/${id}/cancel`)),
+};
+
+// ----------------------------------------------------------------- Access
+export const accessApi = {
+  evaluate: (payload: Record<string, unknown>) => unwrap<AccessEvaluation>(apiClient.post('/access/evaluate', payload)),
 };

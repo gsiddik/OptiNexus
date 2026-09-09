@@ -35,6 +35,29 @@ import { BillingsListPage } from './pages/commercial/billing/BillingsListPage';
 import { BillingDetailPage } from './pages/commercial/billing/BillingDetailPage';
 import { InvoicesListPage } from './pages/commercial/invoices/InvoicesListPage';
 import { InvoiceDetailPage } from './pages/commercial/invoices/InvoiceDetailPage';
+import { PoliciesListPage } from './pages/orchestration/policies/PoliciesListPage';
+import { PolicyDetailPage } from './pages/orchestration/policies/PolicyDetailPage';
+import { WorkflowsListPage } from './pages/orchestration/workflows/WorkflowsListPage';
+import { WorkflowDetailPage } from './pages/orchestration/workflows/WorkflowDetailPage';
+import { WorkflowInstancesListPage } from './pages/orchestration/workflow-instances/WorkflowInstancesListPage';
+import { WorkflowInstanceDetailPage } from './pages/orchestration/workflow-instances/WorkflowInstanceDetailPage';
+import { ApprovalDefinitionsListPage } from './pages/orchestration/approvals/ApprovalDefinitionsListPage';
+import { ApprovalDefinitionDetailPage } from './pages/orchestration/approvals/ApprovalDefinitionDetailPage';
+import { ApprovalRequestsListPage } from './pages/orchestration/approvals/ApprovalRequestsListPage';
+import { ApprovalRequestDetailPage } from './pages/orchestration/approvals/ApprovalRequestDetailPage';
+import { IntegrationsListPage } from './pages/orchestration/integrations/IntegrationsListPage';
+import { IntegrationDetailPage } from './pages/orchestration/integrations/IntegrationDetailPage';
+import { EventCatalogListPage } from './pages/orchestration/events/EventCatalogListPage';
+import { EventCatalogDetailPage } from './pages/orchestration/events/EventCatalogDetailPage';
+import { EventDeliveriesListPage } from './pages/orchestration/events/EventDeliveriesListPage';
+import { FeatureFlagsListPage } from './pages/orchestration/feature-flags/FeatureFlagsListPage';
+import { FeatureFlagDetailPage } from './pages/orchestration/feature-flags/FeatureFlagDetailPage';
+import { NotificationTemplatesListPage } from './pages/orchestration/notifications/NotificationTemplatesListPage';
+import { NotificationTemplateDetailPage } from './pages/orchestration/notifications/NotificationTemplateDetailPage';
+import { NotificationRulesListPage } from './pages/orchestration/notifications/NotificationRulesListPage';
+import { NotificationRuleDetailPage } from './pages/orchestration/notifications/NotificationRuleDetailPage';
+import { NotificationsListPage } from './pages/orchestration/notifications/NotificationsListPage';
+import { NotificationDetailPage } from './pages/orchestration/notifications/NotificationDetailPage';
 
 function Protected({ children }: { children: ReactNode }) {
   return (
@@ -81,6 +104,29 @@ export default function App() {
           <Route path="/billings/:id" element={<Protected><BillingDetailPage /></Protected>} />
           <Route path="/invoices" element={<Protected><InvoicesListPage /></Protected>} />
           <Route path="/invoices/:id" element={<Protected><InvoiceDetailPage /></Protected>} />
+          <Route path="/policies" element={<Protected><PoliciesListPage /></Protected>} />
+          <Route path="/policies/:id" element={<Protected><PolicyDetailPage /></Protected>} />
+          <Route path="/workflows" element={<Protected><WorkflowsListPage /></Protected>} />
+          <Route path="/workflows/:id" element={<Protected><WorkflowDetailPage /></Protected>} />
+          <Route path="/workflow-instances" element={<Protected><WorkflowInstancesListPage /></Protected>} />
+          <Route path="/workflow-instances/:id" element={<Protected><WorkflowInstanceDetailPage /></Protected>} />
+          <Route path="/approval-definitions" element={<Protected><ApprovalDefinitionsListPage /></Protected>} />
+          <Route path="/approval-definitions/:id" element={<Protected><ApprovalDefinitionDetailPage /></Protected>} />
+          <Route path="/approval-requests" element={<Protected><ApprovalRequestsListPage /></Protected>} />
+          <Route path="/approval-requests/:id" element={<Protected><ApprovalRequestDetailPage /></Protected>} />
+          <Route path="/integrations" element={<Protected><IntegrationsListPage /></Protected>} />
+          <Route path="/integrations/:id" element={<Protected><IntegrationDetailPage /></Protected>} />
+          <Route path="/event-catalog" element={<Protected><EventCatalogListPage /></Protected>} />
+          <Route path="/event-catalog/:id" element={<Protected><EventCatalogDetailPage /></Protected>} />
+          <Route path="/event-deliveries" element={<Protected><EventDeliveriesListPage /></Protected>} />
+          <Route path="/feature-flags" element={<Protected><FeatureFlagsListPage /></Protected>} />
+          <Route path="/feature-flags/:id" element={<Protected><FeatureFlagDetailPage /></Protected>} />
+          <Route path="/notification-templates" element={<Protected><NotificationTemplatesListPage /></Protected>} />
+          <Route path="/notification-templates/:id" element={<Protected><NotificationTemplateDetailPage /></Protected>} />
+          <Route path="/notification-rules" element={<Protected><NotificationRulesListPage /></Protected>} />
+          <Route path="/notification-rules/:id" element={<Protected><NotificationRuleDetailPage /></Protected>} />
+          <Route path="/notifications" element={<Protected><NotificationsListPage /></Protected>} />
+          <Route path="/notifications/:id" element={<Protected><NotificationDetailPage /></Protected>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

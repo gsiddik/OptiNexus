@@ -16,4 +16,15 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     require __DIR__.'/v1/authorization.php';
     require __DIR__.'/v1/audit.php';
     require __DIR__.'/v1/service_accounts.php';
+
+    // Phase 2 SaaS commercial core.
+    require __DIR__.'/v1/products.php';
+    require __DIR__.'/v1/plans.php';
+    require __DIR__.'/v1/addons.php';
+    require __DIR__.'/v1/pricing.php';
+    require __DIR__.'/v1/subscriptions.php';
+    require __DIR__.'/v1/entitlements.php';
+    require __DIR__.'/v1/usage.php';
+    require __DIR__.'/v1/billing.php';
+    require __DIR__.'/v1/invoices.php';
 });

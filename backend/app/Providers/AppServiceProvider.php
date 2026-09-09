@@ -48,6 +48,8 @@ class AppServiceProvider extends ServiceProvider
             'entitlement.check' => 'Evaluate entitlement decisions for a tenant via POST /entitlements/check',
             'commercial.read' => "Read a tenant's commercial context (plan, status, entitlements, billing period)",
             'usage.write' => 'Submit metered usage events on behalf of an integrated application',
+            'event.write' => 'Submit orchestration events (facts) on behalf of an integrated application',
+            'access.evaluate' => 'Evaluate aggregated effective access (entitlement + permission + policy + feature flag) via POST /access/evaluate',
         ]);
 
         Passport::tokensExpireIn(now()->addHour());

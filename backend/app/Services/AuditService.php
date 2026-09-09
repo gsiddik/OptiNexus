@@ -27,6 +27,8 @@ class AuditService
         ?array $newValue = null,
         ?string $source = 'cgo',
         ?array $metadata = null,
+        ?string $correlationId = null,
+        ?string $causationId = null,
     ): AuditLog {
         $actor ??= $request?->user() instanceof User ? $request->user() : null;
 
@@ -44,7 +46,8 @@ class AuditService
             'ip_address' => $request?->ip(),
             'user_agent' => $request?->userAgent(),
             'request_id' => $request?->headers->get('X-Request-Id') ?? (string) Str::uuid(),
-            'correlation_id' => $request?->headers->get('X-Correlation-Id'),
+            'correlation_id' => $correlationId ?? $request?->headers->get('X-Correlation-Id'),
+            'causation_id' => $causationId,
             'source' => $source,
             'metadata' => $metadata,
         ]);

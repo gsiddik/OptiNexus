@@ -10,7 +10,7 @@ use RuntimeException;
 #[Fillable([
     'actor_user_id', 'actor_identity', 'tenant_id', 'customer_id', 'application_id',
     'action', 'resource_type', 'resource_id', 'old_value', 'new_value',
-    'ip_address', 'user_agent', 'request_id', 'correlation_id', 'source', 'metadata',
+    'ip_address', 'user_agent', 'request_id', 'correlation_id', 'causation_id', 'source', 'metadata',
 ])]
 class AuditLog extends Model
 {

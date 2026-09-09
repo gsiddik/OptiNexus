@@ -63,6 +63,11 @@ class Application extends Model
         return $this->hasMany(Role::class);
     }
 
+    public function products(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'product_applications')->withTimestamps();
+    }
+
     public function isPublished(): bool
     {
         return $this->status === self::STATUS_PUBLISHED;

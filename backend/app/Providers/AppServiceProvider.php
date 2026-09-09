@@ -45,6 +45,9 @@ class AppServiceProvider extends ServiceProvider
             'governance.read' => 'Read tenant, application, capability, permission and user directory data',
             'audit.write' => 'Submit audit events on behalf of an integrated application',
             'introspect' => 'Validate CGO-issued tokens',
+            'entitlement.check' => 'Evaluate entitlement decisions for a tenant via POST /entitlements/check',
+            'commercial.read' => "Read a tenant's commercial context (plan, status, entitlements, billing period)",
+            'usage.write' => 'Submit metered usage events on behalf of an integrated application',
         ]);
 
         Passport::tokensExpireIn(now()->addHour());

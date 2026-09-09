@@ -27,4 +27,15 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     require __DIR__.'/v1/usage.php';
     require __DIR__.'/v1/billing.php';
     require __DIR__.'/v1/invoices.php';
+
+    // Phase 3 orchestration core.
+    require __DIR__.'/v1/policies.php';
+    require __DIR__.'/v1/events.php';
+    require __DIR__.'/v1/workflows.php';
+    require __DIR__.'/v1/workflow_instances.php';
+    require __DIR__.'/v1/approvals.php';
+    require __DIR__.'/v1/integrations.php';
+    require __DIR__.'/v1/feature_flags.php';
+    require __DIR__.'/v1/notifications.php';
+    require __DIR__.'/v1/access.php';
 });

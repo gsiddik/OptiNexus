@@ -17,6 +17,13 @@ the API Gateway. The machine-readable contract is `docs/openapi.yaml`
 
 Secrets are shown once. Store them in your secret manager, never in the repository.
 
+For a fresh OptiNexus, `php artisan db:seed` already does step 1 for both platforms (`optifleet` through the demo
+data, `optiradar` through `OptiRadarApplicationSeeder`) and, for the demo tenant, steps 2 and 3. An application that
+exists is left unchanged, so seeding again never overwrites its launch URLs; set the real URLs through the API. SSO clients
+(step 4) are never seeded because they produce secrets; the demo data only creates a demo OptiFleet service account
+(step 5) and prints its secret once, so create real ones through the API. To add OptiRadar to an existing installation without reseeding
+everything: `php artisan db:seed --class=OptiRadarApplicationSeeder`.
+
 ## 2. Single sign-on (OpenID Connect)
 
 Discovery: `GET {issuer}/.well-known/openid-configuration`. Supported: authorization

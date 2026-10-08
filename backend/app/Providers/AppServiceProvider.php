@@ -49,6 +49,10 @@ class AppServiceProvider extends ServiceProvider
             'commercial.read' => "Read a tenant's commercial context (plan, status, entitlements, billing period)",
             'usage.write' => 'Submit metered usage events on behalf of an integrated application',
             'event.write' => 'Submit orchestration events (facts) on behalf of an integrated application',
+            'gateway.fleet.write' => 'Publish the fleet vehicle directory to the API Gateway',
+            'gateway.fleet.read' => 'Read vehicle <-> telematics device links through the API Gateway',
+            'gateway.telematics.write' => 'Push telematics odometer readings into the API Gateway',
+            'gateway.telematics.read' => 'Read the telematics odometer feed for linked vehicles from the API Gateway',
             'access.evaluate' => 'Evaluate aggregated effective access (entitlement + permission + policy + feature flag) via POST /access/evaluate',
         ]);
 

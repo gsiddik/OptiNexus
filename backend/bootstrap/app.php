@@ -3,6 +3,7 @@
 use App\Http\Middleware\AuthenticateServiceAccount;
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\ForceJsonResponse;
+use App\Http\Middleware\ResolveGatewayTenant;
 use Illuminate\Auth\Access\AuthorizationException as AccessAuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permission' => CheckPermission::class,
             'service_account' => AuthenticateServiceAccount::class,
+            'gateway_tenant' => ResolveGatewayTenant::class,
         ]);
 
         $middleware->throttleApi();

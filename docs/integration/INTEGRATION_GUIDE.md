@@ -98,3 +98,30 @@ Set in `backend/.env`: `OPTIRADAR_SYNC_ENABLED=true`, `OPTIRADAR_BASE_URL`,
 `OPTIRADAR_API_TOKEN` (a Traccar API token of a user that sees every tenant group).
 In OptiRadar, give each tenant group the attribute `optinexusTenantId` = the OptiNexus
 tenant id. `php artisan gateway:sync-optiradar` runs every minute when enabled.
+
+## 6. OptiFleet (operators)
+
+Backend env (`OptiFleet-v2/backend/.env`, all off by default):
+
+| Key | Value |
+|-----|-------|
+| `OPTINEXUS_ENABLED` | `true` |
+| `OPTINEXUS_BASE_URL` | OptiNexus base URL (the OIDC issuer) |
+| `OPTINEXUS_SSO_CLIENT_ID` / `_SECRET` | the OIDC client of the OptiFleet application |
+| `OPTINEXUS_SSO_REDIRECT_URI` | `https://<fleet-api>/api/v1/auth/sso/callback` (register it exactly) |
+| `OPTINEXUS_SSO_FRONTEND_URL` | the SPA origin; the SPA route `/sso/callback` receives the ticket |
+| `OPTINEXUS_GATEWAY_CLIENT_ID` / `_SECRET` | a service account of the OptiFleet application (unbound is fine; OptiFleet sends `X-Tenant-Id`) |
+
+Per tenant: set `tenants.optinexus_tenant_id` to the OptiNexus tenant id. Users must already
+exist in OptiFleet (D7). Grant `telematics_link.view` / `telematics_link.manage` to the roles
+that review and calibrate telematics links (module `VEHICLE`). Register
+`<spa>/login` as a post-logout redirect URI of the OIDC client, and set the application's
+launch URL to `https://<fleet-api>/api/v1/auth/sso/redirect`. `php artisan optinexus:sync`
+runs on a schedule. Calibration: GPS-only devices appear under *Vehicle > Telematics* as
+"Needs calibration"; enter the real odometer at the time of the latest GPS reading (or an offset).
+
+## 7. OptiRadar (operators)
+
+See `OptiRadar/docs/optinexus-sso.md` (settings `openid.*`, `openid.tenantClaim`,
+`openid.tenantGroupAttribute`, one group per tenant with the `optinexusTenantId` attribute).
+Set the application's launch URL to `https://<radar>/api/session/openid/auth`.

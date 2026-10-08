@@ -212,3 +212,25 @@ logout URI to `https://<radar>/api/session/openid/backchannel-logout`. `OptiRada
 sample configuration (creates tenant users on the first SSO login with `users.defaultDeviceLimit=0`). OptiRadar and
 OptiRadar-web are forks that must be built and deployed (server `./gradlew assemble`, web `npm ci && npm run build`);
 the stock Traccar image has none of this.
+
+### OptiRadar events
+
+OptiRadar reports five events to `POST /api/v1/events` (key prefix `optiradar.`): `device.online`, `device.offline`,
+`geofence.entered`, `geofence.exited` and `device.overspeed`. Each one carries `data.aggregate_type` (`device`),
+`data.aggregate_id` (the OptiRadar device id), `data.correlation` (the device's unique id) and `data.payload`
+(device name, unique id, position, speed in km/h, geofence name, depending on the event). Only devices that belong to
+a tenant group (`optinexusTenantId`) are reported, and the group's tenant is the event's `tenant_id`. OptiRadar writes
+each event to its own outbox table first and sends it later under the outbox `event_id`, so OptiNexus being down loses
+nothing and a retry never makes a second event. To switch it on:
+
+1. Register the five events: `php artisan db:seed --class=OptiRadarEventCatalogSeeder` (the application with code
+   `optiradar` must exist, see `OptiRadarApplicationSeeder`; running it again only updates the entries).
+2. Create a service account for the OptiRadar application with the `event.write` scope and assign the OptiRadar
+   application to the tenants.
+3. In OptiRadar set `optinexus.events.enable`, `optinexus.baseUrl`, `optinexus.clientId` and
+   `optinexus.clientSecret`; online/offline events also need `event.status.enable=true`. See
+   `OptiRadar/docs/optinexus-sso.md`.
+
+Network errors, 5xx and an event type that is not in the catalog yet are retried with backoff (2 minutes doubling to
+1 hour, 20 attempts); a refusal that retrying cannot fix parks the event as `FAILED`.
+

@@ -2,25 +2,16 @@
 
 namespace Database\Seeders;
 
-use App\Models\Application;
-use App\Models\EventCatalogEntry;
-use Illuminate\Database\Seeder;
-
 /**
  * Registers the events OptiFleet reports to OptiNexus (POST /api/v1/events)
- * in the Event Catalog. Idempotent: running it again updates the entries.
- *
- * Every event shares one envelope in `data`:
- *   aggregate_type  what the event is about (workshop_invoice, ...)
- *   aggregate_id    id of that record in OptiFleet
- *   correlation     ids that tie the event to its context (work order, partner)
- *   payload         the facts of this event type
- * Money is always a decimal string, never a float.
+ * in the Event Catalog; the envelope is described in the base class. Here
+ * aggregate_id is the id of the record in OptiFleet and correlation names the
+ * work order or partner. Money is always a decimal string, never a float.
  *
  * Run: php artisan db:seed --class=OptiFleetEventCatalogSeeder
  * The application with code `optifleet` must exist first.
  */
-class OptiFleetEventCatalogSeeder extends Seeder
+class OptiFleetEventCatalogSeeder extends ApplicationEventCatalogSeeder
 {
     public const APPLICATION_CODE = 'optifleet';
 
@@ -52,38 +43,13 @@ class OptiFleetEventCatalogSeeder extends Seeder
         ],
     ];
 
-    public const PAYLOAD_SCHEMA = [
-        'required' => ['aggregate_type', 'aggregate_id', 'payload'],
-        'properties' => [
-            'aggregate_type' => ['type' => 'string'],
-            'aggregate_id' => ['type' => 'string'],
-            'correlation' => ['type' => 'object'],
-            'payload' => ['type' => 'object'],
-        ],
-    ];
-
-    public function run(): void
+    protected function applicationCode(): string
     {
-        $application = Application::query()->where('application_code', self::APPLICATION_CODE)->first();
+        return self::APPLICATION_CODE;
+    }
 
-        if (! $application) {
-            $this->command?->warn('Application "'.self::APPLICATION_CODE.'" does not exist yet; register it, then run this seeder again.');
-
-            return;
-        }
-
-        foreach (self::EVENTS as $key => $definition) {
-            EventCatalogEntry::query()->updateOrCreate(
-                ['event_key' => $key],
-                [
-                    'application_id' => $application->id,
-                    'name' => $definition['name'],
-                    'description' => $definition['description'],
-                    'schema_version' => '1',
-                    'payload_schema' => self::PAYLOAD_SCHEMA,
-                    'status' => EventCatalogEntry::STATUS_ACTIVE,
-                ],
-            );
-        }
+    protected function events(): array
+    {
+        return self::EVENTS;
     }
 }

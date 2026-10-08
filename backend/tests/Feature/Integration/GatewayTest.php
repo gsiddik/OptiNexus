@@ -3,7 +3,11 @@
 namespace Tests\Feature\Integration;
 
 use App\Models\Application;
+use App\Models\GatewayFleetVehicle;
+use App\Models\Role;
 use App\Models\Tenant;
+use App\Models\User;
+use Database\Seeders\PermissionSeeder;
 use Database\Seeders\PlatformIntegrationPermissionSeeder;
 use Database\Seeders\PlatformIntegrationRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -221,17 +225,17 @@ class GatewayTest extends TestCase
             $this->reading('dev-7', '50', '2026-10-08T01:00:00Z', ['registration_number' => 'NOPE']),
         ]]);
 
-        $this->seed(\Database\Seeders\PermissionSeeder::class);
+        $this->seed(PermissionSeeder::class);
         $this->seed(PlatformIntegrationPermissionSeeder::class);
         $this->seed(PlatformIntegrationRoleSeeder::class);
-        $user = \App\Models\User::factory()->create(['status' => 'ACTIVE']);
-        $user->userRoles()->create(['role_id' => \App\Models\Role::where('code', 'PLATFORM_INTEGRATION_ADMIN')->first()->id, 'tenant_id' => null]);
+        $user = User::factory()->create(['status' => 'ACTIVE']);
+        $user->userRoles()->create(['role_id' => Role::where('code', 'PLATFORM_INTEGRATION_ADMIN')->first()->id, 'tenant_id' => null]);
         Sanctum::actingAs($user);
 
         $unmatched = $this->getJson("/api/v1/gateway/tenants/{$this->tenant->id}/vehicle-links?status=UNMATCHED")->assertOk()->json('data');
         $this->assertCount(1, $unmatched);
 
-        $vehicle = \App\Models\GatewayFleetVehicle::where('external_vehicle_id', 'veh-2')->first();
+        $vehicle = GatewayFleetVehicle::where('external_vehicle_id', 'veh-2')->first();
         $this->putJson("/api/v1/gateway/tenants/{$this->tenant->id}/vehicle-links/{$unmatched[0]['id']}", ['fleet_vehicle_id' => $vehicle->id])
             ->assertOk()->assertJsonPath('data.link_type', 'MANUAL');
 
@@ -246,7 +250,7 @@ class GatewayTest extends TestCase
 
     public function test_admin_endpoints_require_permission(): void
     {
-        Sanctum::actingAs(\App\Models\User::factory()->create(['status' => 'ACTIVE']));
+        Sanctum::actingAs(User::factory()->create(['status' => 'ACTIVE']));
 
         $this->getJson("/api/v1/gateway/tenants/{$this->tenant->id}/vehicle-links")->assertStatus(403);
     }

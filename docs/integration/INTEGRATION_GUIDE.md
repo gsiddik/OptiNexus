@@ -81,7 +81,7 @@ body `logout_token=<JWT>`. OptiNexus follows no redirects, waits 5 seconds, and 
 when you accepted it (also when you do not know the user), or `400` when the token is invalid
 (not retried). Every attempt is recorded in `oidc_logout_deliveries`.
 
-**The `logout_token`** is an RS256 JWT signed with the same key as the `id_token`:
+**The `logout_token`** is an RS256 JWT signed with the same key as the `id_token`, with header `typ: logout+jwt`:
 
 | Claim | Value |
 |-------|-------|
@@ -161,6 +161,7 @@ Backend env (`OptiFleet-v2/backend/.env`, all off by default):
 | `OPTINEXUS_SSO_REDIRECT_URI` | `https://<fleet-api>/api/v1/auth/sso/callback` (register it exactly) |
 | `OPTINEXUS_SSO_FRONTEND_URL` | the SPA origin; the SPA route `/sso/callback` receives the ticket |
 | `OPTINEXUS_GATEWAY_CLIENT_ID` / `_SECRET` | a service account of the OptiFleet application (unbound is fine; OptiFleet sends `X-Tenant-Id`) |
+| `OPTINEXUS_EVENTS_ENABLED` | `true` to report invoice and memo events (see below); also needs the `event.write` scope on that service account |
 
 Per tenant: set `tenants.optinexus_tenant_id` to the OptiNexus tenant id. Users must already
 exist in OptiFleet (D7). Grant `telematics_link.view` / `telematics_link.manage` to the roles
@@ -170,8 +171,37 @@ launch URL to `https://<fleet-api>/api/v1/auth/sso/redirect`. `php artisan optin
 runs on a schedule. Calibration: GPS-only devices appear under *Vehicle > Telematics* as
 "Needs calibration"; enter the real odometer at the time of the latest GPS reading (or an offset).
 
+### OptiFleet events
+
+OptiFleet reports six events to `POST /api/v1/events` (key prefix `optifleet.`):
+`workshop_invoice.recorded`, `.corrected`, `.cancelled`, `.payment_recorded`, `maintenance_memo.billed`,
+`maintenance_memo.paid`. Each one carries `data.aggregate_type`, `data.aggregate_id`, `data.correlation`
+(work order, partner) and `data.payload`; money is a decimal string. OptiFleet sends the id of its outbox row as
+`event_id`, so a retry never makes a second event. To switch it on:
+
+1. Register the six events: `php artisan db:seed --class=OptiFleetEventCatalogSeeder` (the application with code
+   `optifleet` must exist; running it again only updates the entries).
+2. Give the OptiFleet service account the `event.write` scope and assign the OptiFleet application to the tenants.
+3. Set `OPTINEXUS_EVENTS_ENABLED=true` in OptiFleet. `php artisan optinexus:relay-events` then runs every minute.
+
+Only tenants linked to OptiNexus are relayed. Network errors, 5xx and an event type that is not in the catalog yet
+are retried with backoff (2 minutes doubling to 1 hour, 20 attempts); a refusal that retrying cannot fix (payload
+does not match, application not assigned) parks the event as `FAILED`; fix the cause and run
+`php artisan optinexus:relay-events --retry-failed`.
+
+### Central logout in OptiFleet
+
+Register `https://<fleet-api>/api/v1/auth/sso/backchannel-logout` as the back-channel logout URI of the OIDC client
+(§2b). A logout in any application ends the user's OptiFleet API sessions; when access is revoked the account is also
+deactivated, and it is switched on again only by the next SSO sign-in. Password sign-in for users OptiNexus has not
+touched is unchanged, and OptiFleet works without OptiNexus.
+
 ## 7. OptiRadar (operators)
 
 See `OptiRadar/docs/optinexus-sso.md` (settings `openid.*`, `openid.tenantClaim`,
 `openid.tenantGroupAttribute`, one group per tenant with the `optinexusTenantId` attribute).
-Set the application's launch URL to `https://<radar>/api/session/openid/auth`.
+Set the application's launch URL to `https://<radar>/api/session/openid/auth` and the OIDC client's back-channel
+logout URI to `https://<radar>/api/session/openid/backchannel-logout`. `OptiRadar/setup/traccar-optinexus.xml` is a
+sample configuration (creates tenant users on the first SSO login with `users.defaultDeviceLimit=0`). OptiRadar and
+OptiRadar-web are forks that must be built and deployed (server `./gradlew assemble`, web `npm ci && npm run build`);
+the stock Traccar image has none of this.

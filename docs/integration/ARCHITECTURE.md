@@ -22,9 +22,11 @@ Status: design baseline for the OptiNexus ⇄ OptiFleet ⇄ OptiRadar integratio
 | D2 | Commercial ownership, phased: OptiNexus owns tenant, user, application access now. OptiFleet's own contract/billing modules keep working unchanged in this phase and move to OptiNexus later. | Confirmed by owner |
 | D3 | OptiRadar tenant isolation: one Traccar Group per OptiNexus tenant. | Confirmed by owner |
 | D4 | SSO protocol: OpenID Connect (authorization code + PKCE), OptiNexus as the provider. | Default |
-| D5 | OptiNexus has no `main` branch yet; this work branches from `claude/cgo-phase-1-governance-qtmik1`. | Default |
+| D5 | `main` is the baseline of every repository. The first line of work (`claude/cgo-phase-1-governance-qtmik1`) became OptiNexus `main`; new development always starts from `main` on a new branch and reaches `main` by pull request. | Confirmed by owner |
 | D6 | GPS distance versus the odometer already recorded in OptiFleet: GPS distance is never applied by itself. It is stored and held until someone calibrates the link manually (an offset, or the actual odometer at the time of the latest GPS reading). A device that reports a real odometer is applied directly. | Confirmed by owner |
 | D7 | SSO for a user who has no OptiFleet account yet: sign-in is refused (existing users only). OptiFleet never creates accounts from SSO; an administrator adds the user first. | Confirmed by owner |
+| D8 | Central logout and automatic deactivation: OIDC Back-Channel Logout. A logout anywhere ends the user's sessions in every application (all devices). Losing access (user suspended or disabled, removed from the tenant, application access removed, tenant suspended) also deactivates the application account so password sign-in stops too; the account is switched on again only by the next successful SSO sign-in and only if OptiNexus deactivated it. Every application keeps working with its own password login when OptiNexus is not used. | Confirmed by owner |
+| D9 | OptiFleet reports invoice and memo events to OptiNexus (`POST /api/v1/events`) from its integration outbox, in the OptiNexus Event Catalog under `optifleet.*`. PostgreSQL in OptiFleet stays the source of truth; delivery is at-least-once and idempotent by `event_id`. | Confirmed by owner |
 
 ## 3. Components
 
@@ -85,6 +87,29 @@ account menu. See `OptiRadar/docs/optinexus-sso.md`.
 app signs the user in without a second login prompt, because OptiNexus reuses its
 session.
 
+### 3.1b Central logout and deactivation (D8)
+
+* OptiNexus records every application sign-in as an `oidc_sessions` row (its id is the `sid` claim).
+* Logout (OptiNexus, or an application that redirects to the end-session endpoint) and every access loss
+  (user, tenant membership, application access, tenant or application changes; a periodic
+  `oidc:reconcile-access` run catches changes made without a hook) queue one **Back-Channel Logout** call per
+  application in `oidc_logout_deliveries`. A queued job posts a signed `logout+jwt` to the client's
+  `backchannel_logout_uri` with retries. Access loss adds the custom event
+  `https://schemas.optinexus.io/event/access-revoked` (reason, scope `user` or `tenant`, `tenant_id`).
+* **OptiFleet** ends the user's API tokens (all, or the tenant's) and, on access loss, marks the account as
+  deactivated by OptiNexus so password login is refused; the next SSO sign-in reactivates only such accounts.
+* **OptiRadar** stores the time of the event in the user attribute `optinexusSessionsNotBefore` (older web
+  sessions stop being accepted), disables the account on access loss and marks it with `optinexusDeactivated`
+  (same reactivation rule), or removes the tenant group link for a tenant-level loss.
+* The user-level action is "log out everywhere"; there is no per-device logout.
+
+### 3.1c OptiFleet events (D9)
+
+`optifleet.*` events travel from OptiFleet's `integration_outbox_events` to `POST /api/v1/events` with the outbox
+row id as `event_id`. OptiNexus validates them against the Event Catalog (`OptiFleetEventCatalogSeeder` registers
+six events), stores each once per `event_id` (a replay with the same content is answered idempotently) and the
+workflow and notification engine can react. See the integration guide, §6.
+
 ### 3.2 API Gateway
 
 Base path `/api/gateway/v1`. Every call uses an OAuth2 client-credentials token
@@ -141,6 +166,9 @@ name. Admins can override links; manual links win.
 * OIDC: exact redirect URI match, PKCE S256 supported (required for public
   clients), single-use codes valid 5 minutes, hashed secrets, codes and tokens.
 * Gateway uses the existing SSRF-safe HTTP client for outbound connector calls.
+* Logout tokens are RS256 `logout+jwt` (never carry a `nonce`, short-lived, unique `jti`); receivers verify
+  signature, issuer, audience, age and type, accept each token once, and the call is the only thing they trust.
+  OptiNexus delivers with a 5 second timeout and no redirects.
 * All credentials (Traccar token, client secrets) live in environment config or
   encrypted integration credentials, never in the repository.
 
@@ -165,13 +193,17 @@ databases, scripted browser; not part of the automated suites):
 
 ## 7. Known limits
 
-* Logout is not federated: OptiFleet's sign-out ends the OptiNexus session; OptiRadar's sign-out
-  only ends its own session, and the other apps' sessions end at their own expiry.
-* Deprovisioning is not pushed to the apps. Removing a user's access or deactivating them in
-  OptiNexus stops new SSO sign-ins at once, but sessions already open in an app live until that
-  app ends them (OptiFleet API tokens have no expiry configured, Traccar sessions run to their
-  timeout), and OptiFleet's own account status is not changed. A user-lifecycle event or a
-  periodic `userinfo` check is the natural next step (needs an owner decision).
+* Logout is user-level ("everywhere"); a plain logout does not revoke Traccar long-lived API tokens (a deactivation
+  does, because the account is disabled).
+* Reactivation happens only at the next successful SSO sign-in; nothing switches an account on by itself when
+  access is restored. An account an administrator disabled by hand in an application is never reactivated.
+* The reconciler and the hooks only know about SSO sessions and access rows; an OptiFleet account that never
+  signed in through SSO is reached through its access row (by e-mail match). OptiFleet API tokens have no expiry of
+  their own; they end through these events.
+* A delivery that keeps failing (application down) is retried with backoff and then left as `FAILED` in
+  `oidc_logout_deliveries`. The reconciler only looks at sessions that are still active, so it does not repeat a
+  failed call, and there is no re-queue command yet: the failure stays visible in the table (and in the audit trail),
+  and the application's session lasts until its own timeout or the next event for that user.
 * Traccar's built-in OpenID client does not verify the authorization `state` or the ID token
   separately (upstream behavior, unchanged). The user is identified through `userinfo`.
 * OptiAccounting is an empty repository; it can onboard using the guide without changes here.

@@ -60,7 +60,7 @@ class DeliverBackchannelLogout implements ShouldQueue, ShouldQueueAfterCommit
             $response = Http::asForm()
                 ->withOptions(['allow_redirects' => false])
                 ->timeout((int) config('oidc.backchannel_timeout_seconds'))
-                ->post($client->backchannel_logout_uri, ['logout_token' => $keys->sign($this->claims($delivery))]);
+                ->post($client->backchannel_logout_uri, ['logout_token' => $keys->sign($this->claims($delivery), 'logout+jwt')]);
         } catch (ConnectionException $e) {
             $delivery->update(['last_http_status' => null, 'last_error' => Str::limit($e->getMessage(), 500)]);
 

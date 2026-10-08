@@ -102,6 +102,8 @@ class CentralLogoutTest extends TestCase
         foreach (Http::recorded() as [$request]) {
             parse_str($request->body(), $form);
             if (isset($form['logout_token'])) {
+                $header = json_decode(OidcKeyService::base64UrlDecode(explode('.', $form['logout_token'])[0]), true);
+                $this->assertSame('logout+jwt', $header['typ'], 'a logout token must be typed so it cannot pass for an id_token');
                 $claims = app(OidcKeyService::class)->verify($form['logout_token']);
                 $this->assertNotNull($claims, 'logout_token must verify against the published key');
                 $sent[] = ['url' => $request->url(), 'claims' => $claims];

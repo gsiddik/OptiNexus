@@ -54,7 +54,7 @@ class EventDispatchService
             // A genuine idempotent retry (same id, same fact) replays the
             // original record; the same id reused for a *different* fact is
             // a real conflict, not a safe-to-ignore duplicate.
-            if ($existing->event_key !== $envelope['event_key'] || $existing->data !== $data) {
+            if ($existing->event_key !== $envelope['event_key'] || $this->canonical($existing->data) !== $this->canonical($data)) {
                 return [null, 'EVENT_DUPLICATE', ['reason' => 'event_id already used for a different event.']];
             }
 
@@ -82,6 +82,25 @@ class EventDispatchService
         $this->dispatchToConsumers($event);
 
         return [$event, null, []];
+    }
+
+    /**
+     * Same facts, same shape, whatever the key order: PostgreSQL's jsonb hands
+     * keys back in its own order, so a plain comparison would call every retry
+     * of a multi-field event a conflict.
+     */
+    private function canonical(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        $value = array_map(fn ($item) => $this->canonical($item), $value);
+        if (! array_is_list($value)) {
+            ksort($value);
+        }
+
+        return $value;
     }
 
     private function dispatchToConsumers(Event $event): void

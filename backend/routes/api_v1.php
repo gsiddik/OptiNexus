@@ -38,4 +38,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     require __DIR__.'/v1/feature_flags.php';
     require __DIR__.'/v1/notifications.php';
     require __DIR__.'/v1/access.php';
+
+    // Platform integration: SSO and API Gateway administration.
+    require __DIR__.'/v1/oidc_clients.php';
+    require __DIR__.'/v1/gateway.php';
 });

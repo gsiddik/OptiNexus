@@ -5,3 +5,9 @@
 // alongside v1 without disturbing existing integrations.
 
 require __DIR__.'/api_v1.php';
+
+// OpenID Connect back-channel endpoints (stateless, called server-to-server).
+require __DIR__.'/api_oidc.php';
+
+// API Gateway for cross-platform data exchange.
+require __DIR__.'/api_gateway.php';

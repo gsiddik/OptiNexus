@@ -18,9 +18,9 @@ Status: design baseline for the OptiNexus ⇄ OptiFleet ⇄ OptiRadar integratio
 
 | # | Decision | Status |
 |---|----------|--------|
-| D1 | Odometer direction: OptiRadar (GPS) → OptiFleet. OptiFleet only moves `current_odometer` forward, every reading is stored with its source. | Confirmed by owner |
-| D2 | Commercial ownership: OptiNexus owns tenant, user, application access. OptiFleet's own contract/billing modules keep working unchanged in this phase. | Default, pending owner |
-| D3 | OptiRadar tenant isolation: one Traccar Group per OptiNexus tenant. | Default, pending owner |
+| D1 | Odometer direction: OptiRadar (GPS) → OptiFleet. Manual odometer entry in OptiFleet (inspection, work order, release, tire operations) stays available, so tenants without OptiRadar are unaffected; sync only runs for tenants linked to OptiNexus with telematics. OptiFleet only moves `current_odometer` forward and stores every telematics reading with its source. | Confirmed by owner |
+| D2 | Commercial ownership, phased: OptiNexus owns tenant, user, application access now. OptiFleet's own contract/billing modules keep working unchanged in this phase and move to OptiNexus later. | Confirmed by owner |
+| D3 | OptiRadar tenant isolation: one Traccar Group per OptiNexus tenant. | Confirmed by owner |
 | D4 | SSO protocol: OpenID Connect (authorization code + PKCE), OptiNexus as the provider. | Default |
 | D5 | OptiNexus has no `main` branch yet; this work branches from `claude/cgo-phase-1-governance-qtmik1`. | Default |
 

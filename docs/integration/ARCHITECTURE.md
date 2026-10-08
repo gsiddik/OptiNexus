@@ -27,6 +27,7 @@ Status: design baseline for the OptiNexus ⇄ OptiFleet ⇄ OptiRadar integratio
 | D7 | SSO for a user who has no OptiFleet account yet: sign-in is refused (existing users only). OptiFleet never creates accounts from SSO; an administrator adds the user first. | Confirmed by owner |
 | D8 | Central logout and automatic deactivation: OIDC Back-Channel Logout. A logout anywhere ends the user's sessions in every application (all devices). Losing access (user suspended or disabled, removed from the tenant, application access removed, tenant suspended) also deactivates the application account so password sign-in stops too; the account is switched on again only by the next successful SSO sign-in and only if OptiNexus deactivated it. Every application keeps working with its own password login when OptiNexus is not used. | Confirmed by owner |
 | D9 | OptiFleet reports invoice and memo events to OptiNexus (`POST /api/v1/events`) from its integration outbox, in the OptiNexus Event Catalog under `optifleet.*`. PostgreSQL in OptiFleet stays the source of truth; delivery is at-least-once and idempotent by `event_id`. | Confirmed by owner |
+| D10 | OptiRadar reports device online/offline, geofence enter/exit and overspeed events to OptiNexus (`POST /api/v1/events`) from an outbox table of its own, in the Event Catalog under `optiradar.*`, for devices of a tenant group only. Same guarantees as D9 (at-least-once, idempotent by `event_id`); the Traccar database stays the source of truth. | Confirmed by owner |
 
 ## 3. Components
 
@@ -109,6 +110,14 @@ session.
 row id as `event_id`. OptiNexus validates them against the Event Catalog (`OptiFleetEventCatalogSeeder` registers
 six events), stores each once per `event_id` (a replay with the same content is answered idempotently) and the
 workflow and notification engine can react. See the integration guide, §6.
+
+### 3.1d OptiRadar events (D10)
+
+`optiradar.*` events (device online/offline, geofence entered/exited, overspeed) travel from the `tc_optinexus_events`
+outbox table of the OptiRadar fork to `POST /api/v1/events` with the same envelope and guarantees as D9.
+`OptiRadarEventCatalogSeeder` registers the five events, `OptiRadarApplicationSeeder` the application. The tenant of an
+event is the `optinexusTenantId` of the device's group (or nearest ancestor group); devices outside a tenant group are
+not reported. See the integration guide, §7 (OptiRadar events).
 
 ### 3.2 API Gateway
 

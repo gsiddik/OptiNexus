@@ -88,6 +88,13 @@ body `logout_token=<JWT>`. OptiNexus follows no redirects, waits 5 seconds, and 
 when you accepted it (also when you do not know the user), or `400` when the token is invalid
 (not retried). Every attempt is recorded in `oidc_logout_deliveries`.
 
+If your endpoint was down for longer than the retries (about 45 minutes), the call ends as `FAILED`.
+After you are back, the OptiNexus operator runs `php artisan oidc:requeue-logout-deliveries`
+(`--dry-run` shows what would be sent). It sends a call again only while it is still true: not a
+logout when the user signed in to your application again since or when it is more than
+`--max-age` hours old (default 24), and not an access-revoked call once the user's access has been
+restored. Keep answering `200` for a user you do not know, so a repeated call is harmless.
+
 **The `logout_token`** is an RS256 JWT signed with the same key as the `id_token`, with header `typ: logout+jwt`:
 
 | Claim | Value |

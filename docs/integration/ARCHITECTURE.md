@@ -210,9 +210,14 @@ databases, scripted browser; not part of the automated suites):
   signed in through SSO is reached through its access row (by e-mail match). OptiFleet API tokens have no expiry of
   their own; they end through these events.
 * A delivery that keeps failing (application down) is retried with backoff and then left as `FAILED` in
-  `oidc_logout_deliveries`. The reconciler only looks at sessions that are still active, so it does not repeat a
-  failed call, and there is no re-queue command yet: the failure stays visible in the table (and in the audit trail),
-  and the application's session lasts until its own timeout or the next event for that user.
+  `oidc_logout_deliveries`. The reconciler only looks at sessions that are still active, so it never repeats a
+  failed call. An administrator sends them again with `php artisan oidc:requeue-logout-deliveries` once the
+  application is back (`--dry-run` first, `--client=`, `--user=`, `--max-age=` to narrow). The command repeats a call
+  only while it is still true, because an application acts on it at once: a *logout* is skipped when the user signed
+  in to that application again after the call was created (it would end the new session) or when it is older than
+  `--max-age` hours (default 24; the user may have signed in to the application directly since, which OptiNexus does
+  not see); an *access revoked* call is skipped when access has been restored (it would deactivate a reinstated
+  user), whatever its age. Nothing runs it automatically: a person decides when the application is healthy again.
 * Traccar's built-in OpenID client does not verify the authorization `state` or the ID token
   separately (upstream behavior, unchanged). The user is identified through `userinfo`.
 * OptiAccounting is an empty repository; it can onboard using the guide without changes here.

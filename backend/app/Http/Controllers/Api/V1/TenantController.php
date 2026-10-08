@@ -15,6 +15,7 @@ use App\Models\Tenant;
 use App\Models\TenantMembership;
 use App\Models\User;
 use App\Services\AuditService;
+use App\Services\Oidc\SessionRevocationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -23,7 +24,10 @@ class TenantController extends Controller
 {
     use ApiResponses, HandlesLifecycleTransitions;
 
-    public function __construct(private readonly AuditService $audit) {}
+    public function __construct(
+        private readonly AuditService $audit,
+        private readonly SessionRevocationService $revocation,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -122,6 +126,8 @@ class TenantController extends Controller
 
     public function detachApplication(Request $request, Tenant $tenant, Application $application): JsonResponse
     {
+        $this->revocation->revokeTenant($tenant, 'application_not_assigned', $application, $request);
+
         $tenant->applications()->detach($application->id);
 
         $this->audit->record('tenant.application_removed', $request, resourceType: 'Tenant', resourceId: $tenant->id, oldValue: ['application_id' => $application->id], tenantId: $tenant->id, applicationId: $application->id);
@@ -168,6 +174,10 @@ class TenantController extends Controller
 
         $old = $tenant->status;
         $tenant->update(['status' => $to]);
+
+        if (in_array($to, [Tenant::STATUS_SUSPENDED, Tenant::STATUS_TERMINATED, Tenant::STATUS_ARCHIVED], true)) {
+            $this->revocation->revokeTenant($tenant, 'tenant_'.strtolower($to), null, $request);
+        }
 
         $this->audit->record(
             'tenant.status_changed',

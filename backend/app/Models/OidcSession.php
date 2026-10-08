@@ -3,21 +3,31 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['token_hash', 'oidc_client_id', 'user_id', 'tenant_id', 'authorization_code_id', 'oidc_session_id', 'scopes', 'expires_at', 'revoked_at'])]
-class OidcAccessToken extends Model
+/**
+ * One sign-in of a user to an application for a tenant. Its id is the `sid`
+ * claim of the id_token. It stays active until the user logs out, access is
+ * revoked, or it times out.
+ */
+#[Fillable(['user_id', 'tenant_id', 'oidc_client_id', 'expires_at', 'ended_at', 'end_reason'])]
+class OidcSession extends Model
 {
     use HasUuidPrimaryKey;
 
     protected function casts(): array
     {
         return [
-            'scopes' => 'array',
             'expires_at' => 'datetime',
-            'revoked_at' => 'datetime',
+            'ended_at' => 'datetime',
         ];
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereNull('ended_at')->where('expires_at', '>', now());
     }
 
     public function client(): BelongsTo
@@ -33,10 +43,5 @@ class OidcAccessToken extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
-    }
-
-    public function isUsable(): bool
-    {
-        return $this->revoked_at === null && $this->expires_at->isFuture();
     }
 }

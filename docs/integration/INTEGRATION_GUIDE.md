@@ -53,6 +53,56 @@ code flow, PKCE `S256`, RS256 `id_token`, `userinfo`, JWKS, RP-initiated logout.
 * Call `userinfo` periodically (for example every 10 minutes) to learn about revoked access. A `401 invalid_token` means end the local session.
 * An `error=access_denied` redirect means the user's organization is not subscribed to your application or the user lacks access. Show a clear message; do not retry.
 
+## 2b. Central logout and automatic deactivation (Back-Channel Logout)
+
+OptiNexus tells every application when a user logs out anywhere, and when a user loses access.
+It implements OIDC Back-Channel Logout 1.0 with one extra event. Register the endpoint on the
+OIDC client (`backchannel_logout_uri`); without it the application is simply not notified.
+
+**What triggers a call**
+
+| Trigger | Type | Reason (`reason`) |
+|---------|------|-------------------|
+| The user logs out of OptiNexus or any application (`/oidc/logout`), or an admin calls `POST /users/{id}/force-logout` | logout | `logout`, `admin_logout` |
+| User suspended / disabled | access revoked, all tenants | `user_suspended`, `user_disabled` |
+| User removed from a tenant | access revoked, one tenant | `tenant_membership_removed` |
+| User's access to the application removed | access revoked | `application_access_revoked` |
+| Tenant suspended / terminated / archived | access revoked, one tenant | `tenant_suspended`, `tenant_terminated`, `tenant_archived` |
+| Application unassigned from the tenant, or its subscription lapsed (caught within a minute by `oidc:reconcile-access`) | access revoked, one tenant | `application_not_assigned`, `application_unavailable` |
+
+A *logout* ends sessions only. An *access revoked* call ends sessions **and** asks the application
+to deactivate its account for the user, so password login stops too. Reactivation is not pushed:
+when OptiNexus lets the user in again, the next successful SSO sign-in reactivates an account
+that was deactivated this way (and only such an account).
+
+**The call**: `POST <backchannel_logout_uri>`, `Content-Type: application/x-www-form-urlencoded`,
+body `logout_token=<JWT>`. OptiNexus follows no redirects, waits 5 seconds, and retries
+(10 s, 30 s, 2 min, 10 min, 30 min) on network errors, 5xx, 408 and 429. Answer `200` or `204`
+when you accepted it (also when you do not know the user), or `400` when the token is invalid
+(not retried). Every attempt is recorded in `oidc_logout_deliveries`.
+
+**The `logout_token`** is an RS256 JWT signed with the same key as the `id_token`:
+
+| Claim | Value |
+|-------|-------|
+| `iss`, `aud` | the issuer and **your** `client_id` |
+| `iat`, `exp` | issued now, valid 2 minutes (signed afresh on every retry) |
+| `jti` | unique id, remember it for a few minutes and refuse a repeat |
+| `sub` | the OptiNexus user id (same as in the `id_token`) |
+| `email` | the user's e-mail (extra claim, for applications that match accounts by e-mail) |
+| `events` | always `{"http://schemas.openid.net/event/backchannel-logout": {}}`; for access revoked also `"https://schemas.optinexus.io/event/access-revoked": {"reason": "...", "scope": "user" or "tenant", "tenant_id": "..."}` (`tenant_id` only when `scope` is `tenant`) |
+
+There is never a `nonce`. Validate like an `id_token` (signature through the JWKS, `iss`, `aud`,
+`exp`/`iat` with a small clock skew), require the `events` member, and require `sub`. Then:
+
+1. End every session of that user in your application (all devices). A token issued earlier
+   must stop working.
+2. If the access-revoked event is present, also deactivate the local account: for `scope=tenant`
+   only the user's membership of that `tenant_id` (map it to your local tenant), for
+   `scope=user` the whole account. Mark it as deactivated by OptiNexus so that an SSO sign-in can
+   undo exactly that, and nothing else.
+3. Answer `200`.
+
 ## 3. API Gateway
 
 Base: `{host}/api/gateway/v1`. Authenticate with OAuth2 client credentials

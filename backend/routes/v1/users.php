@@ -13,6 +13,8 @@ Route::prefix('users')->name('users.')->middleware('auth:sanctum')->group(functi
     Route::post('/{user}/suspend', [UserController::class, 'suspend'])->middleware('permission:cgo.user.suspend')->name('suspend');
     Route::post('/{user}/disable', [UserController::class, 'disable'])->middleware('permission:cgo.user.disable')->name('disable');
 
+    Route::post('/{user}/force-logout', [UserController::class, 'forceLogout'])->middleware('permission:cgo.user.session.revoke')->name('force-logout');
+
     Route::get('/{user}/tenants', [UserController::class, 'tenants'])->middleware('permission:cgo.user.view')->name('tenants.index');
     Route::post('/{user}/tenants/{tenant}', [UserController::class, 'attachTenant'])->middleware('permission:cgo.user.tenant.assign,tenant')->name('tenants.attach');
     Route::delete('/{user}/tenants/{tenant}', [UserController::class, 'detachTenant'])->middleware('permission:cgo.user.tenant.assign,tenant')->name('tenants.detach');

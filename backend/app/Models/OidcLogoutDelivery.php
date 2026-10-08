@@ -6,18 +6,27 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['token_hash', 'oidc_client_id', 'user_id', 'tenant_id', 'authorization_code_id', 'oidc_session_id', 'scopes', 'expires_at', 'revoked_at'])]
-class OidcAccessToken extends Model
+/**
+ * Outbox row for one Back-Channel Logout call to one application.
+ */
+#[Fillable(['oidc_client_id', 'user_id', 'tenant_id', 'type', 'reason', 'status', 'attempts', 'last_http_status', 'last_error', 'delivered_at'])]
+class OidcLogoutDelivery extends Model
 {
     use HasUuidPrimaryKey;
 
+    public const TYPE_LOGOUT = 'LOGOUT';
+
+    public const TYPE_ACCESS_REVOKED = 'ACCESS_REVOKED';
+
+    public const STATUS_PENDING = 'PENDING';
+
+    public const STATUS_DELIVERED = 'DELIVERED';
+
+    public const STATUS_FAILED = 'FAILED';
+
     protected function casts(): array
     {
-        return [
-            'scopes' => 'array',
-            'expires_at' => 'datetime',
-            'revoked_at' => 'datetime',
-        ];
+        return ['delivered_at' => 'datetime'];
     }
 
     public function client(): BelongsTo
@@ -33,10 +42,5 @@ class OidcAccessToken extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
-    }
-
-    public function isUsable(): bool
-    {
-        return $this->revoked_at === null && $this->expires_at->isFuture();
     }
 }

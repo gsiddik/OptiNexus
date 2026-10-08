@@ -19,6 +19,7 @@ use App\Models\User;
 use App\Models\UserApplicationAccess;
 use App\Services\AuditService;
 use App\Services\AuthorizationService;
+use App\Services\Oidc\SessionRevocationService;
 use App\Services\PrivilegeEscalationGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,6 +32,7 @@ class UserController extends Controller
         private readonly AuditService $audit,
         private readonly AuthorizationService $authorization,
         private readonly PrivilegeEscalationGuard $escalationGuard,
+        private readonly SessionRevocationService $revocation,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -103,6 +105,14 @@ class UserController extends Controller
         return $this->transitionTo($request, $user, User::STATUS_DISABLED, [User::STATUS_ACTIVE, User::STATUS_SUSPENDED, User::STATUS_INVITED]);
     }
 
+    /** Sign the user out of every application and OptiNexus itself. */
+    public function forceLogout(Request $request, User $user): JsonResponse
+    {
+        $notified = $this->revocation->logoutEverywhere($user, 'admin_logout', $request);
+
+        return $this->ok(['applications_notified' => $notified]);
+    }
+
     public function tenants(User $user): JsonResponse
     {
         return $this->ok(TenantResource::collection($user->tenants));
@@ -124,6 +134,9 @@ class UserController extends Controller
 
     public function detachTenant(Request $request, User $user, Tenant $tenant): JsonResponse
     {
+        // Before the access rows go: they decide which applications must be told.
+        $this->revocation->revokeAccess($user, 'tenant_membership_removed', $tenant, null, $request);
+
         $user->tenantMemberships()->where('tenant_id', $tenant->id)->delete();
         $user->applicationAccess()->where('tenant_id', $tenant->id)->delete();
         $user->userRoles()->where('tenant_id', $tenant->id)->delete();
@@ -165,6 +178,8 @@ class UserController extends Controller
     public function detachApplication(Request $request, User $user, Application $application): JsonResponse
     {
         $tenantId = $request->query('tenant_id');
+
+        $this->revocation->revokeAccess($user, 'application_access_revoked', $tenantId ? Tenant::query()->find($tenantId) : null, $application, $request);
 
         $query = $user->applicationAccess()->where('application_id', $application->id);
         if ($tenantId) {
@@ -254,6 +269,10 @@ class UserController extends Controller
         $user->update(['status' => $to]);
 
         $this->audit->record('user.status_changed', $request, resourceType: 'User', resourceId: $user->id, oldValue: ['status' => $old], newValue: ['status' => $to]);
+
+        if (in_array($to, [User::STATUS_SUSPENDED, User::STATUS_DISABLED], true)) {
+            $this->revocation->revokeAccess($user, $to === User::STATUS_DISABLED ? 'user_disabled' : 'user_suspended', null, null, $request);
+        }
 
         return $this->ok(new UserResource($user));
     }

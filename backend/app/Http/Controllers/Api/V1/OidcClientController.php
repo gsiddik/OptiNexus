@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Concerns\ApiResponses;
 use App\Http\Controllers\Controller;
 use App\Models\OidcAccessToken;
 use App\Models\OidcClient;
+use App\Models\OidcSession;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -52,6 +53,7 @@ class OidcClientController extends Controller
             'redirect_uris' => $data['redirect_uris'],
             'post_logout_redirect_uris' => $data['post_logout_redirect_uris'] ?? [],
             'launch_url' => $data['launch_url'] ?? null,
+            'backchannel_logout_uri' => $data['backchannel_logout_uri'] ?? null,
             'require_pkce' => (bool) ($data['require_pkce'] ?? false),
             'status' => OidcClient::STATUS_ACTIVE,
             'created_by' => $request->user()?->id,
@@ -71,6 +73,7 @@ class OidcClientController extends Controller
             'post_logout_redirect_uris' => ['sometimes', 'array', 'max:20'],
             'post_logout_redirect_uris.*' => ['required', 'url:http,https', 'max:2048'],
             'launch_url' => ['sometimes', 'nullable', 'url:http,https', 'max:2048'],
+            'backchannel_logout_uri' => ['sometimes', 'nullable', 'url:http,https', 'max:2048'],
             'require_pkce' => ['sometimes', 'boolean'],
         ]);
 
@@ -98,6 +101,7 @@ class OidcClientController extends Controller
     {
         $oidcClient->update(['status' => OidcClient::STATUS_REVOKED]);
         OidcAccessToken::query()->where('oidc_client_id', $oidcClient->id)->whereNull('revoked_at')->update(['revoked_at' => now()]);
+        OidcSession::query()->where('oidc_client_id', $oidcClient->id)->whereNull('ended_at')->update(['ended_at' => now(), 'end_reason' => 'client_revoked']);
         $this->audit->record('sso.client.revoked', $request, applicationId: $oidcClient->application_id, resourceType: 'OidcClient', resourceId: $oidcClient->id);
 
         return $this->ok($this->present($oidcClient));
@@ -113,6 +117,7 @@ class OidcClientController extends Controller
             'post_logout_redirect_uris' => ['nullable', 'array', 'max:20'],
             'post_logout_redirect_uris.*' => ['required', 'url:http,https', 'max:2048'],
             'launch_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'backchannel_logout_uri' => ['nullable', 'url:http,https', 'max:2048'],
             'confidential' => ['sometimes', 'boolean'],
             'require_pkce' => ['sometimes', 'boolean'],
         ];
@@ -129,6 +134,7 @@ class OidcClientController extends Controller
             'redirect_uris' => $client->redirect_uris,
             'post_logout_redirect_uris' => $client->post_logout_redirect_uris,
             'launch_url' => $client->launch_url,
+            'backchannel_logout_uri' => $client->backchannel_logout_uri,
             'require_pkce' => $client->require_pkce,
             'status' => $client->status,
             'created_at' => $client->created_at,

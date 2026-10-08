@@ -652,6 +652,14 @@ paths:
   /users/{user}/disable:
     parameters: [{ $ref: '#/components/parameters/UserId' }]
     post: { tags: [Users], summary: "→ DISABLED (terminal)", responses: { '200': { $ref: '#/components/responses/UserItem' } } }
+  /users/{user}/force-logout:
+    parameters: [{ $ref: '#/components/parameters/UserId' }]
+    post:
+      tags: [Users]
+      summary: Sign the user out of every application and OptiNexus
+      description: "Permission `cgo.user.session.revoke`. Same effect as a central logout, started by an administrator. Returns how many applications were notified."
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { applications_notified: { type: integer } } } } } } } }
   /users/{user}/tenants:
     parameters: [{ $ref: '#/components/parameters/UserId' }]
     get: { tags: [Users], summary: List tenant memberships, responses: { '200': { $ref: '#/components/responses/TenantList' } } }
@@ -1981,7 +1989,8 @@ paths:
     servers: [{ url: "https://cgo.example.com" }]
     get:
       tags: [SSO]
-      summary: End the OptiNexus session
+      summary: End the OptiNexus session and sign the user out of every application
+      description: "Central logout. The user is the one signed in at OptiNexus, or the one named by a valid `id_token_hint`. Every application the user is signed in to receives a Back-Channel Logout call (`logout_token`, no access-revoked event). The user's account in those applications stays active."
       security: []
       parameters:
         - { name: client_id, in: query, schema: { type: string } }
@@ -2019,7 +2028,7 @@ paths:
   /oidc-clients/{oidcClient}:
     parameters: [{ name: oidcClient, in: path, required: true, schema: { type: string, format: uuid } }]
     get: { tags: [SSO Clients], summary: Get an SSO client, responses: { '200': { description: OK } } }
-    put: { tags: [SSO Clients], summary: Update redirect URIs, name or PKCE policy, responses: { '200': { description: OK } } }
+    put: { tags: [SSO Clients], summary: Update redirect URIs, back-channel logout URI, name or PKCE policy, responses: { '200': { description: OK } } }
   /oidc-clients/{oidcClient}/rotate-secret:
     parameters: [{ name: oidcClient, in: path, required: true, schema: { type: string, format: uuid } }]
     post: { tags: [SSO Clients], summary: Rotate the client secret (shown once), responses: { '200': { description: OK } } }
@@ -3750,6 +3759,9 @@ components:
         userinfo_endpoint: { type: string }
         jwks_uri: { type: string }
         end_session_endpoint: { type: string }
+        backchannel_logout_supported: { type: boolean }
+        backchannel_logout_session_supported: { type: boolean }
+        backchannel_logout_events_supported: { type: array, items: { type: string, format: uri } }
     OidcTokenResponse:
       type: object
       properties:
@@ -3763,6 +3775,7 @@ components:
       description: "Claims in the id_token and userinfo."
       properties:
         sub: { type: string, format: uuid, description: "Stable OptiNexus user id - use this, not the email, to link accounts." }
+        sid: { type: string, format: uuid, description: "id_token only. Identifies this sign-in at OptiNexus; kept for logging and support. See Back-Channel Logout." }
         email: { type: string }
         email_verified: { type: boolean }
         name: { type: string }
@@ -3785,6 +3798,11 @@ components:
         redirect_uris: { type: array, items: { type: string, format: uri }, minItems: 1 }
         post_logout_redirect_uris: { type: array, items: { type: string, format: uri } }
         launch_url: { type: string, format: uri, nullable: true }
+        backchannel_logout_uri:
+          type: string
+          format: uri
+          nullable: true
+          description: "Where OptiNexus POSTs a signed `logout_token` when the user logs out anywhere or loses access (OIDC Back-Channel Logout 1.0). Leave empty and the application is not notified."
         confidential: { type: boolean, default: true }
         require_pkce: { type: boolean, default: false }
     GatewayPublishVehicles:

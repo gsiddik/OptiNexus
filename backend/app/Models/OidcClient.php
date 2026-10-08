@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * An OpenID Connect relying party (an integrated application's login).
  * A null client_secret_hash marks a public client, which must use PKCE.
  */
-#[Fillable(['application_id', 'client_id', 'client_secret_hash', 'name', 'redirect_uris', 'post_logout_redirect_uris', 'launch_url', 'require_pkce', 'status', 'created_by'])]
+#[Fillable(['application_id', 'client_id', 'client_secret_hash', 'name', 'redirect_uris', 'post_logout_redirect_uris', 'launch_url', 'backchannel_logout_uri', 'require_pkce', 'status', 'created_by'])]
 #[Hidden(['client_secret_hash'])]
 class OidcClient extends Model
 {

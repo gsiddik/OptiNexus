@@ -5,6 +5,7 @@ namespace App\Services\Oidc;
 use App\Models\OidcAccessToken;
 use App\Models\OidcAuthorizationCode;
 use App\Models\OidcClient;
+use App\Models\OidcSession;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -86,6 +87,14 @@ class OidcTokenService
                 return [null, 'access_denied'];
             }
 
+            // The sid claim: one entry per application sign-in, used for central logout.
+            $session = OidcSession::create([
+                'user_id' => $user->id,
+                'tenant_id' => $tenant->id,
+                'oidc_client_id' => $client->id,
+                'expires_at' => now()->addSeconds((int) config('oidc.session_ttl_seconds')),
+            ]);
+
             $plainToken = Str::random(64);
             $ttl = (int) config('oidc.access_token_ttl_seconds');
 
@@ -95,11 +104,12 @@ class OidcTokenService
                 'user_id' => $user->id,
                 'tenant_id' => $tenant->id,
                 'authorization_code_id' => $authCode->id,
+                'oidc_session_id' => $session->id,
                 'scopes' => $authCode->scopes,
                 'expires_at' => now()->addSeconds($ttl),
             ]);
 
-            $idToken = $this->keys->sign($this->idTokenClaims($authCode, $client, $user, $tenant, $plainToken));
+            $idToken = $this->keys->sign($this->idTokenClaims($authCode, $client, $user, $tenant, $plainToken, $session));
 
             return [[
                 'access_token' => $plainToken,
@@ -148,7 +158,7 @@ class OidcTokenService
         return $claims;
     }
 
-    private function idTokenClaims(OidcAuthorizationCode $code, OidcClient $client, User $user, Tenant $tenant, string $accessToken): array
+    private function idTokenClaims(OidcAuthorizationCode $code, OidcClient $client, User $user, Tenant $tenant, string $accessToken, OidcSession $session): array
     {
         $now = time();
         $claims = [
@@ -157,6 +167,7 @@ class OidcTokenService
             'iat' => $now,
             'exp' => $now + (int) config('oidc.id_token_ttl_seconds'),
             'auth_time' => $code->auth_time->getTimestamp(),
+            'sid' => $session->id,
             // OIDC Core §3.1.3.6: left half of SHA-256 of the access token.
             'at_hash' => OidcKeyService::base64Url(substr(hash('sha256', $accessToken, true), 0, 16)),
         ] + $this->userClaims($user, $tenant, $code->scopes);

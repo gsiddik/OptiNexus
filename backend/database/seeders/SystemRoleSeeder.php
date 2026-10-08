@@ -38,6 +38,7 @@ class SystemRoleSeeder extends Seeder
             'permissions' => [
                 'cgo.user.view', 'cgo.user.create', 'cgo.user.update', 'cgo.user.activate', 'cgo.user.suspend',
                 'cgo.user.disable', 'cgo.user.tenant.assign', 'cgo.user.application.assign', 'cgo.user.role.assign',
+                'cgo.user.session.revoke',
                 'cgo.role.view', 'cgo.role.create', 'cgo.role.update', 'cgo.role.clone', 'cgo.role.permission.grant',
                 'cgo.permission.view', 'cgo.permission.create', 'cgo.permission.update',
             ],
@@ -55,7 +56,7 @@ class SystemRoleSeeder extends Seeder
             'description' => 'Front-line support: can view accounts and suspend/reactivate users, read-only elsewhere.',
             'permissions' => [
                 'cgo.customer.view', 'cgo.tenant.view', 'cgo.application.view', 'cgo.user.view',
-                'cgo.user.suspend', 'cgo.user.activate', 'cgo.audit.view',
+                'cgo.user.suspend', 'cgo.user.activate', 'cgo.user.session.revoke', 'cgo.audit.view',
             ],
         ],
     ];

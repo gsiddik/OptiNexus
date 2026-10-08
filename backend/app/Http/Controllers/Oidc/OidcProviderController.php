@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\AuditService;
 use App\Services\Oidc\OidcKeyService;
 use App\Services\Oidc\OidcTokenService;
+use App\Services\Oidc\SessionRevocationService;
 use App\Services\Oidc\SsoAccessResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -36,6 +37,7 @@ class OidcProviderController extends Controller
         private readonly OidcTokenService $tokens,
         private readonly SsoAccessResolver $access,
         private readonly AuditService $audit,
+        private readonly SessionRevocationService $revocation,
     ) {}
 
     public function discovery(): JsonResponse
@@ -56,8 +58,11 @@ class OidcProviderController extends Controller
             'scopes_supported' => config('oidc.scopes_supported'),
             'token_endpoint_auth_methods_supported' => ['client_secret_basic', 'client_secret_post', 'none'],
             'code_challenge_methods_supported' => ['S256'],
-            'claims_supported' => ['sub', 'iss', 'aud', 'exp', 'iat', 'auth_time', 'nonce', 'at_hash', 'email', 'email_verified', 'name', 'preferred_username', 'tenant_id', 'tenant_code', 'tenant_name', 'groups', 'apps'],
+            'claims_supported' => ['sub', 'iss', 'aud', 'exp', 'iat', 'auth_time', 'sid', 'nonce', 'at_hash', 'email', 'email_verified', 'name', 'preferred_username', 'tenant_id', 'tenant_code', 'tenant_name', 'groups', 'apps'],
             'authorization_response_iss_parameter_supported' => true,
+            'backchannel_logout_supported' => true,
+            'backchannel_logout_session_supported' => true,
+            'backchannel_logout_events_supported' => [SessionRevocationService::EVENT_BACKCHANNEL_LOGOUT, SessionRevocationService::EVENT_ACCESS_REVOKED],
         ]);
     }
 
@@ -257,15 +262,31 @@ class OidcProviderController extends Controller
             ->header('Cache-Control', 'no-store');
     }
 
+    /**
+     * RP-initiated logout (OIDC RP-Initiated Logout 1.0) and the entry point of
+     * central logout: whoever is signed in here (the browser session, or the
+     * user named by a valid id_token_hint) is signed out of every application,
+     * and each application is told through Back-Channel Logout.
+     */
     public function logout(Request $request): Response|View
     {
+        $hint = $request->query('id_token_hint');
+        $hintClaims = is_string($hint) && $hint !== '' ? $this->keys->verify($hint) : null;
+
+        $user = Auth::guard('web')->user()
+            ?? (isset($hintClaims['sub']) ? User::query()->find($hintClaims['sub']) : null);
+
+        if ($user instanceof User) {
+            $this->revocation->logoutEverywhere($user, 'logout', $request);
+        }
+
         $this->endWebSession($request);
 
         $target = (string) $request->query('post_logout_redirect_uri');
         $clientId = (string) $request->query('client_id');
 
-        if ($target !== '' && $clientId === '' && ($hint = $request->query('id_token_hint'))) {
-            $clientId = (string) ($this->keys->verify($hint)['aud'] ?? '');
+        if ($target !== '' && $clientId === '' && $hintClaims) {
+            $clientId = (string) ($hintClaims['aud'] ?? '');
         }
 
         $client = $clientId !== '' ? OidcClient::query()->where('client_id', $clientId)->first() : null;

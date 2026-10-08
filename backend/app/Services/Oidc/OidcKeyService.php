@@ -15,9 +15,12 @@ class OidcKeyService
 {
     private ?OpenSSLAsymmetricKey $key = null;
 
-    public function sign(array $claims): string
+    /**
+     * @param  string  $type  JOSE `typ` header: "JWT" for id_tokens, "logout+jwt" for logout tokens, so one kind of token can never be mistaken for the other.
+     */
+    public function sign(array $claims, string $type = 'JWT'): string
     {
-        $header = ['alg' => 'RS256', 'typ' => 'JWT', 'kid' => $this->keyId()];
+        $header = ['alg' => 'RS256', 'typ' => $type, 'kid' => $this->keyId()];
         $input = self::base64Url(json_encode($header, JSON_UNESCAPED_SLASHES)).'.'
             .self::base64Url(json_encode($claims, JSON_UNESCAPED_SLASHES));
 

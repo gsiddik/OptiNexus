@@ -4,6 +4,7 @@ namespace Tests\Feature\Integration;
 
 use App\Models\Application;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Services\Oidc\OidcKeyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesIntegrationFixtures;
@@ -109,8 +110,8 @@ class OidcProviderTest extends TestCase
 
     public function test_user_without_application_access_is_denied(): void
     {
-        [$client, , ] = $this->setUpRadar();
-        $outsider = \App\Models\User::factory()->create(['status' => 'ACTIVE', 'password' => 'Passw0rd!Passw0rd']);
+        [$client] = $this->setUpRadar();
+        $outsider = User::factory()->create(['status' => 'ACTIVE', 'password' => 'Passw0rd!Passw0rd']);
         $this->attachUserToTenant($outsider, $this->tenant); // member, but never given OptiRadar
 
         $response = $this->signIn($client, $outsider);

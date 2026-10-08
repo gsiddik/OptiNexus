@@ -30,7 +30,7 @@ class PermissionSeeder extends Seeder
 
         'cgo.user.view', 'cgo.user.create', 'cgo.user.update', 'cgo.user.activate',
         'cgo.user.suspend', 'cgo.user.disable', 'cgo.user.tenant.assign',
-        'cgo.user.application.assign', 'cgo.user.role.assign',
+        'cgo.user.application.assign', 'cgo.user.role.assign', 'cgo.user.session.revoke',
 
         'cgo.audit.view',
 

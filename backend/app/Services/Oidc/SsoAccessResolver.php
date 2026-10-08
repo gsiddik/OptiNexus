@@ -53,6 +53,47 @@ class SsoAccessResolver
     }
 
     /**
+     * Why the user may no longer open the application in the tenant, or null
+     * when access still holds. The codes are part of the logout contract
+     * (`reason` of the access-revoked event), so keep them stable.
+     */
+    public function denialReason(User $user, Application $application, Tenant $tenant): ?string
+    {
+        if (! $user->isActive()) {
+            return $user->status === User::STATUS_DISABLED ? 'user_disabled' : 'user_suspended';
+        }
+
+        if ($tenant->status !== Tenant::STATUS_ACTIVE) {
+            return 'tenant_'.strtolower($tenant->status);
+        }
+
+        $membershipActive = TenantMembership::query()
+            ->where('user_id', $user->id)->where('tenant_id', $tenant->id)
+            ->where('status', TenantMembership::STATUS_ACTIVE)->exists();
+        if (! $membershipActive) {
+            return 'tenant_membership_removed';
+        }
+
+        $hasAccess = UserApplicationAccess::query()
+            ->where('user_id', $user->id)->where('tenant_id', $tenant->id)
+            ->where('application_id', $application->id)
+            ->where('status', UserApplicationAccess::STATUS_ACTIVE)->exists();
+        if (! $hasAccess) {
+            return 'application_access_revoked';
+        }
+
+        if (! $this->applicationIsLive($application)) {
+            return 'application_unavailable';
+        }
+
+        $assigned = $tenant->applications()
+            ->where('applications.id', $application->id)
+            ->where('tenant_applications.status', 'ACTIVE')->exists();
+
+        return $assigned ? null : 'application_not_assigned';
+    }
+
+    /**
      * Every application the user may open in the tenant, for app switchers
      * (the `apps` and `groups` claims).
      *

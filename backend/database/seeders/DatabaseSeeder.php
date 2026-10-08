@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             PlatformIntegrationRoleSeeder::class,
             AdminUserSeeder::class,
             DemoDataSeeder::class,
+            OptiRadarApplicationSeeder::class,
             CommercialDemoDataSeeder::class,
             // After the applications exist; does nothing (with a warning) when "optifleet" is not registered yet.
             OptiFleetEventCatalogSeeder::class,

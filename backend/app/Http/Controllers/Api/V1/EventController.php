@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\V1\Concerns\ApiResponses;
+use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\StoreEventRequest;
 use App\Http\Resources\V1\EventResource;
-use App\Http\Controllers\Controller;
 use App\Models\ServiceAccount;
 use App\Models\Tenant;
 use App\Services\AuditService;
@@ -26,7 +26,8 @@ class EventController extends Controller
     /**
      * Machine-to-machine only. The producer's identity comes from the
      * authenticated service account (event.write scope), never from the
-     * request body, preventing event spoofing. Idempotent on event_id.
+     * request body, preventing event spoofing, and it may only send the event
+     * keys registered to its own application. Idempotent on event_id.
      */
     public function store(StoreEventRequest $request): JsonResponse
     {
@@ -49,7 +50,11 @@ class EventController extends Controller
         [$event, $errorCode, $details] = $this->dispatch->ingest($data, $producer);
 
         if ($errorCode) {
-            $status = $errorCode === 'EVENT_DUPLICATE' ? 409 : 422;
+            $status = match ($errorCode) {
+                'EVENT_DUPLICATE' => 409,
+                'EVENT_SOURCE_DENIED' => 403,
+                default => 422,
+            };
 
             return $this->fail($errorCode, 'The event could not be accepted.', $status, $details);
         }

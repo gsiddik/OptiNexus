@@ -154,6 +154,11 @@ an admin links it (`PUT /api/v1/gateway/tenants/{tenant}/vehicle-links/{link}`).
 
 * `POST /api/v1/authorization/check`, `/entitlements/check`, `/access/evaluate` - server-side permission and module checks.
 * `POST /api/v1/events` (`event.write`) - publish business events to the catalog for workflows and notifications.
+  An application may only send the event keys registered to it (`optifleet.*` from the OptiFleet service account,
+  `optiradar.*` from OptiRadar's). Any other key is refused with `403 EVENT_SOURCE_DENIED`, before anything about
+  the key is revealed. A key registered without an application is a platform key: only a service account that
+  belongs to no application may send it. A platform administrator can hand such a key to an application once
+  (`PUT /api/v1/event-catalog/{id}` with `application_id`); an owned key never changes hands.
 * `POST /api/v1/audit-events` (`audit.write`), `POST /api/v1/usage-events` (`usage.write`).
 
 ## 5. OptiRadar connector (operators)
@@ -195,7 +200,8 @@ OptiFleet reports six events to `POST /api/v1/events` (key prefix `optifleet.`):
 
 1. Register the six events: `php artisan db:seed --class=OptiFleetEventCatalogSeeder` (the application with code
    `optifleet` must exist; running it again only updates the entries).
-2. Give the OptiFleet service account the `event.write` scope and assign the OptiFleet application to the tenants.
+2. Give the OptiFleet service account (created for the OptiFleet application, not a platform account) the `event.write`
+   scope and assign the OptiFleet application to the tenants.
 3. Set `OPTINEXUS_EVENTS_ENABLED=true` in OptiFleet. `php artisan optinexus:relay-events` then runs every minute.
 
 Only tenants linked to OptiNexus are relayed. Network errors, 5xx and an event type that is not in the catalog yet

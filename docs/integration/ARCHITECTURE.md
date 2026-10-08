@@ -119,6 +119,18 @@ outbox table of the OptiRadar fork to `POST /api/v1/events` with the same envelo
 event is the `optinexusTenantId` of the device's group (or nearest ancestor group); devices outside a tenant group are
 not reported. See the integration guide, §7 (OptiRadar events).
 
+### 3.1e Event key ownership
+
+An event key belongs to the application it is registered to in the Event Catalog (`event_catalog.application_id`).
+`POST /api/v1/events` accepts it only from a service account of that application, so one application can never emit
+another's events (OptiRadar's token cannot send `optifleet.*`). A key without an application is a platform key and only
+a service account without an application may send it. The check runs right after the key is looked up, before the
+status and payload checks, so a stranger learns nothing about a key it does not own; the answer is `403
+EVENT_SOURCE_DENIED`, which the OptiFleet and OptiRadar relays already treat as a refusal retrying cannot fix. The owner
+of a platform key can be set once through the catalog update (`application_id`); changing an owner is refused, because
+the new owner could then speak for the old one. This closes the gap noted in OptiNexus PR #4. The service accounts
+used by OptiFleet and OptiRadar must therefore be created for their own application.
+
 ### 3.2 API Gateway
 
 Base path `/api/gateway/v1`. Every call uses an OAuth2 client-credentials token

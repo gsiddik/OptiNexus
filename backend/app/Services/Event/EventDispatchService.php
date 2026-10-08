@@ -37,6 +37,11 @@ class EventDispatchService
             return [null, 'EVENT_INVALID', ['reason' => 'Unknown event_key. Register it in the Event Catalog first.']];
         }
 
+        // Before the status check, so a producer learns nothing about keys it does not own.
+        if (! $this->producerOwnsKey($producer, $catalogEntry)) {
+            return [null, 'EVENT_SOURCE_DENIED', ['reason' => 'This event_key is not registered to the sending application.']];
+        }
+
         if (! $catalogEntry->isActive()) {
             return [null, 'EVENT_INVALID', ['reason' => 'This event_key is not ACTIVE in the Event Catalog.']];
         }
@@ -82,6 +87,18 @@ class EventDispatchService
         $this->dispatchToConsumers($event);
 
         return [$event, null, []];
+    }
+
+    /**
+     * An event key belongs to the application it is registered to, and only
+     * that application's service accounts may send it, so one application can
+     * never speak with another's name (optifleet.* from OptiRadar's token).
+     * A key without an application is a platform key and a service account
+     * without an application is a platform account; they only fit each other.
+     */
+    private function producerOwnsKey(ServiceAccount $producer, EventCatalogEntry $entry): bool
+    {
+        return $entry->application_id === $producer->application_id;
     }
 
     /**

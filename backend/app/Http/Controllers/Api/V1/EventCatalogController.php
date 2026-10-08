@@ -10,6 +10,7 @@ use App\Models\EventCatalogEntry;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class EventCatalogController extends Controller
 {
@@ -57,7 +58,14 @@ class EventCatalogController extends Controller
             'schema_version' => ['sometimes', 'string', 'max:20'],
             'payload_schema' => ['nullable', 'array'],
             'status' => ['sometimes', 'string', 'in:'.implode(',', EventCatalogEntry::STATUSES)],
+            'application_id' => ['sometimes', 'uuid', 'exists:applications,id'],
         ]);
+
+        // A key without an application can be handed to one (only that application may then send it),
+        // but an owned key never changes hands: that would let the new owner speak for the old one.
+        if (isset($validated['application_id']) && $event->application_id !== null && $validated['application_id'] !== $event->application_id) {
+            throw ValidationException::withMessages(['application_id' => 'The application of an event key cannot be changed once it is set.']);
+        }
 
         $old = $event->toArray();
         $event->update($validated);

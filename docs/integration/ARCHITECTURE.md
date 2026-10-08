@@ -167,6 +167,11 @@ databases, scripted browser; not part of the automated suites):
 
 * Logout is not federated: OptiFleet's sign-out ends the OptiNexus session; OptiRadar's sign-out
   only ends its own session, and the other apps' sessions end at their own expiry.
+* Deprovisioning is not pushed to the apps. Removing a user's access or deactivating them in
+  OptiNexus stops new SSO sign-ins at once, but sessions already open in an app live until that
+  app ends them (OptiFleet API tokens have no expiry configured, Traccar sessions run to their
+  timeout), and OptiFleet's own account status is not changed. A user-lifecycle event or a
+  periodic `userinfo` check is the natural next step (needs an owner decision).
 * Traccar's built-in OpenID client does not verify the authorization `state` or the ID token
   separately (upstream behavior, unchanged). The user is identified through `userinfo`.
 * OptiAccounting is an empty repository; it can onboard using the guide without changes here.

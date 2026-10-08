@@ -53,6 +53,8 @@ class OptiRadarConnectorTest extends TestCase
         // Device-reported odometer wins over GPS distance; metres become km exactly.
         $this->assertDatabaseHas('gateway_odometer_readings', ['tenant_id' => $tenant->id, 'device_ref' => '10', 'odometer_km' => '12500.00']);
         $this->assertDatabaseHas('gateway_odometer_readings', ['tenant_id' => $tenant->id, 'device_ref' => '11', 'odometer_km' => '1.00']);
+        $this->assertDatabaseHas('gateway_odometer_readings', ['device_ref' => '10', 'odometer_kind' => 'DEVICE_ODOMETER']);
+        $this->assertDatabaseHas('gateway_odometer_readings', ['device_ref' => '11', 'odometer_kind' => 'GPS_DISTANCE']);
         $this->assertDatabaseMissing('gateway_odometer_readings', ['device_ref' => '12']);
 
         // Same fix times again: nothing new.

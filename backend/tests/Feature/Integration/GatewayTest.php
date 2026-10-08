@@ -74,6 +74,7 @@ class GatewayTest extends TestCase
         $feed = $this->as($this->fleetToken())->getJson('/api/gateway/v1/telematics/odometer-readings')->assertOk();
         $feed->assertJsonPath('data.items.0.vehicle_id', 'veh-1')
             ->assertJsonPath('data.items.0.odometer_km', '12500.50')
+            ->assertJsonPath('data.items.0.odometer_kind', 'DEVICE_ODOMETER')
             ->assertJsonPath('data.items.0.registration_number', 'B 1234 XYZ');
     }
 
@@ -181,6 +182,22 @@ class GatewayTest extends TestCase
 
         $this->as($readOnly)->putJson('/api/gateway/v1/fleet/vehicles', ['vehicles' => [['id' => '1', 'registration_number' => 'X']]])->assertStatus(403);
         $this->flushHeaders()->getJson('/api/gateway/v1/vehicle-links')->assertStatus(401);
+    }
+
+    public function test_odometer_kind_is_validated_and_returned(): void
+    {
+        $this->publish([['id' => 'veh-1', 'registration_number' => 'B1234XYZ']]);
+
+        $this->as($this->radarToken())->postJson('/api/gateway/v1/telematics/odometer-readings', ['readings' => [
+            $this->reading('dev-9', '10', '2026-10-08T01:00:00Z', ['registration_number' => 'B1234XYZ', 'odometer_kind' => 'BOGUS']),
+        ]])->assertStatus(422);
+
+        $this->as($this->radarToken())->postJson('/api/gateway/v1/telematics/odometer-readings', ['readings' => [
+            $this->reading('dev-9', '10', '2026-10-08T01:00:00Z', ['registration_number' => 'B1234XYZ', 'odometer_kind' => 'GPS_DISTANCE']),
+        ]])->assertStatus(202);
+
+        $this->as($this->fleetToken())->getJson('/api/gateway/v1/telematics/odometer-readings')
+            ->assertJsonPath('data.items.0.odometer_kind', 'GPS_DISTANCE');
     }
 
     public function test_validation_rejects_negative_odometer(): void

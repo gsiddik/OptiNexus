@@ -3815,6 +3815,7 @@ components:
             properties:
               device_ref: { type: string }
               odometer_km: { type: number, minimum: 0, description: "Kilometres" }
+              odometer_kind: { type: string, enum: [DEVICE_ODOMETER, GPS_DISTANCE], default: DEVICE_ODOMETER, description: "GPS_DISTANCE = distance accumulated by the tracker since installation; consumers should calibrate it against their own odometer." }
               recorded_at: { type: string, format: date-time }
               device_name: { type: string, nullable: true }
               registration_number: { type: string, nullable: true, description: "Used for automatic matching to a fleet vehicle" }
@@ -3834,6 +3835,7 @@ components:
                   vehicle_id: { type: string, description: "The fleet application's own vehicle id" }
                   registration_number: { type: string }
                   odometer_km: { type: string, example: "12500.50" }
+                  odometer_kind: { type: string, enum: [DEVICE_ODOMETER, GPS_DISTANCE] }
                   recorded_at: { type: string, format: date-time }
                   source: { type: string, example: optiradar }
                   device_ref: { type: string }

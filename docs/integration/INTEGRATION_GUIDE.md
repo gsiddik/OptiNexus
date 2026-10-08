@@ -72,7 +72,7 @@ Base: `{host}/api/gateway/v1`. Authenticate with OAuth2 client credentials
 | `GET /telematics/odometer-readings?cursor=` | `gateway.telematics.read` | Fleet app pulls readings for its linked vehicles |
 
 **Consuming the feed (what OptiFleet does):** persist `next_cursor`; be idempotent on
-`reading_id`; treat `odometer_km` as a decimal string (never a float); a reading can be
+`reading_id`; treat `odometer_km` as a decimal string (never a float); `odometer_kind` is `DEVICE_ODOMETER` (real odometer) or `GPS_DISTANCE` (tracker distance since installation - calibrate it against your own odometer before use); a reading can be
 delivered again when its device is linked later.
 
 **Matching** vehicles to devices is automatic by registration number (case, spaces and

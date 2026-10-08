@@ -58,6 +58,9 @@ return new class extends Migration
             $table->string('source', 40);
             $table->string('device_ref');
             $table->decimal('odometer_km', 12, 2);
+            // DEVICE_ODOMETER: the vehicle's real odometer. GPS_DISTANCE: distance accumulated by the
+            // tracker since installation (not comparable to the dashboard odometer without calibration).
+            $table->string('odometer_kind', 20)->default('DEVICE_ODOMETER');
             $table->timestamp('recorded_at');
             $table->timestamps();
 

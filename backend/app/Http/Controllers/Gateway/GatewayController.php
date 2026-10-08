@@ -63,6 +63,7 @@ class GatewayController extends Controller
             'readings.*.device_ref' => ['required', 'string', 'max:64'],
             'readings.*.odometer_km' => ['required', 'numeric', 'min:0', 'max:99999999'],
             'readings.*.recorded_at' => ['required', 'date'],
+            'readings.*.odometer_kind' => ['nullable', 'in:DEVICE_ODOMETER,GPS_DISTANCE'],
             'readings.*.device_name' => ['nullable', 'string', 'max:255'],
             'readings.*.registration_number' => ['nullable', 'string', 'max:32'],
         ]);

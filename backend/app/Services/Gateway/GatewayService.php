@@ -47,7 +47,7 @@ class GatewayService
      * (then auto-linked by registration when a vehicle exists), so no reading
      * is lost while an admin sorts out the mapping.
      *
-     * @param  array<int, array{device_ref: string, odometer_km: numeric-string|int|float, recorded_at: string, device_name?: ?string, registration_number?: ?string}>  $readings
+     * @param  array<int, array{device_ref: string, odometer_km: numeric-string|int|float, recorded_at: string, device_name?: ?string, registration_number?: ?string, odometer_kind?: ?string}>  $readings
      * @return array{accepted: int, duplicates: int}
      */
     public function ingestReadings(string $tenantId, string $source, array $readings): array
@@ -78,6 +78,7 @@ class GatewayService
                     'device_ref' => (string) $reading['device_ref'],
                     // Decimal string end to end: monetary-grade safety, no float rounding of kilometres.
                     'odometer_km' => number_format((float) $reading['odometer_km'], 2, '.', ''),
+                    'odometer_kind' => $reading['odometer_kind'] ?? 'DEVICE_ODOMETER',
                     'recorded_at' => $recordedAt,
                 ]);
                 $accepted++;
@@ -107,13 +108,14 @@ class GatewayService
             ->where('r.seq', '>', $cursor)
             ->orderBy('r.seq')
             ->limit($limit)
-            ->get(['r.seq', 'r.reading_id', 'r.source', 'r.device_ref', 'r.odometer_km', 'r.recorded_at', 'v.external_vehicle_id', 'v.registration_number']);
+            ->get(['r.seq', 'r.reading_id', 'r.source', 'r.device_ref', 'r.odometer_km', 'r.odometer_kind', 'r.recorded_at', 'v.external_vehicle_id', 'v.registration_number']);
 
         $items = $rows->map(fn ($row) => [
             'reading_id' => $row->reading_id,
             'vehicle_id' => $row->external_vehicle_id,
             'registration_number' => $row->registration_number,
             'odometer_km' => $row->odometer_km,
+            'odometer_kind' => $row->odometer_kind,
             'recorded_at' => Carbon::parse($row->recorded_at, 'UTC')->toIso8601String(),
             'source' => $row->source,
             'device_ref' => $row->device_ref,

@@ -44,7 +44,7 @@ class OptiRadarConnector
         foreach ($devices as $device) {
             $tenantId = $this->tenantOf($groups, $device['groupId'] ?? null, $config['tenant_group_attribute']);
             $position = $positions->get($device['id']);
-            $metres = $position ? $this->odometerMetres($position) : null;
+            [$metres, $kind] = $position ? $this->odometerMetres($position) : [null, null];
 
             if (! $tenantId || ! in_array($tenantId, $subscribed, true) || $metres === null) {
                 $skipped++;
@@ -58,6 +58,7 @@ class OptiRadarConnector
                 'device_name' => $device['name'] ?? null,
                 'registration_number' => $attributes['registrationNumber'] ?? $attributes['plate'] ?? null,
                 'odometer_km' => $this->metresToKilometres($metres),
+                'odometer_kind' => $kind,
                 'recorded_at' => $position['fixTime'] ?? $position['deviceTime'] ?? now()->toIso8601String(),
             ];
         }
@@ -83,17 +84,17 @@ class OptiRadarConnector
     }
 
     /** Device-reported odometer wins; otherwise the GPS distance accumulated by Traccar. */
-    private function odometerMetres(array $position): ?string
+    private function odometerMetres(array $position): array
     {
         $attributes = $position['attributes'] ?? [];
 
-        foreach (['odometer', 'totalDistance'] as $key) {
+        foreach (['odometer' => 'DEVICE_ODOMETER', 'totalDistance' => 'GPS_DISTANCE'] as $key => $kind) {
             if (isset($attributes[$key]) && is_numeric($attributes[$key]) && $attributes[$key] >= 0) {
-                return number_format((float) $attributes[$key], 0, '.', '');
+                return [number_format((float) $attributes[$key], 0, '.', ''), $kind];
             }
         }
 
-        return null;
+        return [null, null];
     }
 
     private function tenantOf($groups, ?int $groupId, string $attribute): ?string

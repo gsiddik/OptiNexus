@@ -23,6 +23,9 @@ info:
     - **Human users** (the CGO admin SPA, or a human operator) authenticate with
       `POST /api/v1/auth/login` and receive a Laravel Sanctum bearer token
       (`Authorization: Bearer <token>`).
+    - **Browser sign-in for integrated applications (SSO)** uses OpenID Connect
+      against OptiNexus as the identity provider (see the `SSO` tag and
+      `docs/integration/INTEGRATION_GUIDE.md`).
     - **Machine-to-machine / integrated applications** authenticate using the
       OAuth 2.0 **Client Credentials** grant against `POST /api/v1/oauth/token`
       and receive a short-lived JWT bearer token scoped to specific capabilities
@@ -175,6 +178,14 @@ tags:
     description: "Phase 3 — templates, trigger rules, and queued delivery across EMAIL/IN_APP/WEBHOOK channels"
   - name: Access
     description: "Phase 3 — aggregated effective-access evaluation (entitlement + permission + policy + feature flag)"
+  - name: SSO
+    description: "Platform integration — OpenID Connect provider (single sign-on for OptiFleet, OptiRadar and other apps)"
+  - name: SSO Clients
+    description: "Platform integration — registration of an application's OIDC client"
+  - name: Gateway
+    description: "Platform integration — machine API Gateway for cross-platform data exchange (fleet vehicles, telematics odometer)"
+  - name: Gateway Admin
+    description: "Platform integration — admin view of vehicle <-> device links and gateway call log"
 
 security:
   - BearerAuth: []
@@ -1881,6 +1892,238 @@ paths:
       security: [{ OAuth2ClientCredentials: [access.evaluate] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AccessEvaluateInput' } } } }
       responses: { '200': { $ref: '#/components/responses/AccessEvaluationResult' }, '403': { $ref: '#/components/responses/Unauthorized' } }
+  # ------------------------------------------- Platform integration (SSO)
+  /.well-known/openid-configuration:
+    servers: [{ url: "https://cgo.example.com", description: "OptiNexus root (not under /api/v1)" }]
+    get:
+      tags: [SSO]
+      summary: OpenID Connect discovery document
+      description: Standard discovery metadata. Relying parties configure themselves from this document.
+      security: []
+      responses:
+        '200': { description: Discovery document, content: { application/json: { schema: { $ref: '#/components/schemas/OidcDiscovery' } } } }
+  /oidc/jwks:
+    servers: [{ url: "https://cgo.example.com" }]
+    get:
+      tags: [SSO]
+      summary: Public signing keys (JWKS)
+      description: RS256 public key used to verify `id_token` signatures. Cache for up to 5 minutes and refetch on an unknown `kid`.
+      security: []
+      responses:
+        '200': { description: JSON Web Key Set }
+  /oidc/authorize:
+    servers: [{ url: "https://cgo.example.com" }]
+    get:
+      tags: [SSO]
+      summary: Start sign-in (authorization code flow)
+      description: |
+        Browser redirect endpoint. If the user already has an OptiNexus session (from signing in to another
+        application) the code is issued immediately - this is the single sign-on hop. Otherwise the user signs in
+        on OptiNexus first. Access is granted only when ALL hold: the user is ACTIVE, has an ACTIVE membership of
+        an ACTIVE tenant, the tenant has the application assigned and ACTIVE (its subscription outcome), and the
+        user has ACTIVE access to the application in that tenant. Otherwise the browser is redirected back with
+        `error=access_denied`.
+
+        Redirect URIs are matched exactly. Public clients (no secret) and clients with `require_pkce` must send
+        a PKCE `S256` challenge.
+      security: []
+      parameters:
+        - { name: response_type, in: query, required: true, schema: { type: string, enum: [code] } }
+        - { name: client_id, in: query, required: true, schema: { type: string } }
+        - { name: redirect_uri, in: query, required: true, schema: { type: string, format: uri } }
+        - { name: scope, in: query, required: true, schema: { type: string, example: "openid profile email" }, description: "Must include `openid`." }
+        - { name: state, in: query, schema: { type: string } }
+        - { name: nonce, in: query, schema: { type: string } }
+        - { name: code_challenge, in: query, schema: { type: string } }
+        - { name: code_challenge_method, in: query, schema: { type: string, enum: [S256] } }
+        - { name: tenant_hint, in: query, schema: { type: string }, description: "Tenant id or tenant_code; skips the organization picker when the user belongs to several." }
+        - { name: prompt, in: query, schema: { type: string, enum: [none, login] } }
+      responses:
+        '302': { description: "Redirect to `redirect_uri` with `code` + `state` + `iss`, or `error` (access_denied, login_required, invalid_scope, invalid_request)" }
+        '400': { description: "Unknown client or unregistered redirect URI (shown to the user, never redirected)" }
+  /api/oidc/token:
+    servers: [{ url: "https://cgo.example.com" }]
+    post:
+      tags: [SSO]
+      summary: Exchange an authorization code for tokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [grant_type, code, redirect_uri]
+              properties:
+                grant_type: { type: string, enum: [authorization_code] }
+                code: { type: string }
+                redirect_uri: { type: string, format: uri }
+                client_id: { type: string, description: "Or HTTP Basic" }
+                client_secret: { type: string }
+                code_verifier: { type: string, description: "PKCE verifier (43-128 chars)" }
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Tokens, content: { application/json: { schema: { $ref: '#/components/schemas/OidcTokenResponse' } } } }
+        '400': { description: "invalid_grant (expired, replayed, wrong redirect_uri or PKCE verifier), access_denied (access revoked since sign-in), invalid_request" }
+        '401': { description: invalid_client }
+  /api/oidc/userinfo:
+    servers: [{ url: "https://cgo.example.com" }]
+    get:
+      tags: [SSO]
+      summary: Current identity and tenant context
+      description: Access is re-checked on every call, so a revoked user or lapsed subscription stops working at the next refresh.
+      security: [{ OidcAccessToken: [] }]
+      responses:
+        '200': { description: Claims, content: { application/json: { schema: { $ref: '#/components/schemas/OidcClaims' } } } }
+        '401': { description: invalid_token }
+  /oidc/logout:
+    servers: [{ url: "https://cgo.example.com" }]
+    get:
+      tags: [SSO]
+      summary: End the OptiNexus session
+      security: []
+      parameters:
+        - { name: client_id, in: query, schema: { type: string } }
+        - { name: id_token_hint, in: query, schema: { type: string } }
+        - { name: post_logout_redirect_uri, in: query, schema: { type: string, format: uri }, description: "Honoured only when registered on the client." }
+        - { name: state, in: query, schema: { type: string } }
+      responses:
+        '302': { description: Redirect to the registered post-logout URI }
+        '200': { description: Signed-out page }
+  /oidc-clients:
+    get:
+      tags: [SSO Clients]
+      summary: List SSO clients
+      description: "Permission `cgo.sso.client.view`."
+      parameters: [{ name: application_id, in: query, schema: { type: string, format: uuid } }]
+      responses: { '200': { description: OK } }
+    post:
+      tags: [SSO Clients]
+      summary: Register an SSO client for an application
+      description: "Permission `cgo.sso.client.manage`. The `client_secret` is returned once and stored only as a hash. `confidential: false` creates a public (PKCE-only) client."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OidcClientInput' }
+            example:
+              application_id: "0699b1b1-6b1a-4e21-9a8e-7a9a6a2c6b31"
+              name: OptiRadar
+              redirect_uris: ["https://radar.example.com/api/session/openid/callback"]
+              post_logout_redirect_uris: ["https://radar.example.com/"]
+              launch_url: "https://radar.example.com/"
+      responses:
+        '201': { description: Created (includes one-time client_secret) }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /oidc-clients/{oidcClient}:
+    parameters: [{ name: oidcClient, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [SSO Clients], summary: Get an SSO client, responses: { '200': { description: OK } } }
+    put: { tags: [SSO Clients], summary: Update redirect URIs, name or PKCE policy, responses: { '200': { description: OK } } }
+  /oidc-clients/{oidcClient}/rotate-secret:
+    parameters: [{ name: oidcClient, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [SSO Clients], summary: Rotate the client secret (shown once), responses: { '200': { description: OK } } }
+  /oidc-clients/{oidcClient}/revoke:
+    parameters: [{ name: oidcClient, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [SSO Clients], summary: Revoke the client and all its access tokens, responses: { '200': { description: OK } } }
+
+  # ------------------------------------------- Platform integration (Gateway)
+  /fleet/vehicles:
+    servers: [{ url: "https://cgo.example.com/api/gateway/v1", description: API Gateway }]
+    put:
+      tags: [Gateway]
+      summary: Publish the fleet vehicle directory
+      description: |
+        A fleet application (OptiFleet) publishes its vehicles so telematics devices can be matched to them.
+        Idempotent upsert by `id`. Devices already seen but unmatched are linked automatically when the
+        registration number (case, spaces and dashes ignored) matches exactly one vehicle.
+      security: [{ OAuth2ClientCredentials: [gateway.fleet.write] }]
+      parameters: [{ $ref: '#/components/parameters/GatewayTenantHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GatewayPublishVehicles' }
+            example: { vehicles: [{ id: "6f1c...", registration_number: "B 1234 XYZ", vin: "MHKA1BA1JFK000001" }] }
+      responses:
+        '200': { description: "{ upserted, linked }" }
+        '403': { $ref: '#/components/responses/GatewayTenantError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /vehicle-links:
+    servers: [{ url: "https://cgo.example.com/api/gateway/v1" }]
+    get:
+      tags: [Gateway]
+      summary: Vehicles of the caller linked to a telematics device
+      security: [{ OAuth2ClientCredentials: [gateway.fleet.read] }]
+      parameters: [{ $ref: '#/components/parameters/GatewayTenantHeader' }]
+      responses:
+        '200': { description: Links }
+        '403': { $ref: '#/components/responses/GatewayTenantError' }
+  /telematics/odometer-readings:
+    servers: [{ url: "https://cgo.example.com/api/gateway/v1" }]
+    post:
+      tags: [Gateway]
+      summary: Push odometer readings (telematics producer)
+      description: |
+        Idempotent on (tenant, source, device_ref, recorded_at). The source is the calling application's code.
+        Unknown devices are stored as UNMATCHED and linked later. The OptiRadar connector inside OptiNexus
+        uses the same service, so a telematics app may either push here or be pulled.
+      security: [{ OAuth2ClientCredentials: [gateway.telematics.write] }]
+      parameters: [{ $ref: '#/components/parameters/GatewayTenantHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GatewayIngestReadings' }
+      responses:
+        '202': { description: "{ accepted, duplicates }" }
+        '403': { $ref: '#/components/responses/GatewayTenantError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Gateway]
+      summary: Pull the odometer feed for the caller's linked vehicles
+      description: |
+        Ordered by feed position. Persist `next_cursor` and send it back as `cursor`. A reading may be
+        re-delivered with a new position when its device is linked later, so consumers must be idempotent on
+        `reading_id`. Odometer is in kilometres as a decimal string.
+      security: [{ OAuth2ClientCredentials: [gateway.telematics.read] }]
+      parameters:
+        - { $ref: '#/components/parameters/GatewayTenantHeader' }
+        - { name: cursor, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 500, default: 200 } }
+      responses:
+        '200': { description: Feed page, content: { application/json: { schema: { $ref: '#/components/schemas/GatewayFeed' } } } }
+        '403': { $ref: '#/components/responses/GatewayTenantError' }
+  /gateway/tenants/{tenant}/vehicle-links:
+    parameters: [{ $ref: '#/components/parameters/TenantId' }]
+    get:
+      tags: [Gateway Admin]
+      summary: Vehicle <-> device links of a tenant (including UNMATCHED devices)
+      description: "Permission `cgo.gateway.link.view`."
+      parameters: [{ $ref: '#/components/parameters/Status' }]
+      responses: { '200': { description: OK } }
+  /gateway/tenants/{tenant}/vehicle-links/{link}:
+    parameters:
+      - { $ref: '#/components/parameters/TenantId' }
+      - { name: link, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      tags: [Gateway Admin]
+      summary: Link a device to a fleet vehicle manually
+      description: "Permission `cgo.gateway.link.manage`. Manual links are never changed by automatic matching."
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [fleet_vehicle_id], properties: { fleet_vehicle_id: { type: string, format: uuid } } } } } }
+      responses: { '200': { description: OK } }
+    delete:
+      tags: [Gateway Admin]
+      summary: Detach a device from its vehicle
+      description: "Permission `cgo.gateway.link.manage`."
+      responses: { '200': { description: OK } }
+  /gateway/tenants/{tenant}/fleet-vehicles:
+    parameters: [{ $ref: '#/components/parameters/TenantId' }]
+    get: { tags: [Gateway Admin], summary: Fleet vehicles published to the gateway, responses: { '200': { description: OK } } }
+  /gateway/tenants/{tenant}/request-logs:
+    parameters: [{ $ref: '#/components/parameters/TenantId' }]
+    get: { tags: [Gateway Admin], summary: Recent gateway calls for the tenant, responses: { '200': { description: OK } } }
+
 components:
   securitySchemes:
     BearerAuth:
@@ -1903,6 +2146,14 @@ components:
             usage.write: "Phase 2 — submit metered usage events on behalf of an integrated application"
             event.write: "Phase 3 — submit orchestration events (facts) on behalf of an integrated application"
             access.evaluate: "Phase 3 — evaluate aggregated effective access (entitlement + permission + policy + feature flag)"
+            gateway.fleet.write: "Gateway — publish the fleet vehicle directory"
+            gateway.fleet.read: "Gateway — read vehicle <-> telematics device links"
+            gateway.telematics.write: "Gateway — push telematics odometer readings"
+            gateway.telematics.read: "Gateway — read the odometer feed for linked vehicles"
+    OidcAccessToken:
+      type: http
+      scheme: bearer
+      description: "Opaque access token from POST /api/oidc/token, for GET /api/oidc/userinfo only"
 
   parameters:
     CustomerId: { name: customer, in: path, required: true, schema: { type: string, format: uuid } }
@@ -1934,8 +2185,19 @@ components:
     NotificationRuleId: { name: notificationRule, in: path, required: true, schema: { type: string, format: uuid } }
     NotificationId: { name: notification, in: path, required: true, schema: { type: string, format: uuid } }
     CorrelationId: { name: correlation_id, in: query, schema: { type: string } }
+    GatewayTenantHeader:
+      name: X-Tenant-Id
+      in: header
+      required: false
+      schema: { type: string, format: uuid }
+      description: "Required only for service accounts that are not bound to a tenant. A tenant-bound account always acts for its own tenant; naming another tenant returns 403 TENANT_MISMATCH."
 
   responses:
+    GatewayTenantError:
+      description: "Tenant refused: TENANT_MISMATCH, TENANT_NOT_SUBSCRIBED (unknown/inactive tenant or application not assigned), APPLICATION_REQUIRED. TENANT_REQUIRED is returned as 422."
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
     Unauthenticated:
       description: Missing or invalid credentials
       content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' }, example: { success: false, error: { code: UNAUTHENTICATED, message: "Authentication is required to access this resource." } } } }
@@ -3479,3 +3741,100 @@ components:
           type: object
           properties: { entitlement: { type: boolean }, permission: { type: boolean }, policy: { type: boolean }, feature_flag: { type: boolean } }
         reason_code: { type: string, nullable: true }
+    OidcDiscovery:
+      type: object
+      properties:
+        issuer: { type: string }
+        authorization_endpoint: { type: string }
+        token_endpoint: { type: string }
+        userinfo_endpoint: { type: string }
+        jwks_uri: { type: string }
+        end_session_endpoint: { type: string }
+    OidcTokenResponse:
+      type: object
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, example: Bearer }
+        expires_in: { type: integer }
+        id_token: { type: string, description: "RS256 JWT. Verify signature (JWKS), iss, aud, exp and nonce." }
+        scope: { type: string }
+    OidcClaims:
+      type: object
+      description: "Claims in the id_token and userinfo."
+      properties:
+        sub: { type: string, format: uuid, description: "Stable OptiNexus user id - use this, not the email, to link accounts." }
+        email: { type: string }
+        email_verified: { type: boolean }
+        name: { type: string }
+        preferred_username: { type: string }
+        tenant_id: { type: string, format: uuid, description: "The organization this sign-in is for. Never trust a tenant from anywhere else." }
+        tenant_code: { type: string }
+        tenant_name: { type: string }
+        groups: { type: array, items: { type: string }, description: "Codes of the applications the user may open in this tenant" }
+        apps:
+          type: array
+          items:
+            type: object
+            properties: { code: { type: string }, name: { type: string }, launch_url: { type: string, nullable: true } }
+    OidcClientInput:
+      type: object
+      required: [application_id, name, redirect_uris]
+      properties:
+        application_id: { type: string, format: uuid }
+        name: { type: string }
+        redirect_uris: { type: array, items: { type: string, format: uri }, minItems: 1 }
+        post_logout_redirect_uris: { type: array, items: { type: string, format: uri } }
+        launch_url: { type: string, format: uri, nullable: true }
+        confidential: { type: boolean, default: true }
+        require_pkce: { type: boolean, default: false }
+    GatewayPublishVehicles:
+      type: object
+      required: [vehicles]
+      properties:
+        vehicles:
+          type: array
+          maxItems: 1000
+          items:
+            type: object
+            required: [id, registration_number]
+            properties:
+              id: { type: string, description: "The fleet application's own vehicle id" }
+              registration_number: { type: string }
+              vin: { type: string, nullable: true }
+              status: { type: string, nullable: true }
+    GatewayIngestReadings:
+      type: object
+      required: [readings]
+      properties:
+        readings:
+          type: array
+          maxItems: 1000
+          items:
+            type: object
+            required: [device_ref, odometer_km, recorded_at]
+            properties:
+              device_ref: { type: string }
+              odometer_km: { type: number, minimum: 0, description: "Kilometres" }
+              recorded_at: { type: string, format: date-time }
+              device_name: { type: string, nullable: true }
+              registration_number: { type: string, nullable: true, description: "Used for automatic matching to a fleet vehicle" }
+    GatewayFeed:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  reading_id: { type: string, format: uuid }
+                  vehicle_id: { type: string, description: "The fleet application's own vehicle id" }
+                  registration_number: { type: string }
+                  odometer_km: { type: string, example: "12500.50" }
+                  recorded_at: { type: string, format: date-time }
+                  source: { type: string, example: optiradar }
+                  device_ref: { type: string }
+            next_cursor: { type: string }

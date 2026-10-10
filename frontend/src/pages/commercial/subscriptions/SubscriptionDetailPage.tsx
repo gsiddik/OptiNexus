@@ -26,7 +26,6 @@ export function SubscriptionDetailPage() {
 
   return (
     <div>
-      <Link to="/subscriptions" className="back-link">&larr; Back to Subscriptions</Link>
       <div className="page-header">
         <h1>{subscription.subscription_number}</h1>
         <StatusBadge status={subscription.status} />

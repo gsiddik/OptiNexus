@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { applicationsApi, capabilitiesApi } from '../../api/endpoints';
 import { useApiResource } from '../../api/useApi';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
@@ -25,7 +25,6 @@ export function ApplicationDetailPage() {
 
   return (
     <div>
-      <Link to="/applications" className="back-link">&larr; Back to Applications</Link>
       <div className="page-header">
         <h1>{application.name}</h1>
         <StatusBadge status={application.status} />

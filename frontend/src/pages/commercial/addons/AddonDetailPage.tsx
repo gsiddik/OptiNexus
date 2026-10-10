@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { addonsApi, applicationsApi, productsApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
@@ -25,7 +25,6 @@ export function AddonDetailPage() {
 
   return (
     <div>
-      <Link to="/addons" className="back-link">&larr; Back to Add-ons</Link>
       <div className="page-header">
         <h1>{addon.name}</h1>
         <StatusBadge status={addon.status} />

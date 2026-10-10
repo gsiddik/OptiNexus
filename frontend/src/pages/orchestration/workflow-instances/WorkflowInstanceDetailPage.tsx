@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { workflowInstancesApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
@@ -18,7 +18,6 @@ export function WorkflowInstanceDetailPage() {
 
   return (
     <div>
-      <Link to="/workflow-instances" className="back-link">&larr; Back to Instances</Link>
       <div className="page-header">
         <h1>Workflow Instance</h1>
         <StatusBadge status={instance.status} />

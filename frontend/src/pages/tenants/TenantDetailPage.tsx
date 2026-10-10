@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { applicationsApi, tenantsApi } from '../../api/endpoints';
 import { useApiResource } from '../../api/useApi';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
@@ -22,7 +22,6 @@ export function TenantDetailPage() {
 
   return (
     <div>
-      <Link to="/tenants" className="back-link">&larr; Back to Tenants</Link>
       <div className="page-header">
         <h1>{tenant.name}</h1>
         <StatusBadge status={tenant.status} />

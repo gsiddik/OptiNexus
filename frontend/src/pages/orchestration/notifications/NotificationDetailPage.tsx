@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { notificationsApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
@@ -18,7 +18,6 @@ export function NotificationDetailPage() {
 
   return (
     <div>
-      <Link to="/notifications" className="back-link">&larr; Back to Notifications</Link>
       <div className="page-header">
         <h1>Notification</h1>
         <StatusBadge status={notification.status} />

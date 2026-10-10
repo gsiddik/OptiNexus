@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { integrationsApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
@@ -46,7 +46,6 @@ export function IntegrationDetailPage() {
 
   return (
     <div>
-      <Link to="/integrations" className="back-link">&larr; Back to Integrations</Link>
       <div className="page-header">
         <h1>{integration.name}</h1>
         <StatusBadge status={integration.status} />

@@ -15,7 +15,6 @@ export function EventCatalogDetailPage() {
 
   return (
     <div>
-      <Link to="/event-catalog" className="back-link">&larr; Back to Event Catalog</Link>
       <div className="page-header">
         <h1>{entry.name}</h1>
         <StatusBadge status={entry.status} />

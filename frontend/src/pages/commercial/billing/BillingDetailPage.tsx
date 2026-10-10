@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { billingApi, invoicesApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
@@ -41,7 +41,6 @@ export function BillingDetailPage() {
 
   return (
     <div>
-      <Link to="/billings" className="back-link">&larr; Back to Billings</Link>
       <div className="page-header">
         <h1>{billing.billing_number}</h1>
         <StatusBadge status={billing.status} />

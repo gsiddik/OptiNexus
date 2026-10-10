@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { featureFlagsApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
@@ -38,7 +38,6 @@ export function FeatureFlagDetailPage() {
 
   return (
     <div>
-      <Link to="/feature-flags" className="back-link">&larr; Back to Feature Flags</Link>
       <div className="page-header">
         <h1>{flag.name}</h1>
         <StatusBadge status={flag.status} />

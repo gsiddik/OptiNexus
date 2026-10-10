@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { auditApi, rolesApi, usersApi } from '../../api/endpoints';
 import { useApiResource } from '../../api/useApi';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
@@ -22,7 +22,6 @@ export function UserDetailPage() {
 
   return (
     <div>
-      <Link to="/users" className="back-link">&larr; Back to Users</Link>
       <div className="page-header">
         <h1>{user.name}</h1>
         <StatusBadge status={user.status} />

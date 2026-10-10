@@ -10,7 +10,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 /**
- * Registers OptiRadar (GPS telematics, Traccar fork) as an application, the
+ * Registers OptiRadar (GPS telematics, based on Traccar) as an application, the
  * counterpart of the OptiFleet application that DemoDataSeeder registers.
  * Single sign-on and the API Gateway look the application up by the code
  * `optiradar` (config gateway.optiradar.application_code).

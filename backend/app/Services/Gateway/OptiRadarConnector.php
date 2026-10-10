@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
- * Pulls the latest odometer of every OptiRadar (Traccar) device and feeds it
+ * Pulls the latest odometer of every OptiRadar device and feeds it
  * into the gateway. Tenant isolation follows decision D3: each OptiNexus
- * tenant owns one Traccar group (attribute `optinexusTenantId`), and a
+ * tenant owns one OptiRadar group (attribute `optinexusTenantId`), and a
  * device belongs to the tenant of its group or the nearest ancestor group
  * that carries the attribute. Devices outside any tenant group are skipped.
  */
@@ -83,7 +83,7 @@ class OptiRadarConnector
         return bcadd(bcdiv($metres, '1000', 3), '0.005', 2);
     }
 
-    /** Device-reported odometer wins; otherwise the GPS distance accumulated by Traccar. */
+    /** Device-reported odometer wins; otherwise the GPS distance accumulated by OptiRadar. */
     private function odometerMetres(array $position): array
     {
         $attributes = $position['attributes'] ?? [];

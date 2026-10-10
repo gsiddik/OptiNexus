@@ -9,7 +9,7 @@ class SyncOptiRadarTelematics extends Command
 {
     protected $signature = 'gateway:sync-optiradar';
 
-    protected $description = 'Pull the latest device odometers from OptiRadar (Traccar) into the API Gateway';
+    protected $description = 'Pull the latest device odometers from OptiRadar into the API Gateway';
 
     public function handle(OptiRadarConnector $connector): int
     {

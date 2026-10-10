@@ -20,14 +20,14 @@ Status: design baseline for the OptiNexus ⇄ OptiFleet ⇄ OptiRadar integratio
 |---|----------|--------|
 | D1 | Odometer direction: OptiRadar (GPS) → OptiFleet. Manual odometer entry in OptiFleet (inspection, work order, release, tire operations) stays available, so tenants without OptiRadar are unaffected; sync only runs for tenants linked to OptiNexus with telematics. OptiFleet only moves `current_odometer` forward and stores every telematics reading with its source. | Confirmed by owner |
 | D2 | Commercial ownership, phased: OptiNexus owns tenant, user, application access now. OptiFleet's own contract/billing modules keep working unchanged in this phase and move to OptiNexus later. | Confirmed by owner |
-| D3 | OptiRadar tenant isolation: one Traccar Group per OptiNexus tenant. | Confirmed by owner |
+| D3 | OptiRadar tenant isolation: one OptiRadar group per OptiNexus tenant. | Confirmed by owner |
 | D4 | SSO protocol: OpenID Connect (authorization code + PKCE), OptiNexus as the provider. | Default |
 | D5 | `main` is the baseline of every repository. The first line of work (`claude/cgo-phase-1-governance-qtmik1`) became OptiNexus `main`; new development always starts from `main` on a new branch and reaches `main` by pull request. | Confirmed by owner |
 | D6 | GPS distance versus the odometer already recorded in OptiFleet: GPS distance is never applied by itself. It is stored and held until someone calibrates the link manually (an offset, or the actual odometer at the time of the latest GPS reading). A device that reports a real odometer is applied directly. | Confirmed by owner |
 | D7 | SSO for a user who has no OptiFleet account yet: sign-in is refused (existing users only). OptiFleet never creates accounts from SSO; an administrator adds the user first. | Confirmed by owner |
 | D8 | Central logout and automatic deactivation: OIDC Back-Channel Logout. A logout anywhere ends the user's sessions in every application (all devices). Losing access (user suspended or disabled, removed from the tenant, application access removed, tenant suspended) also deactivates the application account so password sign-in stops too; the account is switched on again only by the next successful SSO sign-in and only if OptiNexus deactivated it. Every application keeps working with its own password login when OptiNexus is not used. | Confirmed by owner |
 | D9 | OptiFleet reports invoice and memo events to OptiNexus (`POST /api/v1/events`) from its integration outbox, in the OptiNexus Event Catalog under `optifleet.*`. PostgreSQL in OptiFleet stays the source of truth; delivery is at-least-once and idempotent by `event_id`. | Confirmed by owner |
-| D10 | OptiRadar reports device online/offline, geofence enter/exit and overspeed events to OptiNexus (`POST /api/v1/events`) from an outbox table of its own, in the Event Catalog under `optiradar.*`, for devices of a tenant group only. Same guarantees as D9 (at-least-once, idempotent by `event_id`); the Traccar database stays the source of truth. | Confirmed by owner |
+| D10 | OptiRadar reports device online/offline, geofence enter/exit and overspeed events to OptiNexus (`POST /api/v1/events`) from an outbox table of its own, in the Event Catalog under `optiradar.*`, for devices of a tenant group only. Same guarantees as D9 (at-least-once, idempotent by `event_id`); the OptiRadar database stays the source of truth. | Confirmed by owner |
 
 ## 3. Components
 
@@ -38,10 +38,10 @@ Status: design baseline for the OptiNexus ⇄ OptiFleet ⇄ OptiRadar integratio
  Apps ──M2M────▶ │ API Gateway    /api/gateway/v1/*  (client-credentials tokens)   │
                  │   ├ Vehicle link registry (fleet vehicle ⇄ telematics device)  │
                  │   ├ Telematics odometer store (append-only, cursor feed)       │
-                 │   └ Connectors: OptiRadar (Traccar REST pull)                  │
+                 │   └ Connectors: OptiRadar (REST pull)                          │
                  └────────────────────────────────────────────────────────────────┘
-        ▲ OIDC + gateway client                      ▲ OIDC (built-in Traccar client)
-   OptiFleet (Laravel)                         OptiRadar (Traccar) + OptiRadar-web
+        ▲ OIDC + gateway client                      ▲ OIDC (built-in OpenID client)
+   OptiFleet (Laravel)                         OptiRadar + OptiRadar-web
 ```
 
 ### 3.1 Identity and SSO (OIDC)
@@ -74,9 +74,9 @@ browser only ever receives a one-time ticket (60 s), never a token. The SPA offe
 an app switcher built from the `apps` claim; signing out also ends the OptiNexus
 session.
 
-**OptiRadar** uses Traccar's built-in OpenID client (`openid.*` keys) with
+**OptiRadar** uses its built-in OpenID client (`openid.*` keys) with
 `openid.allowGroup=optiradar`. With `openid.tenantClaim=tenant_id` it requires a
-verified e-mail, finds the one Traccar Group whose attribute `optinexusTenantId`
+verified e-mail, finds the one OptiRadar group whose attribute `optinexusTenantId`
 matches the claim (D3, no group or several groups rejects the login before any
 account is touched) and links the user to that group only, so they see just their
 tenant's devices. The `apps` claim is kept in a user attribute for the web app's
@@ -150,7 +150,7 @@ Admin (Sanctum + RBAC `cgo.gateway.*`): manage vehicle links, view logs, run the
 OptiRadar connector.
 
 **OptiRadar connector**: a scheduled job (`gateway:sync-optiradar`) reads
-Traccar `/api/groups`, `/api/devices` and `/api/positions` with a Traccar
+OptiRadar `/api/groups`, `/api/devices` and `/api/positions` with an OptiRadar
 service token stored as an integration credential. The tenant of a device is
 the `optinexusTenantId` attribute of its group. Odometer is the position's
 `odometer` attribute when the device reports it, otherwise `totalDistance`;
@@ -163,7 +163,7 @@ name. Admins can override links; manual links win.
 
 ### 3.3 Odometer flow (D1, D6)
 
-1. Traccar reports the position's `odometer` attribute when the device sends one,
+1. OptiRadar reports the position's `odometer` attribute when the device sends one,
    otherwise it computes `totalDistance` (both metres).
 2. The OptiNexus connector stores a reading (`tenant`, `device`, `value_km`,
    `odometer_kind` = `DEVICE_ODOMETER` or `GPS_DISTANCE`, `recorded_at`),
@@ -190,7 +190,7 @@ name. Admins can override links; manual links win.
 * Logout tokens are RS256 `logout+jwt` (never carry a `nonce`, short-lived, unique `jti`); receivers verify
   signature, issuer, audience, age and type, accept each token once, and the call is the only thing they trust.
   OptiNexus delivers with a 5 second timeout and no redirects.
-* All credentials (Traccar token, client secrets) live in environment config or
+* All credentials (OptiRadar token, client secrets) live in environment config or
   encrypted integration credentials, never in the repository.
 
 ## 5. Contract for new platforms
@@ -200,12 +200,12 @@ See `docs/integration/INTEGRATION_GUIDE.md` and `docs/openapi.yaml`
 
 ## 6. Verified end to end
 
-Run against live instances (OptiNexus, OptiRadar/Traccar, OptiFleet backend + SPA, throw-away
+Run against live instances (OptiNexus, OptiRadar, OptiFleet backend + SPA, throw-away
 databases, scripted browser; not part of the automated suites):
 
 * OptiFleet sign-in through OptiNexus, then OptiRadar without a login prompt, and the reverse.
 * A user whose organization is not subscribed to OptiRadar is refused by OptiNexus; a tenant
-  with no Traccar group, or a user whose e-mail is not verified, is refused by OptiRadar and no
+  with no OptiRadar group, or a user whose e-mail is not verified, is refused by OptiRadar and no
   account is created; in OptiFleet a user without an account is refused with
   `user_not_provisioned` (D7, nothing is created) and an unlinked tenant with `tenant_not_linked`.
 * A signed-in OptiRadar user sees only the devices of their tenant's group.
@@ -214,7 +214,7 @@ databases, scripted browser; not part of the automated suites):
 
 ## 7. Known limits
 
-* Logout is user-level ("everywhere"); a plain logout does not revoke Traccar long-lived API tokens (a deactivation
+* Logout is user-level ("everywhere"); a plain logout does not revoke OptiRadar long-lived API tokens (a deactivation
   does, because the account is disabled).
 * Reactivation happens only at the next successful SSO sign-in; nothing switches an account on by itself when
   access is restored. An account an administrator disabled by hand in an application is never reactivated.
@@ -230,6 +230,6 @@ databases, scripted browser; not part of the automated suites):
   `--max-age` hours (default 24; the user may have signed in to the application directly since, which OptiNexus does
   not see); an *access revoked* call is skipped when access has been restored (it would deactivate a reinstated
   user), whatever its age. Nothing runs it automatically: a person decides when the application is healthy again.
-* Traccar's built-in OpenID client does not verify the authorization `state` or the ID token
+* OptiRadar's built-in OpenID client does not verify the authorization `state` or the ID token
   separately (upstream behavior, unchanged). The user is identified through `userinfo`.
 * OptiAccounting is an empty repository; it can onboard using the guide without changes here.

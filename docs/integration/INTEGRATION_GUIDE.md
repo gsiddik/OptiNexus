@@ -164,7 +164,7 @@ an admin links it (`PUT /api/v1/gateway/tenants/{tenant}/vehicle-links/{link}`).
 ## 5. OptiRadar connector (operators)
 
 Set in `backend/.env`: `OPTIRADAR_SYNC_ENABLED=true`, `OPTIRADAR_BASE_URL`,
-`OPTIRADAR_API_TOKEN` (a Traccar API token of a user that sees every tenant group).
+`OPTIRADAR_API_TOKEN` (a OptiRadar API token of a user that sees every tenant group).
 In OptiRadar, give each tenant group the attribute `optinexusTenantId` = the OptiNexus
 tenant id. `php artisan gateway:sync-optiradar` runs every minute when enabled.
 
@@ -221,7 +221,7 @@ touched is unchanged, and OptiFleet works without OptiNexus.
 See `OptiRadar/docs/optinexus-sso.md` (settings `openid.*`, `openid.tenantClaim`,
 `openid.tenantGroupAttribute`, one group per tenant with the `optinexusTenantId` attribute).
 Set the application's launch URL to `https://<radar>/api/session/openid/auth` and the OIDC client's back-channel
-logout URI to `https://<radar>/api/session/openid/backchannel-logout`. `OptiRadar/setup/traccar-optinexus.xml` is a
+logout URI to `https://<radar>/api/session/openid/backchannel-logout`. `OptiRadar/setup/optiradar-optinexus.xml` is a
 sample configuration (creates tenant users on the first SSO login with `users.defaultDeviceLimit=0`). OptiRadar and
 OptiRadar-web are forks that must be built and deployed (server `./gradlew assemble`, web `npm ci && npm run build`);
 the stock Traccar image has none of this.

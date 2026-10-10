@@ -2,10 +2,10 @@
 
 return [
     /*
-    | OptiRadar (Traccar) connector. The base URL and token are operator
+    | OptiRadar connector. The base URL and token are operator
     | configuration, never user input, so private-network addresses are allowed
     | here (unlike tenant-defined integration endpoints, which go through the
-    | SSRF-safe client). The token is a Traccar API token of a read-only user
+    | SSRF-safe client). The token is a OptiRadar API token of a read-only user
     | that can see every tenant group.
     */
     'optiradar' => [

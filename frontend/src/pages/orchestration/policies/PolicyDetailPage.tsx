@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { policiesApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
@@ -22,7 +22,6 @@ export function PolicyDetailPage() {
 
   return (
     <div>
-      <Link to="/policies" className="back-link">&larr; Back to Policies</Link>
       <div className="page-header">
         <h1>{policy.name}</h1>
         <StatusBadge status={policy.status} />

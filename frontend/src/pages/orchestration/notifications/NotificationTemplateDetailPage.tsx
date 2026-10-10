@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { notificationTemplatesApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
@@ -49,7 +49,6 @@ export function NotificationTemplateDetailPage() {
 
   return (
     <div>
-      <Link to="/notification-templates" className="back-link">&larr; Back to Templates</Link>
       <div className="page-header">
         <h1>{template.name}</h1>
         <StatusBadge status={template.status} />

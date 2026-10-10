@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { customersApi } from '../../api/endpoints';
 import { useApiResource } from '../../api/useApi';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
@@ -19,7 +19,6 @@ export function CustomerDetailPage() {
 
   return (
     <div>
-      <Link to="/customers" className="back-link">&larr; Back to Customers</Link>
       <div className="page-header">
         <h1>{customer.legal_name}</h1>
         <StatusBadge status={customer.status} />

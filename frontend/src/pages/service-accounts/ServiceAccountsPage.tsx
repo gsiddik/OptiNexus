@@ -45,7 +45,7 @@ export function ServiceAccountsPage() {
           <button className="btn btn-primary" onClick={() => setShowCreate(true)}>+ New Service Account</button>
         </PermissionGuard>
       </div>
-      <p className="muted">OAuth2 client-credentials identities used by integrated applications (OptiFleet, OptiAccounting, VMS, Taxi Management, ...) to call CGO's machine-to-machine APIs.</p>
+      <p className="muted">OAuth2 client-credentials identities used by integrated applications (OptiFleet, OptiEntry, VMS, Taxi Management, ...) to call CGO's machine-to-machine APIs.</p>
       <ErrorAlert message={error ?? actionError} />
       {loading ? (
         <LoadingSpinner />

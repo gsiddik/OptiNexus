@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { plansApi, productsApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
@@ -27,7 +27,6 @@ export function PlanDetailPage() {
 
   return (
     <div>
-      <Link to="/plans" className="back-link">&larr; Back to Plans</Link>
       <div className="page-header">
         <h1>{plan.name}</h1>
         <StatusBadge status={plan.status} />

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { approvalRequestsApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
@@ -43,7 +43,6 @@ export function ApprovalRequestDetailPage() {
 
   return (
     <div>
-      <Link to="/approval-requests" className="back-link">&larr; Back to Approval Requests</Link>
       <div className="page-header">
         <h1>Approval Request</h1>
         <StatusBadge status={request.status} />

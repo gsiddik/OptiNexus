@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { entitlementsApi } from '../../../api/endpoints';
 import { useApiList, useApiResource } from '../../../api/useApi';
 import { DataTable } from '../../../components/DataTable';
@@ -47,7 +47,6 @@ export function TenantEntitlementsPage() {
 
   return (
     <div>
-      <Link to={`/subscriptions`} className="back-link">&larr; Back to Subscriptions</Link>
       <div className="page-header">
         <h1>Entitlements for Tenant {tenantId}</h1>
         <PermissionGuard permission="cgo.entitlement.override">

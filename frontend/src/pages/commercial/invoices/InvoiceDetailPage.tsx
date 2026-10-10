@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { invoicesApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
@@ -24,7 +24,6 @@ export function InvoiceDetailPage() {
 
   return (
     <div>
-      <Link to="/invoices" className="back-link">&larr; Back to Invoices</Link>
       <div className="page-header">
         <h1>{invoice.invoice_number}</h1>
         <StatusBadge status={invoice.status} />

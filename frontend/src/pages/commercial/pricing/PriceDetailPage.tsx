@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { pricesApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
@@ -38,7 +38,6 @@ export function PriceDetailPage() {
 
   return (
     <div>
-      <Link to="/prices" className="back-link">&larr; Back to Pricing</Link>
       <div className="page-header">
         <h1>{price.price_type} Price</h1>
         <StatusBadge status={price.status} />

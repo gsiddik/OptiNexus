@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { permissionsApi, rolesApi } from '../../api/endpoints';
 import { useApiResource } from '../../api/useApi';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
@@ -60,7 +60,6 @@ export function RoleDetailPage() {
 
   return (
     <div>
-      <Link to="/roles" className="back-link">&larr; Back to Roles</Link>
       <div className="page-header">
         <h1>{role.name}</h1>
         <StatusBadge status={role.status} />

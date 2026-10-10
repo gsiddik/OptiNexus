@@ -38,7 +38,6 @@ export function WorkflowDetailPage() {
 
   return (
     <div>
-      <Link to="/workflows" className="back-link">&larr; Back to Workflows</Link>
       <div className="page-header">
         <h1>{workflow.name}</h1>
         <StatusBadge status={workflow.status} />

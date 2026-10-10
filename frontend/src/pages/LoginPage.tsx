@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { unwrapError } from '../api/client';
+import { BrandLogo } from '../components/BrandLogo';
 import { ErrorAlert } from '../components/ErrorAlert';
 
 export function LoginPage() {
@@ -31,6 +32,7 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <form className="login-card" onSubmit={handleSubmit}>
+        <BrandLogo variant="login" />
         <h1>CGO Governance Core</h1>
         <p className="muted">Central Governance &amp; Orchestration</p>
         <ErrorAlert message={error} />

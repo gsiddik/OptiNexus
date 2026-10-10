@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
 import { RequireAuth } from './auth/RequireAuth';
@@ -59,10 +58,11 @@ import { NotificationRuleDetailPage } from './pages/orchestration/notifications/
 import { NotificationsListPage } from './pages/orchestration/notifications/NotificationsListPage';
 import { NotificationDetailPage } from './pages/orchestration/notifications/NotificationDetailPage';
 
-function Protected({ children }: { children: ReactNode }) {
+/** Every page except sign-in: needs a session and shares one Layout, which stays mounted while you move between pages. */
+function ProtectedLayout() {
   return (
     <RequireAuth>
-      <Layout>{children}</Layout>
+      <Layout />
     </RequireAuth>
   );
 }
@@ -73,60 +73,62 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<Protected><DashboardPage /></Protected>} />
-          <Route path="/customers" element={<Protected><CustomersListPage /></Protected>} />
-          <Route path="/customers/:id" element={<Protected><CustomerDetailPage /></Protected>} />
-          <Route path="/tenants" element={<Protected><TenantsListPage /></Protected>} />
-          <Route path="/tenants/:id" element={<Protected><TenantDetailPage /></Protected>} />
-          <Route path="/applications" element={<Protected><ApplicationsListPage /></Protected>} />
-          <Route path="/applications/:id" element={<Protected><ApplicationDetailPage /></Protected>} />
-          <Route path="/permissions" element={<Protected><PermissionsListPage /></Protected>} />
-          <Route path="/roles" element={<Protected><RolesListPage /></Protected>} />
-          <Route path="/roles/:id" element={<Protected><RoleDetailPage /></Protected>} />
-          <Route path="/users" element={<Protected><UsersListPage /></Protected>} />
-          <Route path="/users/:id" element={<Protected><UserDetailPage /></Protected>} />
-          <Route path="/audit-logs" element={<Protected><AuditLogsPage /></Protected>} />
-          <Route path="/service-accounts" element={<Protected><ServiceAccountsPage /></Protected>} />
-          <Route path="/products" element={<Protected><ProductsListPage /></Protected>} />
-          <Route path="/products/:id" element={<Protected><ProductDetailPage /></Protected>} />
-          <Route path="/plans" element={<Protected><PlansListPage /></Protected>} />
-          <Route path="/plans/:id" element={<Protected><PlanDetailPage /></Protected>} />
-          <Route path="/addons" element={<Protected><AddonsListPage /></Protected>} />
-          <Route path="/addons/:id" element={<Protected><AddonDetailPage /></Protected>} />
-          <Route path="/prices" element={<Protected><PricesListPage /></Protected>} />
-          <Route path="/prices/:id" element={<Protected><PriceDetailPage /></Protected>} />
-          <Route path="/pricing/simulate" element={<Protected><PricingSimulatorPage /></Protected>} />
-          <Route path="/subscriptions" element={<Protected><SubscriptionsListPage /></Protected>} />
-          <Route path="/subscriptions/:id" element={<Protected><SubscriptionDetailPage /></Protected>} />
-          <Route path="/tenants/:tenantId/entitlements" element={<Protected><TenantEntitlementsPage /></Protected>} />
-          <Route path="/usage" element={<Protected><UsageEventsPage /></Protected>} />
-          <Route path="/billings" element={<Protected><BillingsListPage /></Protected>} />
-          <Route path="/billings/:id" element={<Protected><BillingDetailPage /></Protected>} />
-          <Route path="/invoices" element={<Protected><InvoicesListPage /></Protected>} />
-          <Route path="/invoices/:id" element={<Protected><InvoiceDetailPage /></Protected>} />
-          <Route path="/policies" element={<Protected><PoliciesListPage /></Protected>} />
-          <Route path="/policies/:id" element={<Protected><PolicyDetailPage /></Protected>} />
-          <Route path="/workflows" element={<Protected><WorkflowsListPage /></Protected>} />
-          <Route path="/workflows/:id" element={<Protected><WorkflowDetailPage /></Protected>} />
-          <Route path="/workflow-instances" element={<Protected><WorkflowInstancesListPage /></Protected>} />
-          <Route path="/workflow-instances/:id" element={<Protected><WorkflowInstanceDetailPage /></Protected>} />
-          <Route path="/approval-definitions" element={<Protected><ApprovalDefinitionsListPage /></Protected>} />
-          <Route path="/approval-definitions/:id" element={<Protected><ApprovalDefinitionDetailPage /></Protected>} />
-          <Route path="/approval-requests" element={<Protected><ApprovalRequestsListPage /></Protected>} />
-          <Route path="/approval-requests/:id" element={<Protected><ApprovalRequestDetailPage /></Protected>} />
-          <Route path="/integrations" element={<Protected><IntegrationsListPage /></Protected>} />
-          <Route path="/integrations/:id" element={<Protected><IntegrationDetailPage /></Protected>} />
-          <Route path="/event-catalog" element={<Protected><EventCatalogListPage /></Protected>} />
-          <Route path="/event-catalog/:id" element={<Protected><EventCatalogDetailPage /></Protected>} />
-          <Route path="/event-deliveries" element={<Protected><EventDeliveriesListPage /></Protected>} />
-          <Route path="/feature-flags" element={<Protected><FeatureFlagsListPage /></Protected>} />
-          <Route path="/feature-flags/:id" element={<Protected><FeatureFlagDetailPage /></Protected>} />
-          <Route path="/notification-templates" element={<Protected><NotificationTemplatesListPage /></Protected>} />
-          <Route path="/notification-templates/:id" element={<Protected><NotificationTemplateDetailPage /></Protected>} />
-          <Route path="/notification-rules" element={<Protected><NotificationRulesListPage /></Protected>} />
-          <Route path="/notification-rules/:id" element={<Protected><NotificationRuleDetailPage /></Protected>} />
-          <Route path="/notifications" element={<Protected><NotificationsListPage /></Protected>} />
-          <Route path="/notifications/:id" element={<Protected><NotificationDetailPage /></Protected>} />
+          <Route element={<ProtectedLayout />}>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/customers" element={<CustomersListPage />} />
+            <Route path="/customers/:id" element={<CustomerDetailPage />} />
+            <Route path="/tenants" element={<TenantsListPage />} />
+            <Route path="/tenants/:id" element={<TenantDetailPage />} />
+            <Route path="/applications" element={<ApplicationsListPage />} />
+            <Route path="/applications/:id" element={<ApplicationDetailPage />} />
+            <Route path="/permissions" element={<PermissionsListPage />} />
+            <Route path="/roles" element={<RolesListPage />} />
+            <Route path="/roles/:id" element={<RoleDetailPage />} />
+            <Route path="/users" element={<UsersListPage />} />
+            <Route path="/users/:id" element={<UserDetailPage />} />
+            <Route path="/audit-logs" element={<AuditLogsPage />} />
+            <Route path="/service-accounts" element={<ServiceAccountsPage />} />
+            <Route path="/products" element={<ProductsListPage />} />
+            <Route path="/products/:id" element={<ProductDetailPage />} />
+            <Route path="/plans" element={<PlansListPage />} />
+            <Route path="/plans/:id" element={<PlanDetailPage />} />
+            <Route path="/addons" element={<AddonsListPage />} />
+            <Route path="/addons/:id" element={<AddonDetailPage />} />
+            <Route path="/prices" element={<PricesListPage />} />
+            <Route path="/prices/:id" element={<PriceDetailPage />} />
+            <Route path="/pricing/simulate" element={<PricingSimulatorPage />} />
+            <Route path="/subscriptions" element={<SubscriptionsListPage />} />
+            <Route path="/subscriptions/:id" element={<SubscriptionDetailPage />} />
+            <Route path="/tenants/:tenantId/entitlements" element={<TenantEntitlementsPage />} />
+            <Route path="/usage" element={<UsageEventsPage />} />
+            <Route path="/billings" element={<BillingsListPage />} />
+            <Route path="/billings/:id" element={<BillingDetailPage />} />
+            <Route path="/invoices" element={<InvoicesListPage />} />
+            <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
+            <Route path="/policies" element={<PoliciesListPage />} />
+            <Route path="/policies/:id" element={<PolicyDetailPage />} />
+            <Route path="/workflows" element={<WorkflowsListPage />} />
+            <Route path="/workflows/:id" element={<WorkflowDetailPage />} />
+            <Route path="/workflow-instances" element={<WorkflowInstancesListPage />} />
+            <Route path="/workflow-instances/:id" element={<WorkflowInstanceDetailPage />} />
+            <Route path="/approval-definitions" element={<ApprovalDefinitionsListPage />} />
+            <Route path="/approval-definitions/:id" element={<ApprovalDefinitionDetailPage />} />
+            <Route path="/approval-requests" element={<ApprovalRequestsListPage />} />
+            <Route path="/approval-requests/:id" element={<ApprovalRequestDetailPage />} />
+            <Route path="/integrations" element={<IntegrationsListPage />} />
+            <Route path="/integrations/:id" element={<IntegrationDetailPage />} />
+            <Route path="/event-catalog" element={<EventCatalogListPage />} />
+            <Route path="/event-catalog/:id" element={<EventCatalogDetailPage />} />
+            <Route path="/event-deliveries" element={<EventDeliveriesListPage />} />
+            <Route path="/feature-flags" element={<FeatureFlagsListPage />} />
+            <Route path="/feature-flags/:id" element={<FeatureFlagDetailPage />} />
+            <Route path="/notification-templates" element={<NotificationTemplatesListPage />} />
+            <Route path="/notification-templates/:id" element={<NotificationTemplateDetailPage />} />
+            <Route path="/notification-rules" element={<NotificationRulesListPage />} />
+            <Route path="/notification-rules/:id" element={<NotificationRuleDetailPage />} />
+            <Route path="/notifications" element={<NotificationsListPage />} />
+            <Route path="/notifications/:id" element={<NotificationDetailPage />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

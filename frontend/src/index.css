@@ -274,5 +274,6 @@ input.invalid { border-color: var(--danger); }
 .fact-warn { color: var(--warning-fg); font-weight: 600; }
 @media (max-width: 900px) {
   .check-row { flex-wrap: wrap; }
+  .check-body { flex: 1 1 12rem; } /* the action drops under the message instead of squeezing it into a narrow column */
   .check-row .btn { margin-left: 2.25rem; }
 }

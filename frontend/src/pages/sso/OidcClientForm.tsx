@@ -61,7 +61,7 @@ export function OidcClientForm({ mode, client, applications, applicationsFailed,
       <label>
         {t('oidc.form.application')}
         {mode === 'create' ? (
-          <select value={form.application_id} onChange={(e) => set('application_id', e.target.value)} aria-invalid={show && problems.application ? true : undefined}>
+          <select value={form.application_id} onChange={(e) => set('application_id', e.target.value)} aria-label={t('oidc.form.application')} aria-invalid={show && problems.application ? true : undefined}>
             <option value="">{t('oidc.form.applicationPick')}</option>
             {applications.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.application_code})</option>)}
           </select>

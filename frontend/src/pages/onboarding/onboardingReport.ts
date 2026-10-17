@@ -10,7 +10,8 @@ import { BREADCRUMB_PATTERNS } from '../../navigation/breadcrumbs';
  */
 export function safePortalRoute(route: unknown): string | null {
   if (typeof route !== 'string' || route === '') return null;
-  if (!route.startsWith('/') || route.startsWith('//') || route.includes('\\') || /[\u0000- \u007f]/.test(route)) return null;
+  if (!route.startsWith('/') || route.startsWith('//') || route.includes('\\')) return null;
+  if ([...route].some((char) => char.charCodeAt(0) <= 0x20 || char.charCodeAt(0) === 0x7f)) return null; // spaces and control characters
   const path = route.split(/[?#]/)[0];
   return BREADCRUMB_PATTERNS.some((pattern) => matchPath({ path: pattern, end: true }, path)) ? route : null;
 }

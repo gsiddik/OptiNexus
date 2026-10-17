@@ -23,6 +23,8 @@ const RELOAD_KEY = 'optinexus.chunk-reload-at';
 export const RELOAD_WINDOW_MS = 60_000;
 
 export function canAutoReload(now = Date.now()): boolean {
+  // Offline, a reload would only replace the portal with the browser's "no internet" page: show the message instead.
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return false;
   try {
     const last = Number(window.sessionStorage.getItem(RELOAD_KEY));
     return !(last > 0 && now - last < RELOAD_WINDOW_MS);

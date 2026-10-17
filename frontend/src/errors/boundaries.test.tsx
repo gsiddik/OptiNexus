@@ -112,6 +112,27 @@ describe('error boundary', () => {
   });
 });
 
+describe('lazy page edge cases', () => {
+  it('a preload cancelled for the automatic reload (import resolves with nothing) is a chunk failure, not a TypeError', async () => {
+    const Cancelled = lazyPage(() => Promise.resolve(undefined) as never, 'X');
+    render(
+      <ErrorBoundary scope="route">
+        <Suspense fallback={<p>loading</p>}>
+          <Cancelled />
+        </Suspense>
+      </ErrorBoundary>,
+    );
+    expect(await screen.findByTestId('chunk-error')).toBeTruthy();
+  });
+
+  it('never reloads automatically while the browser is offline (the reload would end on a "no internet" page)', () => {
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    expect(canAutoReload()).toBe(false);
+    online.mockReturnValue(true);
+    expect(canAutoReload()).toBe(true);
+  });
+});
+
 describe('state views', () => {
   const error = (status: number | undefined, code: string) => new ApiRequestError({ code, message: `${code} message` }, status, 'abcd1234-0000');
 

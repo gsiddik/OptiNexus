@@ -31,6 +31,17 @@ php artisan ecosystem:register-service-account <app_code> [--name=N] [--tenant=I
   the file cannot be created that way) and is never printed. A command that issues a secret without `--secret-file` fails.
 - Rotation invalidates the old secret at once; the client id is kept.
 
+## Order of operations (found by the live test, 2026-10-17)
+
+1. `ecosystem:import-manifest <app> <file> --create-application` (the manifest must declare `manifest_version: "2.0"` as a **string** and an
+   `application` block with `application_code`, `name`, `frontend_url`; OptiEntry and OptiFleet do since the live test).
+2. **Run the bootstrap job again** (`docker compose run --rm bootstrap`, which runs the production seeder). The platform roles are defined
+   as "every permission" and only get the imported permissions when the seeder runs. Until then even a platform administrator cannot
+   build a role from the new product: the escalation guard refuses a grant of a permission the actor does not hold
+   (`403 PRIVILEGE_ESCALATION_DENIED`). Import does not widen any role by itself: this is a deliberate operator step.
+3. `ecosystem:register-oidc-client`, `ecosystem:register-service-account`, then commercial setup (product, plan, subscription), tenant,
+   Admin Tenant and roles.
+
 ## HTTP equivalents and onboarding report
 
 - `POST /api/v1/applications/{application}/manifest` (operator with `cgo.application.update`, `cgo.capability.create`,

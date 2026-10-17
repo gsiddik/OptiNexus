@@ -1,6 +1,6 @@
-# Rendered at start (envsubst): API_UPSTREAM.
+# Rendered at start (envsubst): LISTEN_PORT, API_UPSTREAM.
 server {
-    listen 80;
+    listen ${LISTEN_PORT};
     server_name _;
     root /usr/share/nginx/html;
     index index.html;

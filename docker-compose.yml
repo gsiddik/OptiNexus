@@ -11,7 +11,7 @@ name: optinexus
 x-nexus-env: &nexus-env
   APP_NAME: OptiNexus
   APP_ENV: ${APP_ENV:-production}
-  APP_KEY: ${APP_KEY:?set APP_KEY in .env (php artisan key:generate --show)}
+  APP_KEY: ${APP_KEY:?set APP_KEY in .env (see .env.example)}
   APP_DEBUG: ${APP_DEBUG:-false}
   APP_URL: ${NEXUS_PUBLIC_URL:-http://localhost:8100}
   OIDC_ISSUER: ${NEXUS_PUBLIC_URL:-http://localhost:8100}
@@ -114,13 +114,14 @@ services:
         condition: service_healthy
     environment:
       BACKEND_HOST: api
+      LISTEN_PORT: ${NEXUS_API_PORT:-8100}
       CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-20m}
     volumes:
       - ./docker/nginx/api.conf.template:/etc/nginx/templates/default.conf.template:ro
     ports:
-      - "${BIND_ADDRESS:-127.0.0.1}:${NEXUS_API_PORT:-8100}:80"
+      - "${BIND_ADDRESS:-127.0.0.1}:${NEXUS_API_PORT:-8100}:${NEXUS_API_PORT:-8100}"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/up || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:${NEXUS_API_PORT:-8100}/up || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -139,11 +140,12 @@ services:
       web:
         condition: service_healthy
     environment:
-      API_UPSTREAM: http://web:80
+      LISTEN_PORT: ${NEXUS_UI_PORT:-5180}
+      API_UPSTREAM: http://web:${NEXUS_API_PORT:-8100}
     ports:
-      - "${BIND_ADDRESS:-127.0.0.1}:${NEXUS_UI_PORT:-5180}:80"
+      - "${BIND_ADDRESS:-127.0.0.1}:${NEXUS_UI_PORT:-5180}:${NEXUS_UI_PORT:-5180}"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/nginx-health || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:${NEXUS_UI_PORT:-5180}/nginx-health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6

@@ -1,6 +1,7 @@
-# Rendered by the nginx image at start (envsubst): BACKEND_HOST, CLIENT_MAX_BODY_SIZE.
+# Rendered by the nginx image at start (envsubst): LISTEN_PORT, BACKEND_HOST, CLIENT_MAX_BODY_SIZE.
+# The container listens on the same port the host publishes, so one URL (alias:port) reaches it from the browser and from other containers.
 server {
-    listen 80;
+    listen ${LISTEN_PORT};
     server_name _;
     client_max_body_size ${CLIENT_MAX_BODY_SIZE};
 

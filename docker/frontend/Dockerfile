@@ -14,5 +14,6 @@ RUN npm run build
 FROM ${NGINX_IMAGE}
 COPY docker/frontend/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
-ENV API_UPSTREAM=http://api:80
+ENV API_UPSTREAM=http://web:8100 \
+    LISTEN_PORT=80
 EXPOSE 80

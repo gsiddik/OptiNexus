@@ -14,3 +14,9 @@ Route::post('/authorization/check', [AuthorizationController::class, 'check'])
 Route::post('/authorization/effective-permissions', [AuthorizationController::class, 'effectivePermissions'])
     ->middleware(['service_account:authorization.check'])
     ->name('authorization.effective-permissions');
+
+// The products a person may switch to from the caller's application, in the tenant they are using, and a revalidation of the
+// caller's own session (audit A29). Governance portal never listed.
+Route::post('/authorization/product-context', [AuthorizationController::class, 'productContext'])
+    ->middleware(['service_account:authorization.check'])
+    ->name('authorization.product-context');

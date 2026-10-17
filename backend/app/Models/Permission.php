@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 #[Fillable([
-    'application_id', 'capability_id', 'permission_key', 'name', 'description', 'status',
+    'application_id', 'capability_id', 'permission_key', 'name', 'description', 'status', 'delegable',
 ])]
 class Permission extends Model
 {
@@ -28,6 +28,11 @@ class Permission extends Model
     public const STATUS_DISABLED = 'DISABLED';
 
     public const STATUSES = [self::STATUS_ACTIVE, self::STATUS_DEPRECATED, self::STATUS_DISABLED];
+
+    protected function casts(): array
+    {
+        return ['delegable' => 'boolean'];
+    }
 
     public function application(): BelongsTo
     {

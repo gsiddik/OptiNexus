@@ -6,6 +6,10 @@ use App\Models\AuditLog;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\OrchestrationPermissionSeeder;
+use Database\Seeders\OrchestrationRoleSeeder;
+use Database\Seeders\PlatformIntegrationPermissionSeeder;
+use Database\Seeders\PlatformIntegrationRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
@@ -83,10 +87,10 @@ class EcosystemAccessGateTest extends TestCase
     public function test_every_seeded_system_role_carries_the_ecosystem_permission(): void
     {
         $this->seedCommercialBaseline();
-        $this->seed(\Database\Seeders\OrchestrationPermissionSeeder::class);
-        $this->seed(\Database\Seeders\OrchestrationRoleSeeder::class);
-        $this->seed(\Database\Seeders\PlatformIntegrationPermissionSeeder::class);
-        $this->seed(\Database\Seeders\PlatformIntegrationRoleSeeder::class);
+        $this->seed(OrchestrationPermissionSeeder::class);
+        $this->seed(OrchestrationRoleSeeder::class);
+        $this->seed(PlatformIntegrationPermissionSeeder::class);
+        $this->seed(PlatformIntegrationRoleSeeder::class);
 
         $withoutIt = Role::query()->where('role_type', Role::TYPE_SYSTEM)->whereNull('tenant_id')
             ->whereDoesntHave('permissions', fn ($q) => $q->where('permission_key', Permission::ECOSYSTEM_ACCESS))

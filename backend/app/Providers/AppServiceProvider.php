@@ -68,6 +68,7 @@ class AppServiceProvider extends ServiceProvider
             'gateway.fleet.read' => 'Read vehicle <-> telematics device links through the API Gateway',
             'gateway.telematics.write' => 'Push telematics odometer readings into the API Gateway',
             'gateway.telematics.read' => 'Read the telematics odometer feed for linked vehicles from the API Gateway',
+            'tenant.delegate' => "Manage a tenant's users and custom roles for the caller's own application on behalf of an Admin Tenant (delegation API)",
             'access.evaluate' => 'Evaluate aggregated effective access (entitlement + permission + policy + feature flag) via POST /access/evaluate',
         ]);
 

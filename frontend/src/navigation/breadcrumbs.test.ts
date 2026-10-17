@@ -81,6 +81,15 @@ describe('buildTrail', () => {
     ]);
   });
 
+  it('places the per-tenant screens under their tenant', () => {
+    for (const page of ['onboarding', 'gateway', 'applications', 'admins']) {
+      const trail = buildTrail(`/tenants/t-1/${page}`, { '/tenants/t-1': 'Acme' });
+      expect(trail.map((c) => c.label).slice(2, 4), page).toEqual(['Tenants', 'Acme']);
+      expect(trail[trail.length - 1].labelKey, page).toBeDefined();
+      expect(parentOf(trail), page).toBe('/tenants/t-1');
+    }
+  });
+
   it('keeps a translation handle on every label that is not a record title', () => {
     for (const pattern of BREADCRUMB_PATTERNS) {
       const trail = buildTrail(pattern.replace(/:[A-Za-z]+/g, 'x-1'));

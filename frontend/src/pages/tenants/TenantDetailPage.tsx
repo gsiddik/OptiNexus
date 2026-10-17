@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { applicationsApi, tenantsApi } from '../../api/endpoints';
 import { useApiResource } from '../../api/useApi';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
@@ -8,13 +8,19 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { LifecycleActions } from '../../components/LifecycleActions';
 import { useAuth } from '../../auth/useAuth';
 import { unwrapError } from '../../api/client';
+import { useI18n } from '../../i18n';
 import type { Application, Tenant, User } from '../../api/types';
 
-export function TenantDetailPage() {
-  const { id } = useParams<{ id: string }>();
+type Tab = 'details' | 'applications' | 'admins';
+
+export function TenantDetailPage({ initialTab = 'details' }: { initialTab?: Tab }) {
+  // The onboarding report links to /tenants/:tenantId/applications and /admins, which open this page on that tab.
+  const params = useParams<{ id: string; tenantId: string }>();
+  const id = params.id ?? params.tenantId;
   const { hasPermission } = useAuth();
+  const { t } = useI18n();
   const { data: tenant, loading, error, reload } = useApiResource<Tenant>(() => tenantsApi.get(id!), [id]);
-  const [tab, setTab] = useState<'details' | 'applications' | 'admins'>('details');
+  const [tab, setTab] = useState<Tab>(initialTab);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <ErrorAlert message={error} />;
@@ -40,6 +46,11 @@ export function TenantDetailPage() {
           { key: 'archive', label: 'Archive', allowedFrom: ['TERMINATED'], permission: 'cgo.tenant.archive', danger: true, action: () => tenantsApi.archive(tenant.id) },
         ]}
       />
+
+      <div className="toolbar">
+        <Link className="btn btn-secondary btn-sm tab-link" to={`/tenants/${tenant.id}/onboarding`}>{t('nav.onboarding')}</Link>
+        <Link className="btn btn-secondary btn-sm tab-link" to={`/tenants/${tenant.id}/gateway`}>{t('nav.gateway')}</Link>
+      </div>
 
       <div className="tabs">
         <button className={tab === 'details' ? 'tab active' : 'tab'} onClick={() => setTab('details')}>Details</button>
@@ -163,3 +174,7 @@ function TenantAdmins({ tenant }: { tenant: Tenant }) {
     </div>
   );
 }
+
+/** Opened by the onboarding report ("assign an application", "assign access"). */
+export const TenantApplicationsPage = () => <TenantDetailPage initialTab="applications" />;
+export const TenantAdminsPage = () => <TenantDetailPage initialTab="admins" />;

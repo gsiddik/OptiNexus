@@ -28,7 +28,10 @@ for (const list of DETAIL_OF) META[`${list}/:id`] = { label: 'Details', labelKey
 // The entitlements page names its tenant parameter differently from the tenant detail page; this alias is a parent only.
 META['/tenants/:tenantId'] = { label: 'Details', labelKey: 'nav.details', parent: '/tenants' };
 META['/tenants/:tenantId/entitlements'] = { label: 'Entitlements', labelKey: 'nav.entitlements', parent: '/tenants/:tenantId' };
-// Per-tenant screens, reached from the tenant page or from the menu's tenant picker.
+// Per-tenant screens, reached from the tenant page or from the menu's tenant picker. The onboarding report links to the first two.
+META['/tenants/:tenantId/onboarding'] = { label: 'Onboarding', labelKey: 'nav.onboarding', parent: '/tenants/:tenantId' };
+META['/tenants/:tenantId/applications'] = { label: 'Applications', labelKey: 'nav.applications', parent: '/tenants/:tenantId' };
+META['/tenants/:tenantId/admins'] = { label: 'Admins', labelKey: 'nav.admins', parent: '/tenants/:tenantId' };
 META['/tenants/:tenantId/gateway'] = { label: 'Vehicle Mapping', labelKey: 'nav.gateway', parent: '/tenants/:tenantId' };
 
 /** Route patterns that have breadcrumb metadata but are not routes themselves. */

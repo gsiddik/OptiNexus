@@ -487,3 +487,36 @@ export interface GatewayRequestLog {
   correlation_id: string | null;
   created_at: string;
 }
+
+// ------------------------------------------------------- Ecosystem onboarding report
+
+export type OnboardingStatus = 'OK' | 'MISSING' | 'WARN';
+
+export interface OnboardingCheck {
+  key: string;
+  /** Application code the check belongs to; null for a tenant-level check. */
+  application: string | null;
+  status: OnboardingStatus;
+  /** Stable code of the finding; the portal owns the (bilingual) wording. */
+  message_code: string;
+  detail?: { count?: number } | null;
+  action?: { label_key: string; route: string } | null;
+}
+
+export interface OnboardingApplication {
+  code: string;
+  name: string;
+  subscribed: boolean;
+  oidc_client: { status: string; pkce_required: boolean; redirect_uris: number } | null;
+  service_account: { present: boolean; last_used_at: string | null };
+  manifest: { revision: string | null; synced_at: string | null };
+  users_with_access: number;
+  tenant_admins: number;
+}
+
+export interface OnboardingReport {
+  tenant: { id: string; code: string; name: string; status: string };
+  ready: boolean;
+  checks: OnboardingCheck[];
+  applications: OnboardingApplication[];
+}

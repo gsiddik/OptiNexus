@@ -15,6 +15,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/customers', label: 'Customers', labelKey: 'nav.customers' },
       { to: '/tenants', label: 'Tenants', labelKey: 'nav.tenants' },
+      { to: '/onboarding', label: 'Onboarding', labelKey: 'nav.onboarding' },
       { to: '/users', label: 'Users', labelKey: 'nav.users' },
     ],
   },

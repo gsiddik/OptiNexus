@@ -30,6 +30,7 @@ import type {
   NotificationRule,
   NotificationTemplate,
   OidcClient,
+  OnboardingReport,
   OidcClientCreate,
   OidcClientUpdate,
   Permission,
@@ -532,4 +533,9 @@ export const gatewayAdminApi = {
     unwrap<GatewayLink>(apiClient.put(`${gw(tenantId)}/vehicle-links/${encodeURIComponent(linkId)}`, { fleet_vehicle_id: fleetVehicleId })),
   unlink: (tenantId: string, linkId: string) => unwrap<GatewayLink>(apiClient.delete(`${gw(tenantId)}/vehicle-links/${encodeURIComponent(linkId)}`)),
   logs: (tenantId: string, params?: { page?: number; per_page?: number }) => unwrapFull<GatewayRequestLog[]>(apiClient.get(`${gw(tenantId)}/request-logs`, { params })),
+};
+
+// ------------------------------------------------------------- Ecosystem onboarding
+export const onboardingApi = {
+  report: (tenantId: string) => unwrap<OnboardingReport>(apiClient.get(`/ecosystem/onboarding/tenants/${encodeURIComponent(tenantId)}`)),
 };

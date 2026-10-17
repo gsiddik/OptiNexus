@@ -1,0 +1,26 @@
+# Joins OptiNexus to the shared ecosystem network. The API listens on the same port it publishes, so
+# http://nexus.<domain>:<port> (the OIDC issuer) is one URL for the browser (published port) and for the other containers (network alias).
+# Used by deploy/ecosystem/ecosystem.ps1: docker compose -f OptiNexus/docker-compose.yml -f overlays/nexus.yaml
+services:
+  web:
+    networks:
+      default: {}
+      ecosystem:
+        aliases: ["nexus.${ECOSYSTEM_DOMAIN:-localtest.me}"]
+  ui:
+    networks:
+      default: {}
+      ecosystem:
+        aliases: ["nexus-console.${ECOSYSTEM_DOMAIN:-localtest.me}"]
+  api:
+    networks: [default, ecosystem]
+  worker:
+    networks: [default, ecosystem]
+  scheduler:
+    networks: [default, ecosystem]
+  bootstrap:
+    networks: [default, ecosystem]
+networks:
+  ecosystem:
+    name: ${ECOSYSTEM_NETWORK:-opti-ecosystem}
+    external: true

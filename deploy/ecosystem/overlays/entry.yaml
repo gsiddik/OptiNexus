@@ -1,0 +1,28 @@
+# Joins OptiEntry to the shared ecosystem network. The console (which proxies /api) answers at http://entry.<domain>:<ui port>,
+# the URL the browser uses; the PHP roles join the network to reach the OptiNexus issuer by its public name.
+# The console reaches its API through a name that exists only in this product's own network: the generic service name `web` would also
+# match OptiNexus's web container once both sit on the shared network.
+services:
+  web:
+    networks:
+      default:
+        aliases: ["entry-web"]
+  ui:
+    environment:
+      API_UPSTREAM: http://entry-web:${ENTRY_API_PORT:-8200}
+    networks:
+      default: {}
+      ecosystem:
+        aliases: ["entry.${ECOSYSTEM_DOMAIN:-localtest.me}"]
+  api:
+    networks: [default, ecosystem]
+  worker:
+    networks: [default, ecosystem]
+  scheduler:
+    networks: [default, ecosystem]
+  bootstrap:
+    networks: [default, ecosystem]
+networks:
+  ecosystem:
+    name: ${ECOSYSTEM_NETWORK:-opti-ecosystem}
+    external: true

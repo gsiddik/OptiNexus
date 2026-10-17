@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 
+/** Local development: the catalog plus demo data. Installations use ProductionSeeder (no demo customers or users). */
 class DatabaseSeeder extends Seeder
 {
     /**

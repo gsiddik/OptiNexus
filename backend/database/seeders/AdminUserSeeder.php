@@ -25,15 +25,20 @@ class AdminUserSeeder extends Seeder
             $password = 'ChangeMe!12345';
         }
 
-        $user = User::query()->updateOrCreate(
-            ['email' => $email],
-            [
+        // The password and name are set when the bootstrap administrator is created. Running the seeder again (every deployment does) must
+        // not overwrite a password the administrator has changed since, unless CGO_SUPERADMIN_RESET_PASSWORD=true says so.
+        $user = User::query()->where('email', $email)->first();
+        if (! $user) {
+            $user = User::query()->create([
+                'email' => $email,
                 'name' => 'Platform Super Admin',
                 'password' => $password,
                 'status' => User::STATUS_ACTIVE,
                 'email_verified_at' => now(),
-            ],
-        );
+            ]);
+        } elseif (filter_var(env('CGO_SUPERADMIN_RESET_PASSWORD', false), FILTER_VALIDATE_BOOLEAN)) {
+            $user->forceFill(['password' => $password, 'status' => User::STATUS_ACTIVE])->save();
+        }
 
         $role = Role::query()->where('code', 'PLATFORM_SUPERADMIN')->whereNull('tenant_id')->first();
 

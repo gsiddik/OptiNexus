@@ -4,8 +4,16 @@ return [
     /*
     | Issuer identifier published in the discovery document and stamped into
     | every id_token. Must be the public base URL of OptiNexus, no trailing slash.
+    | An empty OIDC_ISSUER (as in a copied .env.example) falls back to APP_URL; `php artisan ecosystem:preflight`
+    | refuses an issuer that is still empty or not a plain http(s) origin.
     */
-    'issuer' => rtrim((string) env('OIDC_ISSUER', env('APP_URL', 'http://localhost')), '/'),
+    'issuer' => rtrim((string) (env('OIDC_ISSUER') ?: env('APP_URL') ?: 'http://localhost'), '/'),
+
+    /*
+    | When true the preflight refuses a localhost issuer: products in other containers (or other machines) validate tokens against the
+    | issuer URL, so it must be a name both the browser and those containers resolve. The ecosystem orchestrator sets this.
+    */
+    'require_public_issuer' => filter_var(env('OIDC_REQUIRE_PUBLIC_ISSUER', false), FILTER_VALIDATE_BOOLEAN),
 
     /*
     | RSA private key (PEM) used to sign id_tokens with RS256. When empty,

@@ -25,6 +25,12 @@ class AppServiceProvider extends ServiceProvider
         // attack surface for this API-only platform and are disabled
         // outright rather than merely left unlinked.
         Passport::ignoreRoutes();
+
+        // Signing keys may live on a persistent volume (containers): PASSPORT_KEY_PATH names the directory that holds
+        // oauth-private.key / oauth-public.key. Unset = storage/ as before.
+        if ($keyPath = env('PASSPORT_KEY_PATH')) {
+            Passport::loadKeysFrom($keyPath);
+        }
     }
 
     /**

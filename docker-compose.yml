@@ -1,0 +1,154 @@
+# OptiNexus: PostgreSQL, one-shot bootstrap job, API (php-fpm + nginx), queue worker, scheduler and the console (SPA behind nginx).
+#
+# Two kinds of settings, kept apart on purpose:
+#   * the root .env is read by Compose for ${...} interpolation only (copy .env.example; never commit it);
+#   * the runtime environment of the containers is exactly the `environment:` blocks below, identical for every PHP role (x-nexus-env),
+#     so a changed secret needs `docker compose up -d` (containers re-created), never an image rebuild.
+# Only the `bootstrap` job migrates. api, worker and scheduler wait for it (service_completed_successfully, and the entrypoint also
+# waits for a current schema) and never touch the schema themselves.
+name: optinexus
+
+x-nexus-env: &nexus-env
+  APP_NAME: OptiNexus
+  APP_ENV: ${APP_ENV:-production}
+  APP_KEY: ${APP_KEY:?set APP_KEY in .env (php artisan key:generate --show)}
+  APP_DEBUG: ${APP_DEBUG:-false}
+  APP_URL: ${NEXUS_PUBLIC_URL:-http://localhost:8100}
+  OIDC_ISSUER: ${NEXUS_PUBLIC_URL:-http://localhost:8100}
+  OIDC_REQUIRE_PUBLIC_ISSUER: ${OIDC_REQUIRE_PUBLIC_ISSUER:-false}
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres
+  DB_PORT: 5432
+  DB_DATABASE: ${DB_DATABASE:-optinexus}
+  DB_USERNAME: ${DB_USERNAME:-optinexus}
+  DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+  SESSION_DRIVER: database
+  QUEUE_CONNECTION: database
+  CACHE_STORE: database
+  LOG_CHANNEL: stderr
+  PASSPORT_KEY_PATH: /var/keys
+  CGO_SUPERADMIN_EMAIL: ${CGO_SUPERADMIN_EMAIL:-superadmin@cgo.local}
+  CGO_SUPERADMIN_PASSWORD: ${CGO_SUPERADMIN_PASSWORD:-}
+  CGO_SUPERADMIN_RESET_PASSWORD: ${CGO_SUPERADMIN_RESET_PASSWORD:-false}
+  NEXUS_SEED: ${NEXUS_SEED:-catalog}
+  OPTIRADAR_SYNC_ENABLED: ${OPTIRADAR_SYNC_ENABLED:-false}
+  OPTIRADAR_APPLICATION_CODE: ${OPTIRADAR_APPLICATION_CODE:-optiradar}
+  OPTIRADAR_BASE_URL: ${OPTIRADAR_BASE_URL:-}
+  OPTIRADAR_API_TOKEN: ${OPTIRADAR_API_TOKEN:-}
+
+x-php: &php
+  image: ${NEXUS_IMAGE:-optinexus-backend:local}
+  restart: unless-stopped
+  environment: *nexus-env
+  volumes:
+    - nexus_keys:/var/keys
+    - nexus_storage:/var/www/html/storage/app
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-optinexus}
+      POSTGRES_USER: ${DB_USERNAME:-optinexus}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    volumes:
+      - nexus_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-optinexus} -d ${DB_DATABASE:-optinexus}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  bootstrap:
+    <<: *php
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      args:
+        PHP_IMAGE: ${PHP_IMAGE:-php:8.4-fpm-alpine}
+        COMPOSER_INSTALL_FLAGS: ${COMPOSER_INSTALL_FLAGS:---prefer-dist}
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["bootstrap"]
+
+  api:
+    <<: *php
+    depends_on:
+      postgres:
+        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 9000) ? 0 : 1);'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  worker:
+    <<: *php
+    depends_on:
+      postgres:
+        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
+    command: ["php", "artisan", "queue:work", "--tries=3", "--max-time=3600", "--sleep=3"]
+
+  scheduler:
+    <<: *php
+    depends_on:
+      postgres:
+        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
+    command: ["php", "artisan", "schedule:work"]
+
+  web:
+    image: ${NGINX_IMAGE:-nginx:1.27-alpine}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      BACKEND_HOST: api
+      CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-20m}
+    volumes:
+      - ./docker/nginx/api.conf.template:/etc/nginx/templates/default.conf.template:ro
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${NEXUS_API_PORT:-8100}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/up || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  ui:
+    image: ${NEXUS_UI_IMAGE:-optinexus-ui:local}
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:22-alpine}
+        NGINX_IMAGE: ${NGINX_IMAGE:-nginx:1.27-alpine}
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    environment:
+      API_UPSTREAM: http://web:80
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${NEXUS_UI_PORT:-5180}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/nginx-health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  nexus_postgres_data:
+  nexus_keys:
+  nexus_storage:

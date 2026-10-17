@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\Customer;
 use App\Models\Permission;
 use App\Models\User;
@@ -59,5 +60,7 @@ class ProductionSeederTest extends TestCase
         $this->seed(ProductionSeeder::class);
 
         $this->assertTrue(Hash::check('Reset-To-This-4!', User::query()->where('email', 'superadmin@cgo.local')->firstOrFail()->password));
+        $this->assertSame(1, AuditLog::query()->where('action', 'operator.bootstrap_created')->count());
+        $this->assertSame(1, AuditLog::query()->where('action', 'operator.break_glass_password_reset')->count());
     }
 }

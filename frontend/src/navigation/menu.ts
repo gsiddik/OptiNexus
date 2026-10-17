@@ -68,6 +68,7 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: 'nav.group.integration',
     items: [
       { to: '/integrations', label: 'Integrations', labelKey: 'nav.integrations' },
+      { to: '/gateway', label: 'Vehicle Mapping', labelKey: 'nav.gateway' },
       { to: '/event-catalog', label: 'Event Catalog', labelKey: 'nav.eventCatalog' },
       { to: '/event-deliveries', label: 'Event Deliveries', labelKey: 'nav.eventDeliveries' },
     ],

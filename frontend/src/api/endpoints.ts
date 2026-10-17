@@ -19,6 +19,9 @@ import type {
   EventDelivery,
   FeatureFlag,
   FeatureFlagEvaluation,
+  GatewayLink,
+  GatewayRequestLog,
+  GatewayVehicle,
   Integration,
   IntegrationCredential,
   IntegrationLog,
@@ -518,4 +521,15 @@ export const oidcClientsApi = {
   update: (id: string, payload: OidcClientUpdate) => unwrap<OidcClient>(apiClient.put(`/oidc-clients/${id}`, payload)),
   rotateSecret: (id: string) => unwrap<{ client: OidcClient; client_secret: string }>(apiClient.post(`/oidc-clients/${id}/rotate-secret`)),
   revoke: (id: string) => unwrap<OidcClient>(apiClient.post(`/oidc-clients/${id}/revoke`)),
+};
+
+// ------------------------------------------------- Gateway (per tenant, human admin side)
+const gw = (tenantId: string) => `/gateway/tenants/${encodeURIComponent(tenantId)}`;
+export const gatewayAdminApi = {
+  links: (tenantId: string) => unwrap<GatewayLink[]>(apiClient.get(`${gw(tenantId)}/vehicle-links`)),
+  vehicles: (tenantId: string) => unwrap<GatewayVehicle[]>(apiClient.get(`${gw(tenantId)}/fleet-vehicles`)),
+  link: (tenantId: string, linkId: string, fleetVehicleId: string) =>
+    unwrap<GatewayLink>(apiClient.put(`${gw(tenantId)}/vehicle-links/${encodeURIComponent(linkId)}`, { fleet_vehicle_id: fleetVehicleId })),
+  unlink: (tenantId: string, linkId: string) => unwrap<GatewayLink>(apiClient.delete(`${gw(tenantId)}/vehicle-links/${encodeURIComponent(linkId)}`)),
+  logs: (tenantId: string, params?: { page?: number; per_page?: number }) => unwrapFull<GatewayRequestLog[]>(apiClient.get(`${gw(tenantId)}/request-logs`, { params })),
 };

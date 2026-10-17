@@ -447,3 +447,43 @@ export interface OidcClientCreate {
 }
 
 export type OidcClientUpdate = Omit<OidcClientCreate, 'application_id' | 'confidential'>;
+
+// ------------------------------------------------------- Gateway (vehicle / device mapping)
+
+export type GatewayLinkStatus = 'ACTIVE' | 'UNMATCHED' | 'INACTIVE';
+
+export interface GatewayLink {
+  id: string;
+  telematics_source: string;
+  device_ref: string;
+  device_name: string | null;
+  device_registration: string | null;
+  link_type: 'AUTO' | 'MANUAL';
+  status: GatewayLinkStatus;
+  fleet_vehicle_id: string | null;
+  fleet_vehicle: { external_vehicle_id: string; registration_number: string } | null;
+}
+
+export interface GatewayVehicle {
+  id: string;
+  tenant_id?: string;
+  application_id?: string;
+  external_vehicle_id: string;
+  registration_number: string;
+  normalized_registration: string;
+  vin: string | null;
+  status: string;
+}
+
+export interface GatewayRequestLog {
+  id: string;
+  tenant_id?: string | null;
+  application_id: string | null;
+  service_account_id: string | null;
+  method: string;
+  path: string;
+  status_code: number;
+  duration_ms: number | null;
+  correlation_id: string | null;
+  created_at: string;
+}

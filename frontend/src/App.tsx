@@ -24,6 +24,8 @@ const UserDetailPage = lazyPage(() => import('./pages/users/UserDetailPage'), 'U
 const AuditLogsPage = lazyPage(() => import('./pages/audit/AuditLogsPage'), 'AuditLogsPage');
 const ServiceAccountsPage = lazyPage(() => import('./pages/service-accounts/ServiceAccountsPage'), 'ServiceAccountsPage');
 const OidcClientsPage = lazyPage(() => import('./pages/sso/OidcClientsPage'), 'OidcClientsPage');
+const GatewayPage = lazyPage(() => import('./pages/gateway/GatewayPage'), 'GatewayPage');
+const GatewayPickerPage = lazyPage(() => import('./pages/tenants/TenantPickerPage'), 'GatewayPickerPage');
 const ProductsListPage = lazyPage(() => import('./pages/commercial/products/ProductsListPage'), 'ProductsListPage');
 const ProductDetailPage = lazyPage(() => import('./pages/commercial/products/ProductDetailPage'), 'ProductDetailPage');
 const PlansListPage = lazyPage(() => import('./pages/commercial/plans/PlansListPage'), 'PlansListPage');
@@ -86,6 +88,8 @@ export function AppRoutes() {
         <Route path="/customers/:id" element={<CustomerDetailPage />} />
         <Route path="/tenants" element={<TenantsListPage />} />
         <Route path="/tenants/:id" element={<TenantDetailPage />} />
+      <Route path="/gateway" element={<GatewayPickerPage />} />
+      <Route path="/tenants/:tenantId/gateway" element={<GatewayPage />} />
         <Route path="/applications" element={<ApplicationsListPage />} />
         <Route path="/applications/:id" element={<ApplicationDetailPage />} />
         <Route path="/permissions" element={<PermissionsListPage />} />

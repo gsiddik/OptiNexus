@@ -96,3 +96,23 @@ export function formatDateTime(value: string | null | undefined): string {
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat(INTL_LOCALE[current], { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
+
+/** "5 minutes ago" / "5 menit lalu" in the language of the screen. */
+export function formatRelative(value: string | null | undefined, now: number = Date.now()): string {
+  if (!value) return '—';
+  const time = new Date(value).getTime();
+  if (Number.isNaN(time)) return value;
+  const seconds = Math.round((time - now) / 1000);
+  if (Math.abs(seconds) < 45) return translate('gw.relative.now');
+  const formatter = new Intl.RelativeTimeFormat(INTL_LOCALE[current], { numeric: 'auto' });
+  const steps: [Intl.RelativeTimeFormatUnit, number][] = [['minute', 60], ['hour', 3600], ['day', 86400], ['month', 2_592_000], ['year', 31_536_000]];
+  let unit: Intl.RelativeTimeFormatUnit = 'minute';
+  let size = 60;
+  for (const [candidate, candidateSize] of steps) {
+    if (Math.abs(seconds) >= candidateSize) {
+      unit = candidate;
+      size = candidateSize;
+    }
+  }
+  return formatter.format(Math.round(seconds / size), unit);
+}

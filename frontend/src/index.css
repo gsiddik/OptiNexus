@@ -237,3 +237,13 @@ input.invalid { border-color: var(--danger); }
 .break-all { overflow-wrap: anywhere; }
 .url-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 0.4rem; }
 .url-fieldset legend { padding: 0; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.2rem; }
+
+/* ---- per-tenant screens (gateway, onboarding) */
+.lead { margin: 0 0 0.25rem; font-weight: 600; color: var(--text-muted); }
+.summary-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 1rem; }
+.summary-card { margin-bottom: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+.summary-value { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+.summary-label { font-weight: 600; color: var(--text-muted); font-size: 0.85rem; }
+.summary-note { font-size: 0.8rem; }
+.check-inline { display: inline-flex; flex-direction: row; align-items: center; gap: 0.5rem; font-size: 0.88rem; }
+.tab-link { text-decoration: none; display: inline-block; }

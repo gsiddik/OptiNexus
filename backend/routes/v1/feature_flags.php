@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\FeatureFlagController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('feature-flags')->name('feature-flags.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('feature-flags')->name('feature-flags.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [FeatureFlagController::class, 'index'])->middleware('permission:cgo.featureflag.view')->name('index');
     Route::post('/', [FeatureFlagController::class, 'store'])->middleware('permission:cgo.featureflag.create')->name('store');
     Route::post('/evaluate', [FeatureFlagController::class, 'evaluate'])->middleware('permission:cgo.featureflag.view')->name('evaluate');

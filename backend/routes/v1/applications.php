@@ -4,7 +4,7 @@ use App\Http\Controllers\Api\V1\ApplicationController;
 use App\Http\Controllers\Api\V1\CapabilityController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('applications')->name('applications.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('applications')->name('applications.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [ApplicationController::class, 'index'])->middleware('permission:cgo.application.view')->name('index');
     Route::post('/', [ApplicationController::class, 'store'])->middleware('permission:cgo.application.create')->name('store');
     Route::get('/{application}', [ApplicationController::class, 'show'])->middleware('permission:cgo.application.view')->name('show');

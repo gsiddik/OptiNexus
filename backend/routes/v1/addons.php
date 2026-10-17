@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\AddonController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('addons')->name('addons.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('addons')->name('addons.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [AddonController::class, 'index'])->middleware('permission:cgo.addon.view')->name('index');
     Route::post('/', [AddonController::class, 'store'])->middleware('permission:cgo.addon.create')->name('store');
     Route::get('/{addon}', [AddonController::class, 'show'])->middleware('permission:cgo.addon.view')->name('show');

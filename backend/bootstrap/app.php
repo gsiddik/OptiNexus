@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AuthenticateServiceAccount;
 use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\EnsureEcosystemAccess;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\ResolveGatewayTenant;
 use Illuminate\Auth\Access\AuthorizationException as AccessAuthorizationException;
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'permission' => CheckPermission::class,
+            'ecosystem' => EnsureEcosystemAccess::class,
             'service_account' => AuthenticateServiceAccount::class,
             'gateway_tenant' => ResolveGatewayTenant::class,
         ]);

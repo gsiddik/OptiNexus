@@ -84,7 +84,7 @@ class UserMembershipTest extends TestCase
         $tenant = $this->makeTenant();
 
         $limitedRole = $this->makeTenantRole($tenant, ['cgo.user.role.assign', 'cgo.user.view']);
-        $caller = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+        $caller = $this->makeOperatorWith();
         $this->attachUserToTenant($caller, $tenant, $limitedRole);
         Sanctum::actingAs($caller);
 

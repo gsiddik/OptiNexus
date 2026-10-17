@@ -3,9 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Customer;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\CreatesGovernanceFixtures;
 use Tests\TestCase;
 
@@ -76,8 +74,7 @@ class CustomerLifecycleTest extends TestCase
 
     public function test_user_without_permission_cannot_create_customer(): void
     {
-        $user = User::factory()->create(['status' => User::STATUS_ACTIVE]);
-        Sanctum::actingAs($user);
+        $this->actingAsOperatorWith();
 
         $this->postJson('/api/v1/customers', ['customer_code' => 'NOPE', 'legal_name' => 'Nope'])
             ->assertStatus(403)

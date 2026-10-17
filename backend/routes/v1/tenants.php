@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\TenantController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('tenants')->name('tenants.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('tenants')->name('tenants.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [TenantController::class, 'index'])->middleware('permission:cgo.tenant.view')->name('index');
     Route::post('/', [TenantController::class, 'store'])->middleware('permission:cgo.tenant.create')->name('store');
     Route::get('/{tenant}', [TenantController::class, 'show'])->middleware('permission:cgo.tenant.view,tenant')->name('show');

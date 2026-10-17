@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\PermissionController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('permissions')->name('permissions.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('permissions')->name('permissions.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [PermissionController::class, 'index'])->middleware('permission:cgo.permission.view')->name('index');
     Route::post('/', [PermissionController::class, 'store'])->middleware('permission:cgo.permission.create')->name('store');
     Route::get('/{permission}', [PermissionController::class, 'show'])->middleware('permission:cgo.permission.view')->name('show');

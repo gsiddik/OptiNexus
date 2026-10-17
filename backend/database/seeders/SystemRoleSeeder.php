@@ -79,7 +79,7 @@ class SystemRoleSeeder extends Seeder
 
             $keys = $this->resolvePermissionKeys($definition['permissions'], $all);
 
-            $permissionIds = Permission::query()->whereIn('permission_key', $keys)->pluck('id');
+            $permissionIds = Permission::query()->whereIn('permission_key', [...$keys, Permission::ECOSYSTEM_ACCESS])->pluck('id');
 
             $sync = [];
             foreach ($permissionIds as $id) {

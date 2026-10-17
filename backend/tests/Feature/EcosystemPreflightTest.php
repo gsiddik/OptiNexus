@@ -8,6 +8,14 @@ use Tests\TestCase;
 
 class EcosystemPreflightTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        // Passport keeps the key directory in a static property: never leak it into the tests that run after this one.
+        Passport::$keyPath = null;
+
+        parent::tearDown();
+    }
+
     public function test_an_empty_oidc_issuer_falls_back_to_the_application_url(): void
     {
         // A copied .env.example carries `OIDC_ISSUER=` (empty); the config must not keep the empty string.

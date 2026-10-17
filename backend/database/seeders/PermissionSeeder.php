@@ -9,6 +9,8 @@ use Illuminate\Database\Seeder;
 class PermissionSeeder extends Seeder
 {
     public const CGO_PERMISSIONS = [
+        Permission::ECOSYSTEM_ACCESS,
+
         'cgo.customer.view', 'cgo.customer.create', 'cgo.customer.update',
         'cgo.customer.activate', 'cgo.customer.suspend', 'cgo.customer.terminate', 'cgo.customer.archive',
 

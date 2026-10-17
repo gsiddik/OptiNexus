@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\RoleController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('roles')->name('roles.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('roles')->name('roles.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [RoleController::class, 'index'])->middleware('permission:cgo.role.view')->name('index');
     Route::post('/', [RoleController::class, 'store'])->middleware('permission:cgo.role.create')->name('store');
     Route::get('/{role}', [RoleController::class, 'show'])->middleware('permission:cgo.role.view,role')->name('show');

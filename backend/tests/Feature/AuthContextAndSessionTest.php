@@ -15,7 +15,7 @@ class AuthContextAndSessionTest extends TestCase
 
     public function test_login_with_valid_credentials_issues_a_token(): void
     {
-        $user = User::factory()->create(['password' => Hash::make('correct-password'), 'status' => User::STATUS_ACTIVE]);
+        $user = $this->makeOperatorWith(userOverrides: ['password' => Hash::make('correct-password')]);
 
         $response = $this->postJson('/api/v1/auth/login', [
             'email' => $user->email,
@@ -45,7 +45,7 @@ class AuthContextAndSessionTest extends TestCase
 
     public function test_token_is_revoked_on_logout(): void
     {
-        $user = User::factory()->create(['password' => Hash::make('correct-password'), 'status' => User::STATUS_ACTIVE]);
+        $user = $this->makeOperatorWith(userOverrides: ['password' => Hash::make('correct-password')]);
         $token = $this->postJson('/api/v1/auth/login', ['email' => $user->email, 'password' => 'correct-password'])
             ->json('data.token');
 
@@ -67,7 +67,7 @@ class AuthContextAndSessionTest extends TestCase
         $this->seedGovernanceBaseline();
         $tenant = $this->makeTenant();
         $role = $this->makeTenantRole($tenant, ['cgo.user.view']);
-        $user = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+        $user = $this->makeOperatorWith();
         $this->attachUserToTenant($user, $tenant, $role);
 
         Sanctum::actingAs($user);
@@ -82,8 +82,7 @@ class AuthContextAndSessionTest extends TestCase
     {
         $this->seedGovernanceBaseline();
         $tenant = $this->makeTenant();
-        $user = User::factory()->create(['status' => User::STATUS_ACTIVE]);
-        Sanctum::actingAs($user);
+        $this->actingAsOperatorWith();
 
         $this->getJson("/api/v1/auth/context?tenant_id={$tenant->id}")
             ->assertStatus(403)

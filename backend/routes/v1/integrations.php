@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\IntegrationController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('integrations')->name('integrations.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('integrations')->name('integrations.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [IntegrationController::class, 'index'])->middleware('permission:cgo.integration.view')->name('index');
     Route::post('/', [IntegrationController::class, 'store'])->middleware('permission:cgo.integration.create')->name('store');
     Route::get('/{integration}', [IntegrationController::class, 'show'])->middleware('permission:cgo.integration.view,integration')->name('show');

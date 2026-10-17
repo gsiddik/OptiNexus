@@ -2,11 +2,16 @@
 
 namespace Tests\Feature\Orchestration;
 
+use App\Models\ApprovalDefinition;
 use App\Models\FeatureFlag;
+use App\Models\ServiceAccount;
 use App\Models\User;
+use App\Services\Approval\ApprovalService;
 use App\Services\Integration\SsrfProtectedException;
 use App\Services\Integration\SsrfSafeHttpClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Passport\ClientRepository;
+use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\CreatesGovernanceFixtures;
 use Tests\Concerns\CreatesOrchestrationFixtures;
@@ -72,7 +77,7 @@ class OrchestrationSecurityTest extends TestCase
         // approval service's own approver-resolution logic even runs,
         // demonstrating tenant isolation at two independent layers.
         $roleInTenantB = $this->makeTenantRole($tenantB, ['cgo.approval.approve'], ['code' => 'B-APPROVER']);
-        $approverInB = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+        $approverInB = $this->makeOperatorWith();
         $this->attachUserToTenant($approverInB, $tenantB, $roleInTenantB);
 
         $definitionId = $this->postJson('/api/v1/approval-definitions', [
@@ -82,10 +87,10 @@ class OrchestrationSecurityTest extends TestCase
         ])->json('data.id');
         $this->putJson("/api/v1/approval-definitions/{$definitionId}", ['status' => 'ACTIVE']);
 
-        $definition = \App\Models\ApprovalDefinition::find($definitionId);
-        [$request] = app(\App\Services\Approval\ApprovalService::class)->createRequest($definition, [], tenantId: $tenantA->id);
+        $definition = ApprovalDefinition::find($definitionId);
+        [$request] = app(ApprovalService::class)->createRequest($definition, [], tenantId: $tenantA->id);
 
-        \Laravel\Sanctum\Sanctum::actingAs($approverInB);
+        Sanctum::actingAs($approverInB);
         $this->postJson("/api/v1/approval-requests/{$request->id}/approve")
             ->assertStatus(403)
             ->assertJsonPath('error.code', 'TENANT_ACCESS_DENIED');
@@ -132,10 +137,10 @@ class OrchestrationSecurityTest extends TestCase
         // Holds cgo.workflow.execute, but scoped only to tenant B - must
         // not be able to execute tenant A's workflow via the same route.
         $roleInB = $this->makeTenantRole($tenantB, ['cgo.workflow.execute'], ['code' => 'WF-EXECUTOR-B']);
-        $userInB = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+        $userInB = $this->makeOperatorWith();
         $this->attachUserToTenant($userInB, $tenantB, $roleInB);
 
-        \Laravel\Sanctum\Sanctum::actingAs($userInB);
+        Sanctum::actingAs($userInB);
         $this->postJson("/api/v1/workflows/{$id}/execute")
             ->assertStatus(403)
             ->assertJsonPath('error.code', 'TENANT_ACCESS_DENIED');
@@ -143,8 +148,8 @@ class OrchestrationSecurityTest extends TestCase
 
     private function issueServiceAccountTokenLike(array $scopes): string
     {
-        $client = app(\Laravel\Passport\ClientRepository::class)->createClientCredentialsGrantClient('test-access-'.uniqid());
-        \App\Models\ServiceAccount::create(['oauth_client_id' => $client->id, 'name' => 'test-access', 'status' => 'ACTIVE']);
+        $client = app(ClientRepository::class)->createClientCredentialsGrantClient('test-access-'.uniqid());
+        ServiceAccount::create(['oauth_client_id' => $client->id, 'name' => 'test-access', 'status' => 'ACTIVE']);
 
         return $this->postJson('/api/v1/oauth/token', [
             'grant_type' => 'client_credentials', 'client_id' => $client->id, 'client_secret' => $client->plainSecret,

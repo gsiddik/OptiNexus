@@ -60,7 +60,7 @@ class RolePermissionTest extends TestCase
 
         // The caller only has cgo.role.view/update on this tenant - not cgo.user.suspend.
         $limitedRole = $this->makeTenantRole($tenant, ['cgo.role.view', 'cgo.role.update', 'cgo.role.permission.grant']);
-        $caller = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+        $caller = $this->makeOperatorWith();
         $this->attachUserToTenant($caller, $tenant, $limitedRole);
         Sanctum::actingAs($caller);
 

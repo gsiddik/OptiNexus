@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\PlanController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('plans')->name('plans.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('plans')->name('plans.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [PlanController::class, 'index'])->middleware('permission:cgo.plan.view')->name('index');
     Route::post('/', [PlanController::class, 'store'])->middleware('permission:cgo.plan.create')->name('store');
     Route::get('/{plan}', [PlanController::class, 'show'])->middleware('permission:cgo.plan.view')->name('show');

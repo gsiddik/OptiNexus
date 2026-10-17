@@ -9,8 +9,9 @@ Route::prefix('auth')->name('auth.')->group(function () {
     Route::post('/introspect', [AuthController::class, 'introspect'])->middleware('throttle:30,1')->name('introspect');
 
     Route::middleware('auth:sanctum')->group(function () {
+        // Always allowed: a token must be revocable even after the holder lost ecosystem access.
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-        Route::get('/context', [AuthController::class, 'context'])->name('context');
+        Route::get('/context', [AuthController::class, 'context'])->middleware('ecosystem')->name('context');
     });
 });
 

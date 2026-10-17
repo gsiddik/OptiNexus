@@ -37,6 +37,45 @@ trait CreatesGovernanceFixtures
         return $user;
     }
 
+    /**
+     * A platform operator whose only global role carries the ecosystem gate plus the given cgo permissions - the way to
+     * exercise a permission denial now that users without ecosystem access are stopped one step earlier (audit R07/A24).
+     *
+     * @param  array<int, string>  $permissionKeys
+     * @param  array<string, mixed>  $userOverrides
+     */
+    protected function makeOperatorWith(array $permissionKeys = [], array $userOverrides = []): User
+    {
+        $this->seedGovernanceBaseline();
+
+        $role = Role::create([
+            'tenant_id' => null,
+            'name' => 'Test operator',
+            'code' => 'OPERATOR-'.Str::upper(Str::random(6)),
+            'role_type' => Role::TYPE_SYSTEM,
+            'is_system' => false,
+            'status' => Role::STATUS_ACTIVE,
+        ]);
+
+        $ids = Permission::query()->whereIn('permission_key', [Permission::ECOSYSTEM_ACCESS, ...$permissionKeys])->pluck('id');
+        foreach ($ids as $id) {
+            $role->permissions()->attach($id, ['id' => (string) Str::uuid()]);
+        }
+
+        $user = User::factory()->create(array_merge(['status' => User::STATUS_ACTIVE], $userOverrides));
+        $user->userRoles()->create(['role_id' => $role->id, 'tenant_id' => null]);
+
+        return $user;
+    }
+
+    protected function actingAsOperatorWith(array $permissionKeys = []): User
+    {
+        $user = $this->makeOperatorWith($permissionKeys);
+        Sanctum::actingAs($user);
+
+        return $user;
+    }
+
     protected function makeCustomer(array $overrides = []): Customer
     {
         return Customer::create(array_merge([

@@ -107,6 +107,16 @@ class AuthorizationService
     }
 
     /**
+     * Whether the user may enter the ecosystem portal and call the ecosystem admin API (audit R07/A24). Resolved without a
+     * tenant, so only a global (SYSTEM) role assignment can satisfy it: tenant users and tenant administrators are refused
+     * however their tenant-scoped roles are composed, and a tenant-scoped role that is given the permission anyway stays inert.
+     */
+    public function hasEcosystemAccess(User $user): bool
+    {
+        return $this->userHasPermission($user, Permission::ECOSYSTEM_ACCESS);
+    }
+
+    /**
      * Full evaluation used by the external Authorization Check API.
      *
      * @return array{allowed: bool, scope: ?string, reason: ?string}

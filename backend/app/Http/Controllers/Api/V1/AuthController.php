@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\V1\Concerns\ApiResponses;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnsureEcosystemAccess;
 use App\Http\Requests\V1\LoginRequest;
 use App\Http\Resources\V1\RoleResource;
 use App\Http\Resources\V1\TenantResource;
@@ -60,6 +61,13 @@ class AuthController extends Controller
             $this->audit->record('auth.login_failed', $request, actor: $user, metadata: ['reason' => 'account_not_active', 'status' => $user->status]);
 
             return $this->fail('UNAUTHORIZED', 'This account is not active.', 403);
+        }
+
+        // The portal is for platform operators only (R07/A24): the credentials were right, but no token is issued.
+        if (! $this->authorization->hasEcosystemAccess($user)) {
+            $this->audit->record('auth.login_failed', $request, actor: $user, metadata: ['reason' => 'ecosystem_access_required']);
+
+            return $this->fail(EnsureEcosystemAccess::ERROR_CODE, 'This account cannot use the ecosystem portal. Sign in to your application instead.', 403);
         }
 
         RateLimiter::clear($throttleKey);

@@ -85,7 +85,7 @@ class CommercialRoleSeeder extends Seeder
                 ],
             );
 
-            $permissionIds = Permission::query()->whereIn('permission_key', $definition['permissions'])->pluck('id');
+            $permissionIds = Permission::query()->whereIn('permission_key', [...$definition['permissions'], Permission::ECOSYSTEM_ACCESS])->pluck('id');
 
             $sync = [];
             foreach ($permissionIds as $id) {

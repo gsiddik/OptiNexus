@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useI18n } from '../i18n';
 
 export interface Column<T> {
   header: string;
@@ -14,7 +15,8 @@ interface DataTableProps<T> {
   emptyMessage?: string;
 }
 
-export function DataTable<T>({ columns, rows, rowKey, onRowClick, emptyMessage = 'No records found.' }: DataTableProps<T>) {
+export function DataTable<T>({ columns, rows, rowKey, onRowClick, emptyMessage }: DataTableProps<T>) {
+  const { t } = useI18n();
   return (
     <div className="table-wrap">
       <table className="data-table">
@@ -28,7 +30,7 @@ export function DataTable<T>({ columns, rows, rowKey, onRowClick, emptyMessage =
         <tbody>
           {rows.length === 0 && (
             <tr>
-              <td colSpan={columns.length} className="empty-cell">{emptyMessage}</td>
+              <td colSpan={columns.length} className="empty-cell">{emptyMessage ?? t('common.noRecords')}</td>
             </tr>
           )}
           {rows.map((row) => (

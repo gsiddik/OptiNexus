@@ -13,6 +13,29 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Only visible when the app itself never starts (JavaScript off, or its files could not be loaded after a release). Static, so it is bilingual by hand. -->
+    <div id="boot-fallback" hidden style="font-family:system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:0 1rem;color:#1f2333">
+      <h1 style="font-size:1.25rem">OptiNexus could not be loaded / OptiNexus tidak dapat dimuat</h1>
+      <p>Reload the page. If it keeps happening, check your connection or contact your administrator.</p>
+      <p>Muat ulang halaman. Jika terus terjadi, periksa koneksi Anda atau hubungi administrator.</p>
+      <button type="button" onclick="location.reload()" style="padding:.5rem 1rem">Reload / Muat ulang</button>
+    </div>
+    <noscript>
+      <p style="font-family:system-ui,sans-serif;padding:1rem">OptiNexus needs JavaScript. / OptiNexus memerlukan JavaScript.</p>
+    </noscript>
+    <script>
+      (function () {
+        function show() {
+          if (window.__optinexusBooted) return;
+          var box = document.getElementById('boot-fallback');
+          if (box) box.hidden = false;
+        }
+        window.addEventListener('error', function (event) {
+          if (event.target && event.target.tagName === 'SCRIPT') show();
+        }, true);
+        setTimeout(show, 10000);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

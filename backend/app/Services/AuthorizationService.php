@@ -117,16 +117,8 @@ class AuthorizationService
         Application $application,
         string $permissionKey,
     ): array {
-        if (! $user->isActive()) {
-            return ['allowed' => false, 'scope' => null, 'reason' => 'USER_NOT_ACTIVE'];
-        }
-
-        if ($tenant && ! $this->tenantIsUsable($tenant)) {
-            return ['allowed' => false, 'scope' => null, 'reason' => 'TENANT_NOT_ACTIVE'];
-        }
-
-        if (! $this->applicationIsUsable($application)) {
-            return ['allowed' => false, 'scope' => null, 'reason' => 'APPLICATION_NOT_ACTIVE'];
+        if ($reason = $this->gateDenial($user, $tenant, $application)) {
+            return ['allowed' => false, 'scope' => null, 'reason' => $reason];
         }
 
         $permissions = $this->effectivePermissions($user, $tenant?->id, $application->id);
@@ -140,6 +132,46 @@ class AuthorizationService
             'scope' => $permissions->get($permissionKey)['scope'],
             'reason' => null,
         ];
+    }
+
+    /**
+     * Bulk counterpart of check() for POST /authorization/effective-permissions: every permission one user holds in one
+     * tenant for one application. It runs the same gates and the same effectivePermissions() resolver as check(), so a key is
+     * in the answer exactly when check() would allow it, with the scope check() would report for that key. Only granted keys
+     * are returned - the application's catalog is never listed.
+     *
+     * @return array{allowed: bool, reason: ?string, permissions: array<string, string>} permission_key => scope
+     */
+    public function effectiveAccess(User $user, ?Tenant $tenant, Application $application): array
+    {
+        if ($reason = $this->gateDenial($user, $tenant, $application)) {
+            return ['allowed' => false, 'reason' => $reason, 'permissions' => []];
+        }
+
+        $granted = $this->effectivePermissions($user, $tenant?->id, $application->id)
+            ->map(fn (array $grant): string => $grant['scope'])
+            ->sortKeys()
+            ->all();
+
+        return ['allowed' => $granted !== [], 'reason' => $granted === [] ? 'PERMISSION_NOT_GRANTED' : null, 'permissions' => $granted];
+    }
+
+    /** The reason the user, tenant or application is not usable at all (before any permission is looked at), or null. */
+    private function gateDenial(User $user, ?Tenant $tenant, Application $application): ?string
+    {
+        if (! $user->isActive()) {
+            return 'USER_NOT_ACTIVE';
+        }
+
+        if ($tenant && ! $this->tenantIsUsable($tenant)) {
+            return 'TENANT_NOT_ACTIVE';
+        }
+
+        if (! $this->applicationIsUsable($application)) {
+            return 'APPLICATION_NOT_ACTIVE';
+        }
+
+        return null;
     }
 
     public function tenantIsUsable(Tenant $tenant): bool

@@ -8,3 +8,9 @@ use Illuminate\Support\Facades\Route;
 Route::post('/authorization/check', [AuthorizationController::class, 'check'])
     ->middleware(['service_account:authorization.check'])
     ->name('authorization.check');
+
+// One request for everything a user holds in a tenant, for the application the calling service account is bound to
+// (replaces one /authorization/check per catalog permission; the individual endpoint above stays for compatibility).
+Route::post('/authorization/effective-permissions', [AuthorizationController::class, 'effectivePermissions'])
+    ->middleware(['service_account:authorization.check'])
+    ->name('authorization.effective-permissions');

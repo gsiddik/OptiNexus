@@ -148,7 +148,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => $e->getMessage() ?: 'An error occurred while processing the request.',
                     'details' => null,
                 ],
-            ], $status);
+            ], $status, $e->getHeaders());
         });
 
         $exceptions->render(function (Throwable $e, Request $request) {

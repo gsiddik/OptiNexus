@@ -762,6 +762,41 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Unauthorized' }
 
+  /authorization/effective-permissions:
+    post:
+      tags: [Authorization]
+      summary: Every permission one user holds in a tenant for the caller's own application (M2M only, schema 1.0)
+      description: >
+        Bulk counterpart of `/authorization/check`: one request instead of one per catalog permission. Requires a
+        client-credentials token with the `authorization.check` scope. The application is the one the authenticated
+        service account is bound to - never taken from the body; `application_code`, when sent, must match it
+        (`403 APPLICATION_MISMATCH`). A service account bound to no application is refused (`403 SERVICE_ACCOUNT_NOT_BOUND`),
+        and one bound to a tenant cannot ask about another (`403 TENANT_MISMATCH`). The same gates and resolver as
+        `/authorization/check` decide, so a key is listed exactly when the individual check would allow it, with that
+        key's own scope. Only granted keys are returned - never the application's catalog. A user, tenant or
+        application that is not usable gets `allowed: false`, an empty list and `deny_reason`
+        (USER_NOT_FOUND, TENANT_NOT_FOUND, USER_NOT_ACTIVE, TENANT_NOT_ACTIVE, APPLICATION_NOT_ACTIVE, PERMISSION_NOT_GRANTED).
+        Nexus keeps no cache for this answer: a revoked grant is gone on the next request. `ttl_seconds` (at most 300)
+        is the longest a caller may reuse the answer, so revocation reaches a caller within that time. Authenticated
+        machine requests are limited per OAuth client (`429 RATE_LIMITED` with `Retry-After`; `M2M_RATE_PER_MINUTE`,
+        default 600), not per source address.
+      security: [{ OAuth2ClientCredentials: [authorization.check] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EffectivePermissionsRequest' }
+      responses:
+        '200':
+          description: Effective permissions
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EffectivePermissionsResponse' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Unauthorized' }
+        '422': { description: Validation error, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '429': { description: Client quota exceeded; wait `Retry-After` seconds, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
   # ------------------------------------------------------------------ Audit
   /audit-logs:
     get:
@@ -2633,6 +2668,37 @@ components:
                 allowed: { type: boolean }
                 permission: { type: string }
                 scope: { type: string, nullable: true, enum: [GLOBAL, CUSTOMER, TENANT, APPLICATION, OWN, null] }
+
+    EffectivePermissionsRequest:
+      type: object
+      required: [user_id, tenant_id]
+      properties:
+        user_id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid }
+        application_code: { type: string, maxLength: 100, description: Optional; must equal the service account's application }
+    EffectivePermissionsResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                schema_version: { type: string, example: '1.0' }
+                user_id: { type: string, format: uuid }
+                tenant_id: { type: string, format: uuid }
+                application_code: { type: string }
+                allowed: { type: boolean, description: True when at least one permission is granted }
+                deny_reason: { type: string, nullable: true }
+                permissions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      permission: { type: string, example: optiaccounting.journal.post }
+                      scope: { type: string, enum: [GLOBAL, APPLICATION, TENANT] }
+                evaluated_at: { type: string, format: date-time }
+                ttl_seconds: { type: integer, maximum: 300 }
 
     AuditEventInput:
       type: object

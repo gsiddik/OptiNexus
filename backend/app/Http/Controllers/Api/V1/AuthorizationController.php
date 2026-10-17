@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Api\V1\Concerns\ApiResponses;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\AuthorizationCheckRequest;
+use App\Http\Requests\V1\EffectivePermissionsRequest;
 use App\Models\Application;
+use App\Models\ServiceAccount;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\AuditService;
@@ -64,6 +66,66 @@ class AuthorizationController extends Controller
             'allowed' => $result['allowed'],
             'permission' => $data['permission'],
             'scope' => $result['scope'],
+        ]);
+    }
+
+    /**
+     * Every permission one user holds in one tenant for the caller's own application, in one request (the bulk counterpart of
+     * check(), schema 1.0). The application is the one the authenticated service account is bound to; a service account that
+     * is bound to nothing, or to another application or tenant, gets 403 and learns nothing. Only granted keys come back, each
+     * with its own scope, and a deny carries the same reason code check() would log. `ttl_seconds` is the longest a caller may
+     * reuse the answer: a revoked grant is therefore in force at most that long after the change.
+     */
+    public function effectivePermissions(EffectivePermissionsRequest $request): JsonResponse
+    {
+        $data = $request->validated();
+
+        /** @var ServiceAccount $serviceAccount */
+        $serviceAccount = $request->attributes->get('service_account');
+        $application = $serviceAccount->application;
+
+        if (! $application) {
+            return $this->fail('SERVICE_ACCOUNT_NOT_BOUND', 'This service account is not bound to an application.', 403);
+        }
+
+        if (! empty($data['application_code']) && $data['application_code'] !== $application->application_code) {
+            return $this->fail('APPLICATION_MISMATCH', 'The service account is bound to another application.', 403);
+        }
+
+        if ($serviceAccount->tenant_id !== null && $serviceAccount->tenant_id !== $data['tenant_id']) {
+            return $this->fail('TENANT_MISMATCH', 'The service account is bound to another tenant.', 403);
+        }
+
+        $user = User::query()->find($data['user_id']);
+        $tenant = Tenant::query()->find($data['tenant_id']);
+
+        $access = match (true) {
+            ! $user => ['allowed' => false, 'reason' => 'USER_NOT_FOUND', 'permissions' => []],
+            ! $tenant => ['allowed' => false, 'reason' => 'TENANT_NOT_FOUND', 'permissions' => []],
+            default => $this->authorization->effectiveAccess($user, $tenant, $application),
+        };
+
+        if (! $access['allowed'] && $user) {
+            $this->audit->record(
+                'authorization.denied',
+                $request,
+                actor: $user,
+                tenantId: $tenant?->id,
+                applicationId: $application->id,
+                metadata: ['permission' => '*', 'reason' => $access['reason'], 'bulk' => true],
+            );
+        }
+
+        return $this->ok([
+            'schema_version' => '1.0',
+            'user_id' => $data['user_id'],
+            'tenant_id' => $data['tenant_id'],
+            'application_code' => $application->application_code,
+            'allowed' => $access['allowed'],
+            'deny_reason' => $access['reason'],
+            'permissions' => collect($access['permissions'])->map(fn (string $scope, string $key): array => ['permission' => $key, 'scope' => $scope])->values()->all(),
+            'evaluated_at' => now()->toIso8601String(),
+            'ttl_seconds' => (int) config('m2m.permission_ttl_seconds'),
         ]);
     }
 }

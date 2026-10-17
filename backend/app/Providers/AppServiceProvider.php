@@ -32,7 +32,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        RateLimiter::for('api', fn ($request) => Limit::perMinute(120)->by($request->user()?->id ?: $request->ip()));
+        // Human (interactive) API routes: 120/min per user, or per address when not signed in. Machine-to-machine routes
+        // (`service_account:` middleware) are throttled per authenticated OAuth client inside that middleware instead
+        // (config/m2m.php): a shared proxy address must not pool every product's server-to-server traffic into one bucket.
+        RateLimiter::for('api', function ($request) {
+            if (collect($request->route()?->gatherMiddleware() ?? [])->contains(fn ($middleware) => is_string($middleware) && str_starts_with($middleware, 'service_account'))) {
+                return Limit::none();
+            }
+
+            return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
+        });
 
         Passport::enablePasswordGrant(false);
 

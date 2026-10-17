@@ -7,6 +7,7 @@ Route::prefix('service-accounts')->name('service-accounts.')->middleware(['auth:
     Route::get('/', [ServiceAccountController::class, 'index'])->name('index');
     Route::post('/', [ServiceAccountController::class, 'store'])->name('store');
     Route::get('/{serviceAccount}', [ServiceAccountController::class, 'show'])->name('show');
+    Route::put('/{serviceAccount}/scopes', [ServiceAccountController::class, 'updateScopes'])->name('scopes');
     Route::post('/{serviceAccount}/rotate-secret', [ServiceAccountController::class, 'rotateSecret'])->name('rotate-secret');
     Route::post('/{serviceAccount}/revoke', [ServiceAccountController::class, 'revoke'])->name('revoke');
 });

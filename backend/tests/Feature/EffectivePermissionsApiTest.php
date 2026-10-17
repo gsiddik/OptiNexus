@@ -3,12 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\Application;
+use App\Models\Capability;
+use App\Models\Entitlement;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\TenantMembership;
 use App\Models\User;
 use App\Services\AuthorizationService;
+use App\Services\Commercial\EntitlementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
@@ -244,5 +247,36 @@ class EffectivePermissionsApiTest extends TestCase
         $this->withHeader('Authorization', "Bearer {$token}")->postJson('/api/v1/authorization/check', $this->body() + [
             'application_code' => 'entry-test', 'permission' => $permission->permission_key,
         ])->assertOk()->assertJsonPath('data.allowed', true)->assertJsonPath('data.scope', 'APPLICATION');
+    }
+
+    public function test_lists_the_modules_and_features_the_tenant_is_entitled_to_for_the_callers_application_only(): void
+    {
+        $permissions = $this->catalog($this->app1, 2);
+        $this->attachUserToTenant($this->user, $this->tenant, $this->applicationRole($this->tenant, $this->app1, $permissions, 'ENTRYADM'));
+        $other = $this->makeApplication(['application_code' => 'other-test']);
+        foreach ([[$this->app1, 'BUDGET', Capability::TYPE_MODULE], [$this->app1, 'ASSETS', Capability::TYPE_MODULE], [$other, 'FOREIGN', Capability::TYPE_MODULE]] as [$application, $code, $type]) {
+            Capability::create(['application_id' => $application->id, 'type' => $type, 'code' => $code, 'name' => $code, 'status' => Capability::STATUS_ACTIVE]);
+        }
+        foreach ([[$this->app1, 'BUDGET'], [$other, 'FOREIGN']] as [$application, $code]) {
+            app(EntitlementService::class)->manualOverride($this->tenant, ['entitlement_type' => 'CAPABILITY', 'entitlement_key' => $code, 'value' => 'true', 'application_id' => $application->id], null);
+        }
+        [$token] = $this->issueServiceAccountTokenFor($this->app1->id);
+
+        $this->ask($token, $this->body())->assertOk()
+            ->assertJsonPath('data.entitled_capabilities', [['code' => 'BUDGET', 'type' => Capability::TYPE_MODULE]]);
+
+        Entitlement::query()->where('entitlement_key', 'BUDGET')->update(['status' => 'REVOKED']);
+
+        $this->ask($token, $this->body())->assertOk()->assertJsonPath('data.entitled_capabilities', []);
+    }
+
+    public function test_no_capabilities_are_listed_when_access_is_denied(): void
+    {
+        [$token] = $this->issueServiceAccountTokenFor($this->app1->id);
+        $stranger = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+
+        $this->ask($token, $this->body($stranger))->assertOk()
+            ->assertJsonPath('data.allowed', false)
+            ->assertJsonPath('data.entitled_capabilities', []);
     }
 }

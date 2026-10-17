@@ -7,11 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\AuthorizationCheckRequest;
 use App\Http\Requests\V1\EffectivePermissionsRequest;
 use App\Models\Application;
+use App\Models\Capability;
+use App\Models\Entitlement;
 use App\Models\ServiceAccount;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\AuditService;
 use App\Services\AuthorizationService;
+use App\Services\Commercial\EntitlementService;
 use App\Services\Oidc\SsoAccessResolver;
 use Illuminate\Http\JsonResponse;
 
@@ -29,6 +32,7 @@ class AuthorizationController extends Controller
         private readonly AuthorizationService $authorization,
         private readonly AuditService $audit,
         private readonly SsoAccessResolver $sso,
+        private readonly EntitlementService $entitlements,
     ) {}
 
     public function check(AuthorizationCheckRequest $request): JsonResponse
@@ -126,6 +130,7 @@ class AuthorizationController extends Controller
             'allowed' => $access['allowed'],
             'deny_reason' => $access['reason'],
             'permissions' => collect($access['permissions'])->map(fn (string $scope, string $key): array => ['permission' => $key, 'scope' => $scope])->values()->all(),
+            'entitled_capabilities' => $access['allowed'] && $tenant ? $this->entitledCapabilities($tenant, $application) : [],
             'evaluated_at' => now()->toIso8601String(),
             'ttl_seconds' => (int) config('m2m.permission_ttl_seconds'),
         ]);
@@ -179,5 +184,29 @@ class AuthorizationController extends Controller
             'evaluated_at' => now()->toIso8601String(),
             'ttl_seconds' => (int) config('m2m.permission_ttl_seconds'),
         ]);
+    }
+
+    /**
+     * Modules and features of the caller's application that the tenant is entitled to right now (additive field of schema 1.0).
+     * An ACTIVE catalog entry the tenant holds as a granted CAPABILITY entitlement; nothing else is listed, so a product can
+     * enforce its own module/feature gates from the one bulk answer instead of asking the tenant-wide commercial context.
+     *
+     * @return array<int, array{code: string, type: string}>
+     */
+    private function entitledCapabilities(Tenant $tenant, Application $application): array
+    {
+        $granted = $this->entitlements->effectiveEntitlements($tenant, $application->application_code)
+            ->filter(fn (array $row): bool => $row['entitlement_type'] === Entitlement::TYPE_CAPABILITY && $row['value'] === true)
+            ->pluck('entitlement_key')
+            ->all();
+
+        return Capability::query()
+            ->where('application_id', $application->id)
+            ->where('status', Capability::STATUS_ACTIVE)
+            ->whereIn('code', $granted)
+            ->orderBy('code')
+            ->get(['code', 'type'])
+            ->map(fn (Capability $capability): array => ['code' => $capability->code, 'type' => $capability->type])
+            ->all();
     }
 }

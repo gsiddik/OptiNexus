@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Laravel\Passport\Client;
 
-#[Fillable(['application_id', 'tenant_id', 'name', 'oauth_client_id', 'status', 'created_by'])]
+#[Fillable(['application_id', 'tenant_id', 'name', 'oauth_client_id', 'status', 'allowed_scopes', 'created_by'])]
 class ServiceAccount extends Model
 {
     use HasUuidPrimaryKey;
@@ -16,6 +16,12 @@ class ServiceAccount extends Model
     public const STATUS_ACTIVE = 'ACTIVE';
 
     public const STATUS_REVOKED = 'REVOKED';
+
+    /** What a product's own account may do by default; gateway (telematics) scopes are never part of it and must be named. */
+    public const PRODUCT_SCOPES = [
+        'authorization.check', 'governance.read', 'audit.write', 'introspect', 'entitlement.check',
+        'commercial.read', 'usage.write', 'event.write', 'tenant.delegate', 'access.evaluate',
+    ];
 
     public function application(): BelongsTo
     {
@@ -42,6 +48,18 @@ class ServiceAccount extends Model
         return $this->belongsToMany(Role::class, 'service_account_roles')
             ->withPivot(['tenant_id'])
             ->withTimestamps();
+    }
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return ['allowed_scopes' => 'array'];
+    }
+
+    /** No allow-list (NULL) keeps accounts registered before the list existed working; a list is exact. */
+    public function allowsScope(string $scope): bool
+    {
+        return $this->allowed_scopes === null || in_array($scope, $this->allowed_scopes, true);
     }
 
     public function isActive(): bool

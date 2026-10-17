@@ -65,3 +65,20 @@ secret ever appears in a URL other than the standard `code`/`state` of the autho
 
 Each product exposes its catalog as a versioned manifest (`manifest_version`, `revision`): capabilities (module/feature), permissions
 with `capability_code` and `delegable`. Nexus imports it additively (never deletes); see `MANIFEST_IMPORT.md`.
+
+## 5. Service-account scope allow-list and entitled capabilities (A23, A02)
+
+* `service_accounts.allowed_scopes` (JSON, nullable). A token may only use a scope its own account allows: otherwise
+  `403 SCOPE_NOT_ALLOWED`, even when the token carries the scope. `NULL` = accounts registered before the list existed (any
+  registered scope, unchanged). `ecosystem:register-service-account` gives a new account `ServiceAccount::PRODUCT_SCOPES`
+  (authorization, governance read, audit, introspect, entitlement, commercial read, usage, events, `tenant.delegate`,
+  `access.evaluate`); gateway/telematics scopes are never in the default and must be named with `--scopes=`. `--scopes=` on an
+  existing account replaces the list (audit `service_account.scopes_updated`); `PUT /service-accounts/{id}/scopes` does the same
+  for an operator. Unknown scopes are refused.
+* `POST /authorization/effective-permissions` also returns `entitled_capabilities: [{code, type}]` (additive, schema 1.0): the
+  ACTIVE modules/features of the caller's application the tenant is entitled to now; empty when access is denied. Products enforce
+  their module/feature gates from this one answer (same TTL as the permissions).
+* Not done (documented, no correctness impact): a bulk "who holds permission X" query (approver resolution still scans linked
+  members), `subscriptions[].application_codes` in `commercial-context`, and a user-limit entitlement in the delegation API (no user-limit
+  key exists in the catalog yet: business decision, see the decision list).
+

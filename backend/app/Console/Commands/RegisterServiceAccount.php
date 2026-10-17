@@ -8,6 +8,7 @@ use App\Models\ServiceAccount;
 use App\Services\AuditService;
 use Illuminate\Console\Command;
 use Laravel\Passport\ClientRepository;
+use Laravel\Passport\Passport;
 
 /**
  * Operator path to register the machine-to-machine service account of a product (audit A02/A23): one OAuth client-credentials
@@ -23,6 +24,7 @@ class RegisterServiceAccount extends Command
         {application_code : application the service account is bound to}
         {--name= : service account name (default: "<application> service")}
         {--tenant= : bind the account to one tenant id (optional)}
+        {--scopes= : comma-separated scope allow-list (default for a new account: the product scopes; gateway scopes only when named)}
         {--rotate : issue a new secret for the existing account}
         {--secret-file= : file that receives M2M_CLIENT_ID / M2M_CLIENT_SECRET (required when a secret is issued)}';
 
@@ -36,6 +38,18 @@ class RegisterServiceAccount extends Command
             $this->error('Unknown or non-registrable application_code.');
 
             return self::FAILURE;
+        }
+
+        $scopes = null;
+        if ($this->option('scopes') !== null && $this->option('scopes') !== '') {
+            $scopes = array_values(array_unique(array_filter(array_map('trim', explode(',', (string) $this->option('scopes'))))));
+            $unknown = array_diff($scopes, Passport::scopeIds());
+
+            if ($scopes === [] || $unknown !== []) {
+                $this->error('Unknown scope(s): '.implode(', ', $unknown ?: ['(none given)']));
+
+                return self::FAILURE;
+            }
         }
 
         $name = (string) ($this->option('name') ?: $application->application_code.' service');
@@ -58,7 +72,7 @@ class RegisterServiceAccount extends Command
             $client = $clients->createClientCredentialsGrantClient($name);
             $account = ServiceAccount::create([
                 'application_id' => $application->id, 'tenant_id' => $tenantId, 'name' => $name,
-                'oauth_client_id' => $client->id, 'status' => ServiceAccount::STATUS_ACTIVE,
+                'allowed_scopes' => $scopes ?? ServiceAccount::PRODUCT_SCOPES, 'oauth_client_id' => $client->id, 'status' => ServiceAccount::STATUS_ACTIVE,
             ]);
             $created = true;
         } elseif ($this->option('rotate')) {
@@ -75,6 +89,13 @@ class RegisterServiceAccount extends Command
                 return self::FAILURE;
             }
             $clients->regenerateSecret($client);
+        }
+
+        if (! $created && $scopes !== null && $account->allowed_scopes !== $scopes) {
+            $before = $account->allowed_scopes;
+            $account->update(['allowed_scopes' => $scopes]);
+            $audit->record('service_account.scopes_updated', null, applicationId: $application->id, tenantId: $account->tenant_id, resourceType: 'ServiceAccount',
+                resourceId: $account->id, oldValue: ['allowed_scopes' => $before], newValue: ['allowed_scopes' => $scopes], source: 'cli');
         }
 
         if ($client !== null) {

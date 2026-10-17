@@ -101,6 +101,12 @@ class AuthenticateServiceAccount
             return $this->deny('UNAUTHORIZED', 'This client is not associated with an active service account.', 403);
         }
 
+        foreach ($scopes as $scope) {
+            if (! $serviceAccount->allowsScope($scope)) {
+                return $this->deny('SCOPE_NOT_ALLOWED', "This service account is not allowed to use the [{$scope}] scope.", 403);
+            }
+        }
+
         $serviceAccount->forceFill(['last_used_at' => now()])->saveQuietly();
 
         $request->attributes->set('service_account', $serviceAccount);

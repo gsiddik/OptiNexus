@@ -10,6 +10,10 @@ Route::prefix('applications')->name('applications.')->middleware(['auth:sanctum'
     Route::get('/{application}', [ApplicationController::class, 'show'])->middleware('permission:cgo.application.view')->name('show');
     Route::put('/{application}', [ApplicationController::class, 'update'])->middleware('permission:cgo.application.update')->name('update');
 
+    // Additive catalog import (capabilities, permissions, delegable flag); needs all three catalog permissions.
+    Route::post('/{application}/manifest', [ApplicationController::class, 'importManifest'])
+        ->middleware(['permission:cgo.application.update', 'permission:cgo.capability.create', 'permission:cgo.permission.create'])->name('manifest');
+
     Route::post('/{application}/submit', [ApplicationController::class, 'submit'])->middleware('permission:cgo.application.submit')->name('submit');
     Route::post('/{application}/approve', [ApplicationController::class, 'approve'])->middleware('permission:cgo.application.approve')->name('approve');
     Route::post('/{application}/publish', [ApplicationController::class, 'publish'])->middleware('permission:cgo.application.publish')->name('publish');

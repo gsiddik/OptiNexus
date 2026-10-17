@@ -42,3 +42,8 @@ export function StatusBadge({ status, tone: forcedTone }: { status: string; tone
   const key = `status.${status}`;
   return <span className={`badge badge-${tone}`}>{hasMessage(key) ? translate(key) : status}</span>;
 }
+
+/** A badge with its own text (already translated) and tone, for facts that are not a record status. */
+export function Badge({ tone, children, title }: { tone: 'success' | 'warning' | 'danger' | 'info' | 'neutral'; children: string; title?: string }) {
+  return <span className={`badge badge-${tone}`} title={title}>{children}</span>;
+}

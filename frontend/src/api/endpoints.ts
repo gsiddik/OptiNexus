@@ -26,6 +26,9 @@ import type {
   Notification,
   NotificationRule,
   NotificationTemplate,
+  OidcClient,
+  OidcClientCreate,
+  OidcClientUpdate,
   Permission,
   Plan,
   PlanLimit,
@@ -504,4 +507,15 @@ export const notificationsApi = {
 // ----------------------------------------------------------------- Access
 export const accessApi = {
   evaluate: (payload: Record<string, unknown>) => unwrap<AccessEvaluation>(apiClient.post('/access/evaluate', payload)),
+};
+
+// ------------------------------------------------------- SSO (OpenID Connect)
+/** `client_secret` is returned once, by create (confidential clients) and rotate-secret; the caller must not keep it. */
+export const oidcClientsApi = {
+  list: (params?: { application_id?: string }) => unwrap<OidcClient[]>(apiClient.get('/oidc-clients', { params })),
+  create: (payload: OidcClientCreate) =>
+    unwrap<{ client: OidcClient; client_secret: string | null }>(apiClient.post('/oidc-clients', payload)),
+  update: (id: string, payload: OidcClientUpdate) => unwrap<OidcClient>(apiClient.put(`/oidc-clients/${id}`, payload)),
+  rotateSecret: (id: string) => unwrap<{ client: OidcClient; client_secret: string }>(apiClient.post(`/oidc-clients/${id}/rotate-secret`)),
+  revoke: (id: string) => unwrap<OidcClient>(apiClient.post(`/oidc-clients/${id}/revoke`)),
 };

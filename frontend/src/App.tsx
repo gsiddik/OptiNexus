@@ -23,6 +23,7 @@ const UsersListPage = lazyPage(() => import('./pages/users/UsersListPage'), 'Use
 const UserDetailPage = lazyPage(() => import('./pages/users/UserDetailPage'), 'UserDetailPage');
 const AuditLogsPage = lazyPage(() => import('./pages/audit/AuditLogsPage'), 'AuditLogsPage');
 const ServiceAccountsPage = lazyPage(() => import('./pages/service-accounts/ServiceAccountsPage'), 'ServiceAccountsPage');
+const OidcClientsPage = lazyPage(() => import('./pages/sso/OidcClientsPage'), 'OidcClientsPage');
 const ProductsListPage = lazyPage(() => import('./pages/commercial/products/ProductsListPage'), 'ProductsListPage');
 const ProductDetailPage = lazyPage(() => import('./pages/commercial/products/ProductDetailPage'), 'ProductDetailPage');
 const PlansListPage = lazyPage(() => import('./pages/commercial/plans/PlansListPage'), 'PlansListPage');
@@ -94,6 +95,7 @@ export function AppRoutes() {
         <Route path="/users/:id" element={<UserDetailPage />} />
         <Route path="/audit-logs" element={<AuditLogsPage />} />
         <Route path="/service-accounts" element={<ServiceAccountsPage />} />
+      <Route path="/sso-clients" element={<OidcClientsPage />} />
         <Route path="/products" element={<ProductsListPage />} />
         <Route path="/products/:id" element={<ProductDetailPage />} />
         <Route path="/plans" element={<PlansListPage />} />

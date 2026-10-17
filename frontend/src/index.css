@@ -213,3 +213,27 @@ a.btn { display: inline-block; text-decoration: none; text-align: center; }
   .definition-list dd { margin-bottom: 0.5rem; }
 }
 @media (prefers-reduced-motion: reduce) { .sidebar, .nav-group-toggle svg { transition: none; } }
+
+/* ---- SSO clients */
+.secret-value { display: block; padding: 0.5rem 0.65rem; font-size: 0.95rem; overflow-wrap: anywhere; user-select: all; }
+.field-error { color: var(--danger-fg); font-size: 0.8rem; font-weight: 500; }
+.field-warning { color: var(--warning-fg); font-size: 0.8rem; font-weight: 500; }
+.field-hint { color: var(--text-muted); font-size: 0.78rem; font-weight: 400; }
+input.invalid { border-color: var(--danger); }
+.url-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.url-row { display: flex; gap: 0.5rem; align-items: flex-start; }
+.url-row input { flex: 1; min-width: 0; }
+.url-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+.pkce-box { border: 2px solid var(--success-fg); background: var(--success-bg); border-radius: var(--radius); padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.pkce-box.off { border-color: var(--danger); background: var(--danger-bg); }
+.pkce-box label { flex-direction: row; align-items: center; gap: 0.5rem; color: var(--text); font-size: 0.92rem; }
+.pkce-box input[type='checkbox'], .radio-row input { width: 1.05rem; height: 1.05rem; }
+.pkce-box p { margin: 0; font-size: 0.85rem; color: var(--text); }
+.pkce-warning { border-left: 4px solid var(--danger); padding-left: 0.75rem; }
+.radio-row { display: flex; flex-direction: row !important; align-items: flex-start; gap: 0.5rem !important; font-weight: 500 !important; color: var(--text) !important; }
+.badge-row { display: inline-flex; gap: 0.35rem; flex-wrap: wrap; }
+.row-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+.nowrap { white-space: nowrap; }
+.break-all { overflow-wrap: anywhere; }
+.url-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+.url-fieldset legend { padding: 0; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.2rem; }

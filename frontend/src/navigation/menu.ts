@@ -26,6 +26,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/permissions', label: 'Permissions', labelKey: 'nav.permissions' },
       { to: '/roles', label: 'Roles', labelKey: 'nav.roles' },
       { to: '/service-accounts', label: 'Service Accounts', labelKey: 'nav.serviceAccounts' },
+      { to: '/sso-clients', label: 'SSO Clients', labelKey: 'nav.ssoClients' },
       { to: '/audit-logs', label: 'Audit Logs', labelKey: 'nav.auditLogs' },
     ],
   },

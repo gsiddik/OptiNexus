@@ -416,3 +416,34 @@ export interface AccessEvaluation {
   allowed: boolean; checks: { entitlement: boolean; permission: boolean; policy: boolean; feature_flag: boolean };
   reason_code: string | null;
 }
+
+// ------------------------------------------------------- SSO (OpenID Connect)
+
+export interface OidcClient {
+  id: string;
+  application_id: string;
+  client_id: string;
+  name: string;
+  confidential: boolean;
+  redirect_uris: string[];
+  post_logout_redirect_uris: string[];
+  launch_url: string | null;
+  backchannel_logout_uri: string | null;
+  require_pkce: boolean;
+  status: 'ACTIVE' | 'REVOKED';
+  created_at: string;
+}
+
+/** What the create call accepts. `confidential` and `application_id` are fixed once the client exists. */
+export interface OidcClientCreate {
+  application_id: string;
+  name: string;
+  confidential: boolean;
+  require_pkce: boolean;
+  redirect_uris: string[];
+  post_logout_redirect_uris: string[];
+  launch_url: string | null;
+  backchannel_logout_uri: string | null;
+}
+
+export type OidcClientUpdate = Omit<OidcClientCreate, 'application_id' | 'confidential'>;

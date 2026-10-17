@@ -49,10 +49,11 @@ A14 server-side match state, `provision` command in `ecosystem.ps1`. Deferred by
 | What | Result | SHA |
 |---|---|---|
 | Entry full backend (`entry-test.sh`, standalone mode, repo root mounted, Postgres 16) | 1485 passed, 0 failed (121,472 assertions, 1827 s) | E@98d5932 |
-| Fleet full backend (`ptest.sh`, PostgreSQL + MongoDB) | 1664 passed, 1 failed: `AccountingFeedConcurrencyTest` late-commit sample (test timing race while two suites ran in parallel). Test hardened at F@b9886e5; the file passed 3 of 3 times alone afterwards. The full suite was **not** re-run after that one test change | F@2b43df8 (run), b9886e5 (fix) |
+| Fleet full backend (`ptest.sh`, PostgreSQL + MongoDB) | 1664 passed, 1 failed: `AccountingFeedConcurrencyTest` late-commit sample (test timing race while two suites ran in parallel). Test hardened at F@b9886e5; the file passed 3 of 3 times alone afterwards. The full suite was re-run by the repository's CI on b9886e5 (green, next row) | F@2b43df8 (run), b9886e5 (fix) |
 | Nexus full backend | 356 passed, 1 failed: `OrchestrationSecurityTest` SSRF DNS (also fails on baseline; sandbox DNS). Code unchanged since; later commits are docs | N@4eda307 |
 | Nexus governance suite | 66 passed | N@4eda307 |
 | Nexus frontend `tsc -b`, `npm test` 184, `npm run build`, smoke 156/156 (Chromium, mocked API, 1440/820/390) | PASS; one of five test runs failed once under load, four clean | N@e8f164d |
+| GitHub Actions on the PR heads (the repositories' own CI): Fleet PR #36 backend (full PHPUnit, PostgreSQL + MongoDB) and frontend green; Entry PR #10 backend and frontend green. This also covers the full Fleet suite after the test hardening. OptiNexus has no CI configured | PASS | F@b9886e5, E@98d5932 |
 | Entry focused after the manifest fix: `ManifestV2Test` | 7 passed | E@98d5932 |
 | Fleet focused: `FleetManifestTest` 7, `AccountingFeedConcurrencyTest` 3 (x3), Pint on changed files | PASS | F@b9886e5 |
 | Radar server: `org.traccar.governance` 178; whole suite 894 passed / 0 failed / 26 skipped / 1 aborted (pre-existing assumption); checkstyle clean; web `npm test` 25, browser 80 checks | PASS (workers' reports of their own runs; Gradle itself NOT_RUN, scratch runner with the same sources) | R@cb9905f, W@915903c |

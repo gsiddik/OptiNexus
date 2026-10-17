@@ -37,7 +37,7 @@ META['/tenants/:tenantId/gateway'] = { label: 'Vehicle Mapping', labelKey: 'nav.
 /** Route patterns that have breadcrumb metadata but are not routes themselves. */
 export const PARENT_ONLY_PATTERNS = ['/tenants/:tenantId'];
 
-/** Every pattern that has breadcrumb metadata (a test keeps this in step with the routes in App.tsx). */
+/** Every pattern that has breadcrumb metadata (a test keeps this in step with the routes in routes.tsx). */
 export const BREADCRUMB_PATTERNS = Object.keys(META);
 
 const isDynamic = (pattern: string) => /\/:[^/]+$/.test(pattern);

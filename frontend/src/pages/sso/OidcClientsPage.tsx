@@ -166,9 +166,10 @@ function OidcClientsView({ canManage }: { canManage: boolean }) {
               ),
             },
             { key: 'status', header: t('common.status'), render: (r) => <StatusBadge status={r.status} /> },
-            { key: 'created', header: t('common.created'), render: (r) => <span className="nowrap">{formatDateTime(r.created_at)}</span> },
+            { key: 'created', className: 'hide-narrow', header: t('common.created'), render: (r) => <span className="nowrap">{formatDateTime(r.created_at)}</span> },
             {
               key: 'actions',
+              className: 'sticky-end',
               header: '',
               render: (r) =>
                 canManage && r.status === 'ACTIVE' ? (

@@ -234,6 +234,7 @@ function LinksPanel({ tenantId, rows, vehicles, loading, error, canManage, onRet
           { key: 'how', header: t('gw.col.how'), render: (r) => t(`gw.how.${r.link.link_type}` as MessageKey) },
           {
             key: 'actions',
+            className: 'sticky-end',
             header: '',
             render: (r) =>
               canManage ? (

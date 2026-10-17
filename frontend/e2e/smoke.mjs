@@ -85,13 +85,15 @@ const scenarios = {
     check('sidebar and top bar are in Indonesian', (await page.getByText('Keluar').count()) > 0 && (await page.locator('a[href="/"]').count()) > 0);
   },
 
-  async ssoClients({ page, context, base, shot, api }) {
+  async ssoClients({ page, context, base, shot, api, viewport }) {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: base });
     await withSession(context);
     await page.goto(`${base}/sso-clients`);
     await page.getByText('OptiEntry web').waitFor(wait);
     check('list shows type, PKCE and status badges', (await page.getByText('PKCE required').count()) > 0 && (await page.getByText('PKCE off').count()) > 0 && (await page.getByText('Revoked').count()) > 0);
     check('no horizontal overflow of the page', (await horizontalOverflow(page)) <= 0, await horizontalOverflow(page));
+    const edit = await page.getByRole('button', { name: 'Edit' }).first().boundingBox();
+    check('row actions stay in view without scrolling the table', !!edit && edit.x >= 0 && edit.x + edit.width <= viewport.width, JSON.stringify(edit));
     await shot('sso-list');
     await page.getByRole('button', { name: '+ New client' }).click();
     const dialog = page.getByRole('dialog', { name: 'New SSO client' });

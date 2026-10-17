@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import appSource from '../App.tsx?raw';
+import appSource from '../routes.tsx?raw';
 import { BREADCRUMB_PATTERNS, buildTrail, parentOf, PARENT_ONLY_PATTERNS } from './breadcrumbs';
 import { NAV_GROUPS } from './menu';
 
 /** Routes outside the signed-in shell: they have no menu entry and no breadcrumb. */
 const PUBLIC_ROUTES = ['/login', '/access-denied'];
 
-/** Full paths of the routes declared in App.tsx (nesting follows the opening and closing <Route> tags). */
+/** Full paths of the routes declared in routes.tsx (nesting follows the opening and closing <Route> tags). */
 function appRoutes(source: string): string[] {
   const open: string[] = [];
   const found: string[] = [];
@@ -26,7 +26,7 @@ function appRoutes(source: string): string[] {
 }
 
 describe('breadcrumb metadata', () => {
-  it('covers every page route in App.tsx and nothing else', () => {
+  it('covers every page route in routes.tsx and nothing else', () => {
     const routes = appRoutes(appSource);
     expect(routes.length).toBeGreaterThan(50); // the parser found the nested routes
     expect(routes.filter((r) => !BREADCRUMB_PATTERNS.includes(r))).toEqual([]);

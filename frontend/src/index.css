@@ -102,6 +102,12 @@ textarea { min-height: 70px; font-family: inherit; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
 .data-table th { text-align: left; padding: 0.65rem 0.9rem; background: #fafafc; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--text-muted); }
 .data-table td { padding: 0.65rem 0.9rem; border-bottom: 1px solid var(--border); }
+@media (max-width: 1100px) { .data-table .hide-narrow { display: none; } }
+/* On a screen narrower than the table the row actions stay in view while the other columns scroll beneath them. */
+@media (max-width: 900px) {
+  .data-table .sticky-end { position: sticky; right: 0; background: var(--surface); box-shadow: -8px 0 8px -8px rgba(15, 23, 42, 0.25); }
+  .data-table th.sticky-end { background: #fafafc; }
+}
 .data-table tr:last-child td { border-bottom: none; }
 .data-table tr.clickable { cursor: pointer; }
 .data-table tr.clickable:hover { background: #f8f8fc; }

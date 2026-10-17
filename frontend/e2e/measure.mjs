@@ -12,20 +12,24 @@ const dirs = process.argv.slice(2).length ? process.argv.slice(2) : ['dist'];
 const RUNS = Number(process.env.RUNS ?? 7);
 const median = (values) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
 
+// "Usable" = the text of the screen is on the page. Measured inside the page (performance.now() is milliseconds since the navigation
+// started) and polled every frame, so the numbers are not rounded up by the test tool's own polling.
 const SCENARIOS = [
-  { name: 'sign-in screen', path: '/login', session: false, ready: (page) => page.getByRole('button', { name: /Sign in|Masuk/ }).waitFor() },
-  { name: 'dashboard (signed in)', path: '/', session: true, ready: (page) => page.getByRole('heading', { name: /Welcome/ }).waitFor() },
+  { name: 'sign-in screen', path: '/login', session: false, ready: { selector: 'button', text: 'Sign in|Masuk' } },
+  { name: 'dashboard (signed in)', path: '/', session: true, ready: { selector: 'h1,h2', text: 'Welcome' } },
   {
     name: 'dashboard then open Roles',
     path: '/',
     session: true,
-    ready: (page) => page.getByRole('heading', { name: /Welcome/ }).waitFor(),
-    then: async (page) => {
-      await page.getByRole('link', { name: 'Roles', exact: true }).click();
-      await page.getByRole('heading', { name: 'Roles' }).first().waitFor();
-    },
+    ready: { selector: 'h1,h2', text: 'Welcome' },
+    then: { click: 'a[href="/roles"]', ready: { selector: 'h1,h2', text: '^Roles$' } },
   },
 ];
+
+const appears = ({ selector, text }) => {
+  const pattern = new RegExp(text);
+  return [...document.querySelectorAll(selector)].some((el) => pattern.test((el.textContent ?? '').trim()));
+};
 
 function fileSizes(distDir, urlPath) {
   const file = path.resolve(frontendDir, distDir, urlPath.split('?')[0].replace(/^\//, ''));
@@ -68,18 +72,19 @@ for (const distDir of dirs) {
       page.on('request', (req) => {
         if (req.url().includes('/api/v1/')) apiRequests.push(req.url());
       });
-      const t0 = Date.now();
       await page.goto(`${preview.base}${scenario.path}`, { waitUntil: 'commit' });
-      await scenario.ready(page);
-      const firstUsable = Date.now() - t0;
+      await page.waitForFunction(appears, scenario.ready, { polling: 'raf', timeout: 15000 });
+      const firstUsable = await page.evaluate(() => performance.now());
       let afterNavigation = null;
       let navRequests = null;
       if (scenario.then) {
         await page.waitForLoadState('networkidle');
         const before = requests.length;
-        const t1 = Date.now();
-        await scenario.then(page);
-        afterNavigation = Date.now() - t1;
+        const t1 = await page.evaluate(() => performance.now());
+        await page.click(scenario.then.click);
+        await page.waitForFunction(appears, scenario.then.ready, { polling: 'raf', timeout: 15000 });
+        afterNavigation = (await page.evaluate(() => performance.now())) - t1;
+        await page.waitForLoadState('networkidle');
         navRequests = requests.length - before;
       }
       await page.waitForLoadState('networkidle');
@@ -101,15 +106,15 @@ for (const distDir of dirs) {
       appFiles: files,
       jsCssRawBytes: raw,
       jsCssGzipBytes: gzip,
-      firstUsableMs: median(runs.map((r) => r.firstUsable)),
-      ...(scenario.then ? { navigationMs: median(runs.map((r) => r.afterNavigation)), navigationExtraRequests: median(runs.map((r) => r.navRequests)) } : {}),
+      firstUsableMs: Math.round(median(runs.map((r) => r.firstUsable))),
+      ...(scenario.then ? { navigationMs: Math.round(median(runs.map((r) => r.afterNavigation))), navigationExtraRequests: median(runs.map((r) => r.navRequests)) } : {}),
     };
   }
   await browser.close();
   preview.stop();
 }
 
-if (process.env.MEASURE_JSON) {
+if (process.env.MEASURE_JSON === '1') {
   console.log(JSON.stringify(report, null, 1));
 } else {
   for (const [dir, data] of Object.entries(report)) {

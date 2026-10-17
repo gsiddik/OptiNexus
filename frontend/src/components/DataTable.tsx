@@ -5,6 +5,8 @@ export interface Column<T> {
   header: string;
   render: (row: T) => ReactNode;
   key: string;
+  /** Extra class for the header and cells, e.g. `hide-narrow` to drop a secondary column on small screens. */
+  className?: string;
 }
 
 interface DataTableProps<T> {
@@ -23,7 +25,7 @@ export function DataTable<T>({ columns, rows, rowKey, onRowClick, emptyMessage }
         <thead>
           <tr>
             {columns.map((c) => (
-              <th key={c.key}>{c.header}</th>
+              <th key={c.key} className={c.className}>{c.header}</th>
             ))}
           </tr>
         </thead>
@@ -36,7 +38,7 @@ export function DataTable<T>({ columns, rows, rowKey, onRowClick, emptyMessage }
           {rows.map((row) => (
             <tr key={rowKey(row)} onClick={onRowClick ? () => onRowClick(row) : undefined} className={onRowClick ? 'clickable' : ''}>
               {columns.map((c) => (
-                <td key={c.key}>{c.render(row)}</td>
+                <td key={c.key} className={c.className}>{c.render(row)}</td>
               ))}
             </tr>
           ))}

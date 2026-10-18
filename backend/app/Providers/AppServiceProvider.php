@@ -49,6 +49,15 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Invitation pages (owner decision 2026-10-18). Named limiters with their own keys: the plain `throttle:N,M` form shares one counter per
+        // address across every route that uses it, which would let invitation traffic eat the sign-in budget (and the other way round).
+        RateLimiter::for('invitation-open', fn ($request) => Limit::perMinute(30)->by('invitation-open:'.$request->ip()));
+        RateLimiter::for('invitation-view', fn ($request) => Limit::perMinute(60)->by('invitation-view:'.$request->ip()));
+        RateLimiter::for('invitation-submit', fn ($request) => [
+            Limit::perMinute(10)->by('invitation-submit:'.$request->ip()),
+            Limit::perMinute(20)->by('invitation-submit-id:'.($request->session()->get('invitation.id') ?? $request->ip())),
+        ]);
+
         Passport::enablePasswordGrant(false);
 
         // Coarse-grained M2M API scopes for integrated applications

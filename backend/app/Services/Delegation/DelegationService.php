@@ -66,6 +66,24 @@ class DelegationService
             throw new DelegationException('TENANT_MISMATCH', 'The service account is bound to another tenant.');
         }
 
+        return $this->verifiedContext($serviceAccount, $application, $tenant, $actingUserId);
+    }
+
+    /**
+     * The same verification without a service account, for the moment an invitation is accepted: the authority is the Admin Tenant
+     * who invited, and everything that made the invitation legitimate is checked again as it stands now.
+     */
+    public function contextForInviter(Application $application, Tenant $tenant, string $actingUserId): DelegationContext
+    {
+        if (in_array($application->application_code, self::PROTECTED_APPLICATION_CODES, true)) {
+            throw new DelegationException('APPLICATION_NOT_DELEGABLE', 'The governance application cannot be managed through delegation.');
+        }
+
+        return $this->verifiedContext(null, $application, $tenant, $actingUserId);
+    }
+
+    private function verifiedContext(?ServiceAccount $serviceAccount, Application $application, Tenant $tenant, string $actingUserId): DelegationContext
+    {
         if (! $this->authorization->tenantIsUsable($tenant)) {
             throw new DelegationException('TENANT_NOT_ACTIVE', 'The tenant is not active.');
         }
@@ -316,7 +334,7 @@ class DelegationService
         return ['outcome' => $already ? 'existing' : 'linked', 'user' => $existing];
     }
 
-    private function ensureMembershipAndAccess(DelegationContext $context, User $user): void
+    public function ensureMembershipAndAccess(DelegationContext $context, User $user): void
     {
         TenantMembership::query()->firstOrCreate(
             ['user_id' => $user->id, 'tenant_id' => $context->tenant->id],
@@ -400,7 +418,7 @@ class DelegationService
      * @param  array<int, string>  $roleIds
      * @return Collection<int, Role>
      */
-    private function resolveAssignableRoles(DelegationContext $context, array $roleIds): Collection
+    public function resolveAssignableRoles(DelegationContext $context, array $roleIds): Collection
     {
         if ($roleIds === []) {
             return collect();

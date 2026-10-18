@@ -14,6 +14,12 @@ Route::prefix('delegation/tenants/{tenant}')->name('delegation.')->middleware(['
     Route::put('/users/{user}/roles', [DelegationController::class, 'setUserRoles'])->name('users.roles');
     Route::delete('/users/{user}', [DelegationController::class, 'revokeUser'])->name('users.revoke');
 
+    // Onboarding by invitation (owner decision 2026-10-18): the normal way to add a new person. Contract: GOVERNANCE_CONTRACTS.md 2b.
+    Route::get('/invitations', [DelegationController::class, 'invitations'])->name('invitations.index');
+    Route::post('/invitations', [DelegationController::class, 'createInvitation'])->name('invitations.store');
+    Route::post('/invitations/{invitation}/resend', [DelegationController::class, 'resendInvitation'])->name('invitations.resend');
+    Route::post('/invitations/{invitation}/revoke', [DelegationController::class, 'revokeInvitation'])->name('invitations.revoke');
+
     Route::post('/roles', [DelegationController::class, 'createRole'])->name('roles.store');
     Route::put('/roles/{role}', [DelegationController::class, 'updateRole'])->name('roles.update');
     Route::delete('/roles/{role}', [DelegationController::class, 'deleteRole'])->name('roles.destroy');

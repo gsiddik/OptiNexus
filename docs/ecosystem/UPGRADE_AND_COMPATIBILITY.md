@@ -1,6 +1,7 @@
 # Upgrade, compatibility and recovery (draft PRs Nexus #10, Fleet #36, Entry #10)
 
-Status of this page: written during the AI-assisted pre-merge review of 2026-10-18. Everything marked *rehearsed* ran on throwaway databases in the
+Status of this page: written during the AI-assisted pre-merge review of 2026-10-18; follow-up on a separate Codex branch is recorded in
+`SSO_EMAIL_VERIFICATION_REVIEW.md`. Everything marked *rehearsed* ran on throwaway databases in the
 sandbox, never on an operational one. Nothing here has been run on production. Radar is out of scope (paused).
 
 ## 1. What was rehearsed
@@ -26,7 +27,10 @@ the Alpine image build (see `ECOSYSTEM_AUDIT_STATUS.md` section 6).
    accounts keep `allowed_scopes = NULL` (unrestricted, as before); narrow them deliberately. Start the queue worker (invitation mail) and the scheduler
    (`invitations:expire`, `oidc:reconcile-access`). Run `ecosystem:preflight`; set a real mail transport and `TRUSTED_PROXIES` (`deploy/ecosystem/README.md`).
 2. **Entry** and **Fleet** in either order, after Nexus: `php artisan migrate --force`; Entry also `optientry:sync-permissions`. Enable Fleet's accounting feed backfill
-   only once Entry is on the new version (an old Entry would auto-process quarantined backfill events).
+   only once Entry is on the new version (an old Entry would auto-process quarantined backfill events). This is a compatibility prerequisite,
+   **not permission to enable backfill**. Merge/deploy does not approve historical posting, a new financial source or a new accounting treatment.
+   Keep backfill off until the applicable cutover, quarantine, review/reconciliation and owner-approval gates have been satisfied; no seed,
+   bootstrap, scheduler or smoke test may activate it implicitly.
 3. Switch features on per tenant, never globally: Fleet `governance_mode` stays `LOCAL` until `optinexus:governance:enable <tenant> --check` passes; an Entry connection to Fleet is created, mapped
    and activated on one tenant first; seat limits exist only where an operator sets a `user_limit` override.
 
@@ -52,6 +56,10 @@ Every row fails closed (deny or 503), none grants access, none returns a 500.
 * Posted accounting history is never edited by recovery: a wrong booking is corrected by reversal in Entry, not by restoring rows.
 
 ## 5. After a merge (only when the owner has authorised the merge)
+
+Before authorising a merge, confirm external automation with the owner: the root workflows present in Entry and Fleet only run tests/builds,
+and Nexus has no root workflow in the inspected refs. This does **not** establish that external hosting, webhooks or CI integrations cannot deploy
+on a push to main. Their configuration is outside the inspected source; no merge or deployment is authorised by this document.
 
 Record the merge commit of each repo as the new baseline in `ECOSYSTEM_AUDIT_STATUS.md` and the shared checkpoint; run the smoke combination once on the sandbox
 with the merged SHAs (SSO login, delegation, one Fleet invoice into Entry as a balanced journal, one invitation, seat refusal); then the steps of section 2 per environment.

@@ -217,6 +217,12 @@ an ACTIVE assignment of a deleted user), also the migration plan input. After de
 
 ## 3. Product context for switchers (A29) - scope `authorization.check`
 
+Owner decision 11 follow-up (2026-10-18): Entry, like Fleet, requires a verified email on every Nexus SSO login.
+For scope `email`, existing `OidcTokenService::userClaims` emits boolean `email_verified` from Nexus verification state.
+Invitation acceptance and audited manual operator verification both produce true. Entry requires signed ID-token boolean true
+before local provisioning/linking/ticket issuance; missing or other types deny with `email_not_verified`.
+This is a next-login requirement, not a new live-session revocation policy. See `SSO_EMAIL_VERIFICATION_REVIEW.md`.
+
 `POST /api/v1/authorization/product-context` `{user_id, tenant_id}` -> `{schema_version, user_id, tenant{id,code,name}|null,
 application_code, allowed, deny_reason, products[{code,name,launch_url,current}], ttl_seconds}`. The application is the
 service account's. `allowed=false` means the caller's own session must end (`deny_reason` uses the logout vocabulary:

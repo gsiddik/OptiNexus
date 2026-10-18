@@ -1,5 +1,10 @@
 # Ecosystem audit fixes: checkpoint
 
+Separate Codex follow-up, 2026-10-18: owner decision 11 implemented on Entry delta `630543d` (stacked PR #11).
+Provider code and Fleet unchanged. See `SSO_EMAIL_VERIFICATION_REVIEW.md` for supplemental test evidence,
+remaining native/live gates and external auto-deploy uncertainty; original Claude branches are untouched.
+This does not supersede historical results below or authorise merge/deployment/backfill.
+
 Single source of status for A01-A29 / R01-R08 (matrix: `TRACEABILITY.md`; owner decisions: `DECISION_PACKAGE.md`; legacy installs:
 `LEGACY_MIGRATION_PLAN.md`). Product repos keep their own `docs/status/ECOSYSTEM_AUDIT_STATUS.md` for detail. Updated 2026-10-18 (batch 10, pre-merge review of the three draft PRs).
 Pushed does not mean tested: see section 4. Hard limits: no merge, no push to main, no force-push, no change to operational data.

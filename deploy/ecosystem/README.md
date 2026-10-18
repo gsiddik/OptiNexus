@@ -80,6 +80,10 @@ exposing OptiNexus beyond a local trial; the default (unset) keeps the previous 
 
 ## Mail for invitations (OptiNexus)
 
+Upgrade/backfill boundary: merging or deploying these changes never activates historical backfill or approves new financial posting.
+Entry must be upgraded before backfill can be considered, and the applicable cutover, quarantine, review/reconciliation and owner approvals
+must still be satisfied. See `docs/ecosystem/UPGRADE_AND_COMPATIBILITY.md`. Keep automatic activation out of bootstrap/seed/smoke steps.
+
 New people are added from a product by an invitation link that OptiNexus e-mails (`docs/ecosystem/GOVERNANCE_CONTRACTS.md` section 2b). Set the
 mail transport in `.state\nexus.env` (never in Git): `MAIL_MAILER=smtp`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`,
 `MAIL_SCHEME` (empty, `smtp` or `smtps`), `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME`; `INVITATION_TTL_HOURS` (default 72) is optional. The default

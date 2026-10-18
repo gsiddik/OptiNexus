@@ -1,6 +1,6 @@
 # Traceability A01-A29 and R01-R08
 
-Snapshot 2026-10-17 22:30Z, SHA set S2 (checkpoint, validation log and live-flow status: `ECOSYSTEM_AUDIT_STATUS.md`). Columns are separate on purpose: **Impl** = code exists on the
+Snapshot 2026-10-18 (batch 7 added), SHA set S3 (N 741552f, F bf86a23, E b3855c2; rows not mentioning batch 7 are as of S2) (checkpoint, validation log and live-flow status: `ECOSYSTEM_AUDIT_STATUS.md`). Columns are separate on purpose: **Impl** = code exists on the
 branch, **Valid** = what was actually executed (pushed is not tested), **Open** = blocker or remaining work.
 Codes: DONE / PARTIAL / DEFERRED (owner decision, Radar paused 2026-10-17) / BACKLOG. Valid: PASS-unit (own repo tests), PASS-fake (against a
 Nexus built from the documented JSON), PASS-real (against a running OptiNexus), NOT_RUN. Repos: N=OptiNexus, F=OptiFleet-v2, E=OptiEntry
@@ -32,7 +32,8 @@ Nexus built from the documented JSON), PASS-real (against a running OptiNexus), 
 | A22 cursor validation | DONE E@6215ec7; F cursor proof | PASS-unit (18-case malformed-page matrix) | none |
 | A23 service identity | DONE E@88fea73 (registry), N@4eda307 (scope allow-list) | E ServicePrincipalTest 29, Sso 41; N 4 tests | none |
 | A24 portal gate | DONE N@c0bc909, UI N@6ea431e | PASS-unit EcosystemAccessGateTest + route inventory | none |
-| A25 delegation | DONE N@0f7c744; E@9595ddd,71a0ac1; F@38320a4,9105445; R@b3a031e,W@19cbac2 | N PASS-unit; E ~50; F 16 (fake); PASS-real (sandbox): Entry created a user in Nexus through the delegation API with audit; Fleet/Radar delegation action NOT_RUN | delegable-set review by owner |
+| A25 delegation | DONE N@0f7c744; E@9595ddd,71a0ac1; F@38320a4,9105445; R@b3a031e,W@19cbac2 | N PASS-unit; E ~50; F 16 (fake); PASS-real (sandbox): Entry created a user in Nexus through the delegation API with audit; Fleet invitations and a Fleet-created delegated role PASS-real (A25b); Radar delegation action NOT_RUN | delegable-set review by owner |
+| A25b onboarding by invitation (owner decision 2026-10-18; extends A25/R08) | DONE N@c8aeb52,741552f (table, service, delegation endpoints, Nexus acceptance pages EN+ID, mail, sweeper, deprecation of direct creation); F@ba7faa8..bf86a23; E@cf8f0e1..b3855c2 | PASS-unit/real-DB N (governance suite incl. 19 API + 21 acceptance + 2 concurrency tests), F/E PASS-fake; PASS-real (sandbox, local mail sink) for invite from Fleet -> mail -> accept -> Nexus-verified -> Fleet OIDC sign-in with no database edit, and for replay/revoke/resend/role-removed/inviter-lost-flag/expiry; acceptance form in Chromium at 1440/820/390; Entry consumer, existing-identity linking, mail failure NOT_RUN live | gap 1 first Admin Tenant has no verification path; gap 2 seat policy open (item 4); `POST /users` default-off is an owner decision |
 | A26 bilingual OA6 UI | DONE for Entry (i18n layer; delegation, switcher, integration screens EN + ID, catalog parity test); Fleet/Radar new screens: see their status files | PASS-unit E 1206 frontend | none for Entry |
 | A27 outcomes | DONE E@6215ec7 + UI ("Selesai diproses" vs ledger state) | PASS-unit | none |
 | A28 fair scheduling | DONE E@6215ec7 | PASS-unit (backlog fairness) | none |

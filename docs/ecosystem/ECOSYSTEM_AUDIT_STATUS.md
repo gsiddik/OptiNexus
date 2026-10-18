@@ -212,8 +212,8 @@ client and service account scripts of the earlier batches; `optientry:nexus:chec
 Deviations and findings (disclosed): (a) the forced acceptance POST in the over-limit check carried no CSRF token and answered 419 before reaching the seat check; the seat refusal itself is shown by the page
 (409 text) and the no-user-row check, and by the real-database test "a refused acceptance rolls everything back". (b) Entry's side menu stays in Indonesian when English is chosen (existing, outside this batch).
 (c) The sandbox Entry web container answered 502 after its api container was recreated until restarted (section 6). (d) A compound command that deleted three temporary credential files inside the sandbox Nexus container
-was refused by the environment's safety check and was not worked around; the files lived in the container's own filesystem and went with the container when the sandbox was torn down at the end. Screenshots:
-sandbox data only, kept outside the repositories.
+was refused by the environment's safety check and was not worked around; the files lived in the container's own filesystem and went with the container when the sandbox was torn down at the end. Screenshots (26 files, EN and ID, three widths):
+sandbox data only, project files `audit/seat-screenshots/`, not in the repositories.
 
 NOT_RUN live (covered by tests only): the last seat contested by parallel requests on the real stack (real-database parallel-process test), first Admin Tenant refused for lack of a seat, Fleet consumer (no `user_limit`),
 unreadable entitlement source, mail-transport failure.

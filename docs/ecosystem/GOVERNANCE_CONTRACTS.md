@@ -48,6 +48,54 @@ plans/entitlements/subscriptions, the Admin Tenant flag, tenant-wide membership 
 A product keeps no second copy of identity or roles: it renders the answers above, sends changes through this API, and reads
 permissions with `POST /authorization/effective-permissions` (bulk, schema 1.0).
 
+## 2b. Invitations (onboarding by invitation link; owner decision 2026-10-18) - scope `tenant.delegate`
+
+The normal way to add a NEW person from a product. Nexus owns identity, e-mail verification, membership and application access; the
+product only renders and sends. Nothing is granted when an invitation is created: identity, membership, application access and roles
+are granted when the invitee accepts, after Nexus re-validates everything. No password and no token ever passes through the Admin
+Tenant or the product backend: the link is e-mailed by Nexus and the invitee sets their own password on a Nexus page.
+
+Same base, authentication and `acting_user_id` rule as section 2 (Admin Tenant of this tenant with access to this application).
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/invitations` | `email`, `name`, `role_ids[]?` (delegable, assignable roles of this application), `locale?` (`en`\|`id`, default `en`; language of the e-mail and of the Nexus page). 201 with the invitation view; the e-mail is queued |
+| GET | `/invitations?status=&search=&per_page=` | invitations of this tenant and application, newest first. `status` = `PENDING`\|`ACCEPTED`\|`REVOKED`\|`EXPIRED` |
+| POST | `/invitations/{id}/resend` | new token (the old link stops working at once), new expiry, e-mail queued again. Allowed for `PENDING` and `EXPIRED` |
+| POST | `/invitations/{id}/revoke` | `reason?`. `PENDING`/`EXPIRED` -> `REVOKED`; already revoked answers 200 unchanged |
+
+Invitation view (`data`): `id`, `email`, `name`, `status` (an unaccepted invitation past `expires_at` is reported as `EXPIRED`),
+`locale`, `role_ids[]`, `roles[]{id,code,name}`, `invited_by{id,name}`, `created_at`, `expires_at`, `last_sent_at`, `send_count`,
+`delivery{status: QUEUED\|SENT\|FAILED, attempted_at, error_code}`, `accepted_at`, `revoked_at`, `can_resend`, `can_revoke`. The token and
+its hash are never part of any API answer.
+
+Refusals (error envelope as in section 2): `INVITATION_PENDING` (409, one open invitation per e-mail, tenant and application; use
+resend; `details.invitation_id`), `ALREADY_MEMBER` (409, active member with access to this application), `ROLE_NOT_ASSIGNABLE` (422),
+`INVITATION_NOT_FOUND` (404, also for another tenant/application), `INVITATION_NOT_PENDING` (409, `details.status`),
+`INVITATION_RESEND_COOLDOWN` (429, `Retry-After`), `INVITATION_RESEND_LIMIT` (409), `INVITATION_RATE_LIMITED` (429), validation 422.
+Creating never reveals whether the e-mail belongs to an identity elsewhere; conflicts are decided at acceptance.
+
+Acceptance (browser, on Nexus, not in the API): `GET /invitations/{token}` only validates and hands the visitor to
+`/invitations/accept` (token leaves the URL, nothing is consumed, so mail scanners cannot burn it); a new identity sets name and
+password; an existing identity must prove itself with its current password (never linked by e-mail alone). In one transaction with a
+row lock Nexus re-checks: invitation still open and unexpired; tenant and application usable and subscribed; inviter still an active
+Admin Tenant with access; every assigned role still assignable (fail closed, nothing is dropped silently); identity not disabled,
+suspended, deleted or an operator; membership not suspended. Then it creates or links the identity, records `email_verified_at`
+(possession of the mailbox proven by the single-use token), grants membership, application access and exactly the invited roles
+(never more, and existing roles of a linked user are kept), and marks the invitation `ACCEPTED`. The user then continues to the
+product, which starts the normal OIDC code + PKCE sign-in; no session is opened by the invitation itself.
+
+Token: 256-bit random, only its SHA-256 is stored, valid until `expires_at` (default 72 h, `INVITATION_TTL_HOURS`), single use,
+replaced by resend, dead after revoke. Audit: `invitation.created|sent|send_failed|resent|revoked|expired|accepted|email_verified|accept_denied`
+(never the token). Mail is configured at runtime (`MAIL_*`, no secret in Git); a deployment on the `log`/`array` mailer is reported by
+`ecosystem:preflight` as not deliverable.
+
+Compatibility: `POST /users` keeps working (including `initial_password`) but is deprecated: the response carries
+`Deprecation: true` and `Link: <.../invitations>; rel="successor-version"`, `NEXUS_DELEGATION_DIRECT_USERS=false` switches it off per
+deployment (`410 DIRECT_USER_CREATION_DISABLED`). Users created that way have no verified e-mail and cannot sign in to products that
+require one (Fleet). Products should stop calling it; switching the default off is an owner decision (`DECISION_PACKAGE.md`, item 3).
+Seat limits (`user_limit`) are not enforced by invitations or by `POST /users`; the policy is an open owner decision (item 4).
+
 ## 3. Product context for switchers (A29) - scope `authorization.check`
 
 `POST /api/v1/authorization/product-context` `{user_id, tenant_id}` -> `{schema_version, user_id, tenant{id,code,name}|null,

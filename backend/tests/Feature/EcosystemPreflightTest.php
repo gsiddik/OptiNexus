@@ -93,4 +93,12 @@ class EcosystemPreflightTest extends TestCase
 
         $this->artisan('ecosystem:preflight')->assertFailed()->expectsOutputToContain('No OIDC signing key configured');
     }
+
+    public function test_a_production_mailer_that_cannot_deliver_is_a_warning_not_a_failure(): void
+    {
+        $this->app['env'] = 'production';
+        config(['oidc.issuer' => 'https://nexus.example.test', 'app.debug' => false, 'queue.default' => 'database', 'mail.default' => 'log', 'app.key' => 'base64:'.base64_encode(random_bytes(32))]);
+
+        $this->artisan('ecosystem:preflight')->assertSuccessful()->expectsOutputToContain('invitation e-mails will not reach anyone');
+    }
 }

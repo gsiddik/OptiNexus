@@ -52,6 +52,17 @@ class EcosystemPreflight extends Command
         if ($production && in_array(config('queue.default'), ['sync', 'null'], true)) {
             $results[] = ['Queue', 'FAIL', "QUEUE_CONNECTION='".config('queue.default')."' would run deliveries inside requests; use database or redis"];
         }
+        // Invitations are delivered by e-mail (owner decision 2026-10-18). A mailer that cannot deliver is a warning, not a failure: the
+        // installation still works, but no invitee will ever receive a link. A local mail sink (smtp to a sandbox host) is fine.
+        $mailer = (string) config('mail.default');
+        if (in_array($mailer, ['log', 'array', 'null'], true)) {
+            $results[] = ['Mail', $production ? 'WARN' : 'OK', "MAIL_MAILER='{$mailer}' does not deliver: invitation e-mails will not reach anyone (set MAIL_MAILER=smtp and the MAIL_* settings at runtime)"];
+        } elseif ($production && in_array((string) config('mail.from.address'), ['', 'hello@example.com'], true)) {
+            $results[] = ['Mail', 'WARN', 'MAIL_FROM_ADDRESS is not set to a real sender address'];
+        } else {
+            $results[] = ['Mail', 'OK', "MAIL_MAILER='{$mailer}'"];
+        }
+
         if ($production && config('app.debug')) {
             $results[] = ['APP_DEBUG', 'FAIL', 'must be false in production'];
         }

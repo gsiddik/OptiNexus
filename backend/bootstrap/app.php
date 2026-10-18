@@ -12,6 +12,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
 use Illuminate\Validation\ValidationException;
 use Laravel\Passport\Exceptions\MissingScopeException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
@@ -42,6 +43,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // An invitation page whose session ran out: say so in the page, in the invitee's language, instead of a bare 419.
+        $exceptions->render(function (TokenMismatchException $e, Request $request) {
+            if (! $request->is('invitations/*')) {
+                return null;
+            }
+
+            return response(view('invitations.state', ['state' => 'invalid']), 419);
+        });
 
         $exceptions->render(function (ValidationException $e, Request $request) {
             if (! $request->is('api/*') && ! $request->expectsJson()) {

@@ -27,6 +27,18 @@ x-nexus-env: &nexus-env
   CACHE_STORE: database
   LOG_CHANNEL: stderr
   PASSPORT_KEY_PATH: /var/keys
+  # Mail for invitations (owner decision 2026-10-18). Runtime settings only; credentials come from the untracked .env, never from Git.
+  # MAIL_MAILER=log writes mail to the container log and delivers nothing (ecosystem:preflight warns about it).
+  MAIL_MAILER: ${MAIL_MAILER:-log}
+  MAIL_SCHEME: ${MAIL_SCHEME:-}
+  MAIL_HOST: ${MAIL_HOST:-127.0.0.1}
+  MAIL_PORT: ${MAIL_PORT:-2525}
+  MAIL_USERNAME: ${MAIL_USERNAME:-}
+  MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+  MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-hello@example.com}
+  MAIL_FROM_NAME: ${MAIL_FROM_NAME:-OptiNexus}
+  INVITATION_TTL_HOURS: ${INVITATION_TTL_HOURS:-72}
+  NEXUS_DELEGATION_DIRECT_USERS: ${NEXUS_DELEGATION_DIRECT_USERS:-true}
   CGO_SUPERADMIN_EMAIL: ${CGO_SUPERADMIN_EMAIL:-superadmin@cgo.local}
   CGO_SUPERADMIN_PASSWORD: ${CGO_SUPERADMIN_PASSWORD:-}
   CGO_SUPERADMIN_RESET_PASSWORD: ${CGO_SUPERADMIN_RESET_PASSWORD:-false}

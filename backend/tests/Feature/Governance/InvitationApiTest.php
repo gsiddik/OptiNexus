@@ -209,6 +209,15 @@ class InvitationApiTest extends TestCase
         $this->assertTrue(AuditLog::query()->where('action', 'invitation.expired')->exists());
     }
 
+    public function test_the_expire_command_stamps_stale_invitations(): void
+    {
+        $this->invite('cmd@example.test')->assertCreated();
+        $this->travel(73)->hours();
+
+        $this->artisan('invitations:expire')->assertSuccessful()->expectsOutputToContain('Expired 1 invitation(s).');
+        $this->assertSame('EXPIRED', UserInvitation::query()->where('email', 'cmd@example.test')->value('status'));
+    }
+
     public function test_revoke_is_final_idempotent_and_audited_and_an_accepted_invitation_cannot_be_changed(): void
     {
         $id = $this->invite('rev@example.test')->assertCreated()->json('data.id');

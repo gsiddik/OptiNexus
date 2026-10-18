@@ -1,8 +1,13 @@
 # Joins OptiNexus to the shared ecosystem network. The API listens on the same port it publishes, so
 # http://nexus.<domain>:<port> (the OIDC issuer) is one URL for the browser (published port) and for the other containers (network alias).
 # Used by deploy/ecosystem/ecosystem.ps1: docker compose -f OptiNexus/docker-compose.yml -f overlays/nexus.yaml
+# The web container sits on both networks, so it must reach its PHP-FPM through a name that exists only for this product: every product's
+# `api` service carries the alias `api` on the shared network, and a bare `api` would resolve to any of them (found by the live test: after a
+# restart OptiNexus's web answered with OptiEntry's PHP-FPM).
 services:
   web:
+    environment:
+      BACKEND_HOST: nexus-api
     networks:
       default: {}
       ecosystem:
@@ -13,7 +18,10 @@ services:
       ecosystem:
         aliases: ["nexus-console.${ECOSYSTEM_DOMAIN:-localtest.me}"]
   api:
-    networks: [default, ecosystem]
+    networks:
+      default:
+        aliases: ["nexus-api"]
+      ecosystem: {}
   worker:
     networks: [default, ecosystem]
   scheduler:

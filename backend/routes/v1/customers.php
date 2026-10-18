@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\CustomerController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('customers')->name('customers.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('customers')->name('customers.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [CustomerController::class, 'index'])->middleware('permission:cgo.customer.view')->name('index');
     Route::post('/', [CustomerController::class, 'store'])->middleware('permission:cgo.customer.create')->name('store');
     Route::get('/{customer}', [CustomerController::class, 'show'])->middleware('permission:cgo.customer.view')->name('show');

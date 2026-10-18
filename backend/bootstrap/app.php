@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AuthenticateServiceAccount;
 use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\EnsureEcosystemAccess;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\ResolveGatewayTenant;
 use Illuminate\Auth\Access\AuthorizationException as AccessAuthorizationException;
@@ -11,6 +12,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
 use Illuminate\Validation\ValidationException;
 use Laravel\Passport\Exceptions\MissingScopeException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
@@ -30,16 +32,34 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'permission' => CheckPermission::class,
+            'ecosystem' => EnsureEcosystemAccess::class,
             'service_account' => AuthenticateServiceAccount::class,
             'gateway_tenant' => ResolveGatewayTenant::class,
         ]);
 
         $middleware->throttleApi();
+
+        // Behind the shipped nginx chain (and any TLS edge) every request reaches PHP from a proxy address, so rate limits, audit rows and the
+        // secure-cookie decision see the proxy, not the caller. Name the proxies allowed to set X-Forwarded-* (comma separated; "*" only when PHP
+        // can be reached through them alone). Unset keeps the framework default.
+        $proxies = (string) env('TRUSTED_PROXIES', '');
+        if (trim($proxies) !== '') {
+            $middleware->trustProxies(at: trim($proxies) === '*' ? '*' : array_map('trim', explode(',', $proxies)));
+        }
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // An invitation page whose session ran out: say so in the page, in the invitee's language, instead of a bare 419.
+        $exceptions->render(function (TokenMismatchException $e, Request $request) {
+            if (! $request->is('invitations/*')) {
+                return null;
+            }
+
+            return response(view('invitations.state', ['state' => 'invalid']), 419);
+        });
 
         $exceptions->render(function (ValidationException $e, Request $request) {
             if (! $request->is('api/*') && ! $request->expectsJson()) {
@@ -148,7 +168,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => $e->getMessage() ?: 'An error occurred while processing the request.',
                     'details' => null,
                 ],
-            ], $status);
+            ], $status, $e->getHeaders());
         });
 
         $exceptions->render(function (Throwable $e, Request $request) {

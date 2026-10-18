@@ -5,7 +5,7 @@ namespace Database\Seeders;
 use App\Models\Application;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Models\UserApplicationAccess;
+use App\Services\Seats\SeatService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -62,10 +62,7 @@ class OptiRadarApplicationSeeder extends Seeder
         $demoUser = User::query()->where('email', self::DEMO_USER_EMAIL)->first();
 
         if ($demoUser) {
-            UserApplicationAccess::query()->firstOrCreate(
-                ['user_id' => $demoUser->id, 'tenant_id' => $tenant->id, 'application_id' => $radar->id],
-                ['status' => UserApplicationAccess::STATUS_ACTIVE],
-            );
+            app(SeatService::class)->grantAccess($tenant, $radar, $demoUser);
         }
     }
 }

@@ -25,6 +25,12 @@ class AppServiceProvider extends ServiceProvider
         // attack surface for this API-only platform and are disabled
         // outright rather than merely left unlinked.
         Passport::ignoreRoutes();
+
+        // Signing keys may live on a persistent volume (containers): PASSPORT_KEY_PATH names the directory that holds
+        // oauth-private.key / oauth-public.key. Unset = storage/ as before.
+        if ($keyPath = env('PASSPORT_KEY_PATH')) {
+            Passport::loadKeysFrom($keyPath);
+        }
     }
 
     /**
@@ -32,7 +38,28 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        RateLimiter::for('api', fn ($request) => Limit::perMinute(120)->by($request->user()?->id ?: $request->ip()));
+        // Human (interactive) API routes: 120/min per user, or per address when not signed in. Machine-to-machine routes
+        // (`service_account:` middleware) are throttled per authenticated OAuth client inside that middleware instead
+        // (config/m2m.php): a shared proxy address must not pool every product's server-to-server traffic into one bucket.
+        RateLimiter::for('api', function ($request) {
+            if (collect($request->route()?->gatherMiddleware() ?? [])->contains(fn ($middleware) => is_string($middleware) && str_starts_with($middleware, 'service_account'))) {
+                return Limit::none();
+            }
+
+            return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
+        });
+
+        // Invitation pages (owner decision 2026-10-18). Named limiters with their own keys: the plain `throttle:N,M` form shares one counter per
+        // address across every route that uses it, which would let invitation traffic eat the sign-in budget (and the other way round).
+        RateLimiter::for('invitation-open', fn ($request) => Limit::perMinute(30)->by('invitation-open:'.$request->ip()));
+        RateLimiter::for('invitation-view', fn ($request) => Limit::perMinute(60)->by('invitation-view:'.$request->ip()));
+        RateLimiter::for('invitation-submit', fn ($request) => [
+            Limit::perMinute(10)->by('invitation-submit:'.$request->ip()),
+            Limit::perMinute(20)->by('invitation-submit-id:'.($request->session()->get('invitation.id') ?? $request->ip())),
+        ]);
+
+        // First Admin Tenant: the password-change page (owner decision 2026-10-18, second batch). Its own counter, so it cannot eat the sign-in budget.
+        RateLimiter::for('activation-submit', fn ($request) => Limit::perMinute(10)->by('activation-submit:'.$request->ip()));
 
         Passport::enablePasswordGrant(false);
 
@@ -53,6 +80,7 @@ class AppServiceProvider extends ServiceProvider
             'gateway.fleet.read' => 'Read vehicle <-> telematics device links through the API Gateway',
             'gateway.telematics.write' => 'Push telematics odometer readings into the API Gateway',
             'gateway.telematics.read' => 'Read the telematics odometer feed for linked vehicles from the API Gateway',
+            'tenant.delegate' => "Manage a tenant's users and custom roles for the caller's own application on behalf of an Admin Tenant (delegation API)",
             'access.evaluate' => 'Evaluate aggregated effective access (entitlement + permission + policy + feature flag) via POST /access/evaluate',
         ]);
 

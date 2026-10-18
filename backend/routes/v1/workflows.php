@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\WorkflowController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('workflows')->name('workflows.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('workflows')->name('workflows.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [WorkflowController::class, 'index'])->middleware('permission:cgo.workflow.view')->name('index');
     Route::post('/', [WorkflowController::class, 'store'])->middleware('permission:cgo.workflow.create')->name('store');
     Route::get('/{workflow}', [WorkflowController::class, 'show'])->middleware('permission:cgo.workflow.view,workflow')->name('show');

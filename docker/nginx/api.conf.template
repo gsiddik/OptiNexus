@@ -1,0 +1,34 @@
+# Rendered by the nginx image at start (envsubst): LISTEN_PORT, BACKEND_HOST, CLIENT_MAX_BODY_SIZE.
+# The container listens on the same port the host publishes, so one URL (alias:port) reaches it from the browser and from other containers.
+# An invitation link carries a single-use token that is a credential until it is used (it is e-mailed to the invitee). Keep it out of the
+# access log: the request line is logged with the token replaced.
+map $request $nexus_logged_request {
+    default $request;
+    "~^(?<verb>[A-Z]+) /invitations/[0-9a-f]{64}(?<tail>[?\s].*)$" "$verb /invitations/[redacted]$tail";
+}
+log_format nexus_redacted '$remote_addr - $remote_user [$time_local] "$nexus_logged_request" $status $body_bytes_sent "$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
+
+server {
+    listen ${LISTEN_PORT};
+    server_name _;
+    client_max_body_size ${CLIENT_MAX_BODY_SIZE};
+    access_log /dev/stdout nexus_redacted;
+
+    location = /nginx-health {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok";
+    }
+
+    # Every request goes to Laravel's front controller; the files live in the backend image, not here.
+    location / {
+        fastcgi_pass ${BACKEND_HOST}:9000;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_param SCRIPT_NAME /index.php;
+        fastcgi_param REQUEST_URI $request_uri;
+        fastcgi_read_timeout 60s;
+        fastcgi_send_timeout 60s;
+        fastcgi_connect_timeout 5s;
+    }
+}

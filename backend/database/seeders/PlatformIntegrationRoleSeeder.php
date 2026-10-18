@@ -32,7 +32,7 @@ class PlatformIntegrationRoleSeeder extends Seeder
             );
 
             $sync = [];
-            foreach (Permission::query()->whereIn('permission_key', $definition['permissions'])->pluck('id') as $id) {
+            foreach (Permission::query()->whereIn('permission_key', [...$definition['permissions'], Permission::ECOSYSTEM_ACCESS])->pluck('id') as $id) {
                 $sync[$id] = ['id' => (string) Str::uuid()];
             }
             $role->permissions()->sync($sync);

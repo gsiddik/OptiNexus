@@ -4,6 +4,8 @@ namespace Tests\Feature\Commercial;
 
 use App\Models\AuditLog;
 use App\Models\Price;
+use App\Models\ServiceAccount;
+use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -39,7 +41,7 @@ class CommercialSecurityTest extends TestCase
         $tenantB = $this->makeTenant();
 
         $role = $this->makeTenantRole($tenantB, ['cgo.subscription.view']);
-        $user = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+        $user = $this->makeOperatorWith();
         $this->attachUserToTenant($user, $tenantB, $role);
         Sanctum::actingAs($user);
 
@@ -55,7 +57,7 @@ class CommercialSecurityTest extends TestCase
         [$tenantA, $subscriptionId] = $this->subscribedTenant();
 
         $role = $this->makeTenantRole($tenantA, ['cgo.subscription.view']);
-        $user = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+        $user = $this->makeOperatorWith();
         $this->attachUserToTenant($user, $tenantA, $role);
         Sanctum::actingAs($user);
 
@@ -65,11 +67,11 @@ class CommercialSecurityTest extends TestCase
     public function test_read_only_permission_cannot_be_used_to_cancel_a_subscription(): void
     {
         [, $subscriptionId] = $this->subscribedTenant();
-        $tenant = \App\Models\Subscription::findOrFail($subscriptionId)->tenant;
+        $tenant = Subscription::findOrFail($subscriptionId)->tenant;
 
         // Privilege escalation attempt: this role only has view, not cancel.
         $role = $this->makeTenantRole($tenant, ['cgo.subscription.view']);
-        $user = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+        $user = $this->makeOperatorWith();
         $this->attachUserToTenant($user, $tenant, $role);
         Sanctum::actingAs($user);
 
@@ -94,7 +96,7 @@ class CommercialSecurityTest extends TestCase
 
         $tenantB = $this->makeTenant();
         $role = $this->makeTenantRole($tenantB, ['cgo.billing.view']);
-        $user = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+        $user = $this->makeOperatorWith();
         $this->attachUserToTenant($user, $tenantB, $role);
         Sanctum::actingAs($user);
 
@@ -106,9 +108,9 @@ class CommercialSecurityTest extends TestCase
     public function test_denied_authorization_attempt_is_audited(): void
     {
         [, $subscriptionId] = $this->subscribedTenant();
-        $tenant = \App\Models\Subscription::findOrFail($subscriptionId)->tenant;
+        $tenant = Subscription::findOrFail($subscriptionId)->tenant;
         $role = $this->makeTenantRole($tenant, ['cgo.subscription.view']);
-        $user = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+        $user = $this->makeOperatorWith();
         $this->attachUserToTenant($user, $tenant, $role);
         Sanctum::actingAs($user);
 
@@ -162,7 +164,7 @@ class CommercialSecurityTest extends TestCase
         $application = $this->makeApplication(['application_code' => 'optifleet']);
         $tenant = $this->makeTenant();
         $token = $this->issueServiceAccountToken($application->id, ['commercial.read']);
-        \App\Models\ServiceAccount::query()->update(['status' => \App\Models\ServiceAccount::STATUS_REVOKED]);
+        ServiceAccount::query()->update(['status' => ServiceAccount::STATUS_REVOKED]);
 
         $this->withHeader('Authorization', "Bearer {$token}")
             ->getJson("/api/v1/tenants/{$tenant->id}/commercial-context")

@@ -1,6 +1,10 @@
 import { apiClient, type ApiEnvelope } from './client';
 import type {
   AccessEvaluation,
+  AdminAccount,
+  AdminAccountCreate,
+  AdminAccountCreated,
+  AdminAccountReissued,
   Addon,
   AddonLimit,
   ApprovalDefinition,
@@ -19,6 +23,9 @@ import type {
   EventDelivery,
   FeatureFlag,
   FeatureFlagEvaluation,
+  GatewayLink,
+  GatewayRequestLog,
+  GatewayVehicle,
   Integration,
   IntegrationCredential,
   IntegrationLog,
@@ -26,6 +33,10 @@ import type {
   Notification,
   NotificationRule,
   NotificationTemplate,
+  OidcClient,
+  OnboardingReport,
+  OidcClientCreate,
+  OidcClientUpdate,
   Permission,
   Plan,
   PlanLimit,
@@ -34,6 +45,7 @@ import type {
   Price,
   Product,
   Role,
+  SeatStatus,
   ServiceAccount,
   Subscription,
   Tenant,
@@ -98,6 +110,7 @@ export const tenantsApi = {
     apiClient.post(`/tenants/${id}/applications/${applicationId}`),
   detachApplication: (id: string, applicationId: string) =>
     apiClient.delete(`/tenants/${id}/applications/${applicationId}`),
+  seats: (id: string) => unwrap<SeatStatus[]>(apiClient.get(`/tenants/${id}/seats`)),
   admins: (id: string) => unwrap<User[]>(apiClient.get(`/tenants/${id}/admins`)),
   addAdmin: (id: string, userId: string) => apiClient.post(`/tenants/${id}/admins/${userId}`),
   removeAdmin: (id: string, userId: string) => apiClient.delete(`/tenants/${id}/admins/${userId}`),
@@ -504,4 +517,42 @@ export const notificationsApi = {
 // ----------------------------------------------------------------- Access
 export const accessApi = {
   evaluate: (payload: Record<string, unknown>) => unwrap<AccessEvaluation>(apiClient.post('/access/evaluate', payload)),
+};
+
+// ------------------------------------------------------- SSO (OpenID Connect)
+/** `client_secret` is returned once, by create (confidential clients) and rotate-secret; the caller must not keep it. */
+export const oidcClientsApi = {
+  list: (params?: { application_id?: string }) => unwrap<OidcClient[]>(apiClient.get('/oidc-clients', { params })),
+  create: (payload: OidcClientCreate) =>
+    unwrap<{ client: OidcClient; client_secret: string | null }>(apiClient.post('/oidc-clients', payload)),
+  update: (id: string, payload: OidcClientUpdate) => unwrap<OidcClient>(apiClient.put(`/oidc-clients/${id}`, payload)),
+  rotateSecret: (id: string) => unwrap<{ client: OidcClient; client_secret: string }>(apiClient.post(`/oidc-clients/${id}/rotate-secret`)),
+  revoke: (id: string) => unwrap<OidcClient>(apiClient.post(`/oidc-clients/${id}/revoke`)),
+};
+
+// ------------------------------------------------- Gateway (per tenant, human admin side)
+const gw = (tenantId: string) => `/gateway/tenants/${encodeURIComponent(tenantId)}`;
+export const gatewayAdminApi = {
+  links: (tenantId: string) => unwrap<GatewayLink[]>(apiClient.get(`${gw(tenantId)}/vehicle-links`)),
+  vehicles: (tenantId: string) => unwrap<GatewayVehicle[]>(apiClient.get(`${gw(tenantId)}/fleet-vehicles`)),
+  link: (tenantId: string, linkId: string, fleetVehicleId: string) =>
+    unwrap<GatewayLink>(apiClient.put(`${gw(tenantId)}/vehicle-links/${encodeURIComponent(linkId)}`, { fleet_vehicle_id: fleetVehicleId })),
+  unlink: (tenantId: string, linkId: string) => unwrap<GatewayLink>(apiClient.delete(`${gw(tenantId)}/vehicle-links/${encodeURIComponent(linkId)}`)),
+  logs: (tenantId: string, params?: { page?: number; per_page?: number }) => unwrapFull<GatewayRequestLog[]>(apiClient.get(`${gw(tenantId)}/request-logs`, { params })),
+};
+
+// ------------------------------------------------------------- Ecosystem onboarding
+export const onboardingApi = {
+  report: (tenantId: string) => unwrap<OnboardingReport>(apiClient.get(`/ecosystem/onboarding/tenants/${encodeURIComponent(tenantId)}`)),
+};
+
+// ------------------------------------------------------------- First Admin Tenant (operator-created accounts)
+const adminAccountsBase = (tenantId: string) => `/ecosystem/tenants/${encodeURIComponent(tenantId)}/admin-accounts`;
+export const adminAccountsApi = {
+  list: (tenantId: string) => unwrap<AdminAccount[]>(apiClient.get(adminAccountsBase(tenantId))),
+  create: (tenantId: string, payload: AdminAccountCreate) => unwrap<AdminAccountCreated>(apiClient.post(adminAccountsBase(tenantId), payload)),
+  verifyEmail: (tenantId: string, userId: string, payload: { email: string; reason: string }) =>
+    unwrap<AdminAccount>(apiClient.post(`${adminAccountsBase(tenantId)}/${encodeURIComponent(userId)}/email-verification`, payload)),
+  reissueCredential: (tenantId: string, userId: string) =>
+    unwrap<AdminAccountReissued>(apiClient.post(`${adminAccountsBase(tenantId)}/${encodeURIComponent(userId)}/temporary-credential`)),
 };

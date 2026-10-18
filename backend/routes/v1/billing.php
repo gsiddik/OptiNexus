@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\BillingController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/billings', [BillingController::class, 'index'])->middleware('permission:cgo.billing.view')->name('billings.index');
     Route::get('/billings/{billing}', [BillingController::class, 'show'])->middleware('permission:cgo.billing.view,billing')->name('billings.show');
 

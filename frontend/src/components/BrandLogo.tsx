@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useI18n } from '../i18n';
 
 /**
  * The OptiNexus logo in its own container. The image fills the container (`object-fit: contain`), so it follows the container's
@@ -8,6 +9,7 @@ import { Link } from 'react-router-dom';
 const SRC_SET = [320, 640, 960, 1207].map((w) => `/brand/optinexus-logo-${w}.png ${w}w`).join(', ');
 
 export function BrandLogo({ to, variant = 'sidebar' }: { to?: string; variant?: 'sidebar' | 'login' }) {
+  const { t } = useI18n();
   const image = (
     <img
       src="/brand/optinexus-logo-640.png"
@@ -21,7 +23,7 @@ export function BrandLogo({ to, variant = 'sidebar' }: { to?: string; variant?: 
   );
   const className = `brand-logo brand-logo-${variant}`;
   return to ? (
-    <Link to={to} className={className} aria-label="OptiNexus, go to the dashboard">
+    <Link to={to} className={className} aria-label={t('shell.brandHome')}>
       {image}
     </Link>
   ) : (

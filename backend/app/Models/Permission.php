@@ -9,11 +9,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 #[Fillable([
-    'application_id', 'capability_id', 'permission_key', 'name', 'description', 'status',
+    'application_id', 'capability_id', 'permission_key', 'name', 'description', 'status', 'delegable',
 ])]
 class Permission extends Model
 {
     use HasFactory, HasUuidPrimaryKey;
+
+    /**
+     * Gate to the ecosystem portal and the ecosystem admin API (audit R07/A24). Only a global (SYSTEM) role can carry it:
+     * tenant users and tenant administrators never hold it, whatever their tenant-scoped roles contain.
+     */
+    public const ECOSYSTEM_ACCESS = 'cgo.ecosystem.access';
+
+    /** Records that an operator verified an e-mail address outside the system. Held by the super administrator only by default. */
+    public const EMAIL_VERIFY = 'cgo.user.email.verify';
 
     public const STATUS_ACTIVE = 'ACTIVE';
 
@@ -22,6 +31,11 @@ class Permission extends Model
     public const STATUS_DISABLED = 'DISABLED';
 
     public const STATUSES = [self::STATUS_ACTIVE, self::STATUS_DEPRECATED, self::STATUS_DISABLED];
+
+    protected function casts(): array
+    {
+        return ['delegable' => 'boolean'];
+    }
 
     public function application(): BelongsTo
     {

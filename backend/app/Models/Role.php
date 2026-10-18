@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'tenant_id', 'application_id', 'name', 'code', 'description',
-    'role_type', 'is_system', 'status',
+    'role_type', 'is_system', 'origin', 'created_by', 'status',
 ])]
 class Role extends Model
 {
@@ -24,6 +24,9 @@ class Role extends Model
     public const TYPE_TENANT = 'TENANT';
 
     public const TYPES = [self::TYPE_SYSTEM, self::TYPE_APPLICATION, self::TYPE_TENANT];
+
+    /** Created through the tenant delegation API (R08); an operator-created role has no origin. */
+    public const ORIGIN_DELEGATION = 'DELEGATION';
 
     public const STATUS_ACTIVE = 'ACTIVE';
 

@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\PolicyController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('policies')->name('policies.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('policies')->name('policies.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [PolicyController::class, 'index'])->middleware('permission:cgo.policy.view')->name('index');
     Route::post('/', [PolicyController::class, 'store'])->middleware('permission:cgo.policy.create')->name('store');
     Route::post('/simulate', [PolicyController::class, 'simulate'])->middleware('permission:cgo.policy.simulate')->name('simulate');

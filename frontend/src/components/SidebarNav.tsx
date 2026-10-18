@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import { matchPath, NavLink, useLocation } from 'react-router-dom';
+import { useI18n } from '../i18n';
 import { NAV_GROUPS } from '../navigation/menu';
 
 const STORAGE_KEY = 'optinexus.sidebar.collapsed';
@@ -35,6 +36,7 @@ function Chevron() {
  * The group that holds the current page is always opened when you arrive on it, so the active link is never hidden.
  */
 export function SidebarNav() {
+  const { t } = useI18n();
   const { pathname } = useLocation();
   const idBase = useId();
   const headed = NAV_GROUPS.flatMap((g) => (g.label ? [g.label] : []));
@@ -65,14 +67,14 @@ export function SidebarNav() {
   const allCollapsed = headed.every((g) => collapsed.has(g));
 
   return (
-    <nav aria-label="Main menu" className="nav">
+    <nav aria-label={t('shell.mainMenu')} className="nav">
       <button type="button" className="nav-toggle-all" onClick={() => setCollapsed(allCollapsed ? new Set() : new Set(headed))}>
-        {allCollapsed ? 'Expand all' : 'Collapse all'}
+        {allCollapsed ? t('shell.expandAll') : t('shell.collapseAll')}
       </button>
       {NAV_GROUPS.map((group, index) => {
         const links = group.items.map((item) => (
           <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-            {item.label}
+            {t(item.labelKey)}
           </NavLink>
         ));
         if (!group.label) return <div key={`section-${index}`} className="nav-section">{links}</div>;
@@ -90,7 +92,7 @@ export function SidebarNav() {
                 aria-controls={panel}
                 onClick={() => toggle(label)}
               >
-                <span>{label}</span>
+                <span>{group.labelKey ? t(group.labelKey) : label}</span>
                 <Chevron />
               </button>
             </div>

@@ -21,6 +21,7 @@ use App\Services\AuditService;
 use App\Services\AuthorizationService;
 use App\Services\Oidc\SessionRevocationService;
 use App\Services\PrivilegeEscalationGuard;
+use App\Services\Seats\SeatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -33,6 +34,7 @@ class UserController extends Controller
         private readonly AuthorizationService $authorization,
         private readonly PrivilegeEscalationGuard $escalationGuard,
         private readonly SessionRevocationService $revocation,
+        private readonly SeatService $seats,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -83,15 +85,28 @@ class UserController extends Controller
     public function update(UpdateUserRequest $request, User $user): JsonResponse
     {
         $old = $user->only(['name', 'email']);
+        $wasVerified = $user->email_verified_at !== null;
         $user->update($request->validated());
 
         $this->audit->record('user.updated', $request, resourceType: 'User', resourceId: $user->id, oldValue: $old, newValue: $user->only(['name', 'email']));
+
+        // A verified address belongs to that address: the model drops the verification when the e-mail changes, and it is recorded here.
+        if ($wasVerified && $user->email_verified_at === null) {
+            $this->audit->record('user.email_verification_revoked', $request, resourceType: 'User', resourceId: $user->id,
+                oldValue: ['email' => $old['email']], newValue: ['email' => $user->email],
+                metadata: ['reason' => 'email_changed', 'reverification' => 'required']);
+        }
 
         return $this->ok(new UserResource($user));
     }
 
     public function activate(Request $request, User $user): JsonResponse
     {
+        // An account in the first Admin Tenant flow becomes active only when its e-mail was verified AND its holder chose a password.
+        if ($user->isInManagedActivation()) {
+            return $this->fail('ACTIVATION_NOT_COMPLETE', 'This account activates itself when its e-mail address is verified and its holder has chosen a password. It cannot be activated by hand.', 409, ['state' => $user->activationState()]);
+        }
+
         return $this->transitionTo($request, $user, User::STATUS_ACTIVE, [User::STATUS_INVITED, User::STATUS_SUSPENDED]);
     }
 
@@ -162,13 +177,8 @@ class UserController extends Controller
             return $this->fail('TENANT_ACCESS_DENIED', 'The user must have an active membership in this tenant before receiving application access.', 422);
         }
 
-        $access = UserApplicationAccess::query()->firstOrCreate(
-            ['user_id' => $user->id, 'tenant_id' => $validated['tenant_id'], 'application_id' => $application->id],
-            ['status' => UserApplicationAccess::STATUS_ACTIVE],
-        );
-        if (! $access->wasRecentlyCreated) {
-            $access->update(['status' => UserApplicationAccess::STATUS_ACTIVE]);
-        }
+        // Operators obey the seat limit like every other path (no bypass); a refusal is a SeatException the API answers with its code.
+        $this->seats->grantAccess(Tenant::query()->findOrFail($validated['tenant_id']), $application, $user);
 
         $this->audit->record('user.application_access_granted', $request, resourceType: 'User', resourceId: $user->id, newValue: ['application_id' => $application->id, 'tenant_id' => $validated['tenant_id']], tenantId: $validated['tenant_id'], applicationId: $application->id);
 

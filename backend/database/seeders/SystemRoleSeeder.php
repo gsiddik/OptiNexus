@@ -20,8 +20,8 @@ class SystemRoleSeeder extends Seeder
         ],
         'PLATFORM_ADMIN' => [
             'name' => 'Platform Administrator',
-            'description' => 'Platform-wide administrative access, excluding service-account credential management.',
-            'permissions' => ['*', '!cgo.service_account.manage'],
+            'description' => 'Platform-wide administrative access, excluding service-account credential management and manual e-mail verification.',
+            'permissions' => ['*', '!cgo.service_account.manage', '!'.Permission::EMAIL_VERIFY],
         ],
         'CUSTOMER_ADMIN' => [
             'name' => 'Customer Administrator',
@@ -79,7 +79,7 @@ class SystemRoleSeeder extends Seeder
 
             $keys = $this->resolvePermissionKeys($definition['permissions'], $all);
 
-            $permissionIds = Permission::query()->whereIn('permission_key', $keys)->pluck('id');
+            $permissionIds = Permission::query()->whereIn('permission_key', [...$keys, Permission::ECOSYSTEM_ACCESS])->pluck('id');
 
             $sync = [];
             foreach ($permissionIds as $id) {

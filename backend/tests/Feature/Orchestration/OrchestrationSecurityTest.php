@@ -2,12 +2,18 @@
 
 namespace Tests\Feature\Orchestration;
 
+use App\Models\ApprovalDefinition;
 use App\Models\FeatureFlag;
+use App\Models\ServiceAccount;
 use App\Models\User;
+use App\Services\Approval\ApprovalService;
 use App\Services\Integration\SsrfProtectedException;
 use App\Services\Integration\SsrfSafeHttpClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Passport\ClientRepository;
+use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\Concerns\CreatesGovernanceFixtures;
 use Tests\Concerns\CreatesOrchestrationFixtures;
 use Tests\TestCase;
@@ -35,8 +41,17 @@ class OrchestrationSecurityTest extends TestCase
         ];
     }
 
+    /**
+     * The only check that resolves a real public name. Needs working DNS: where there is none (an offline sandbox) it is skipped, never passed;
+     * the deterministic equivalents are in SsrfSafeHttpClientTest. Run it on a host with DNS: `php artisan test --group=network`.
+     */
+    #[Group('network')]
     public function test_ssrf_client_allows_a_public_host(): void
     {
+        if (gethostbyname('example.com') === 'example.com') {
+            $this->markTestSkipped('NOT_RUN: this host cannot resolve public DNS names; run `php artisan test --group=network` where DNS works.');
+        }
+
         [$host, $port, $ip] = app(SsrfSafeHttpClient::class)->validateUrl('https://example.com/webhook');
         $this->assertSame('example.com', $host);
         $this->assertSame(443, $port);
@@ -72,7 +87,7 @@ class OrchestrationSecurityTest extends TestCase
         // approval service's own approver-resolution logic even runs,
         // demonstrating tenant isolation at two independent layers.
         $roleInTenantB = $this->makeTenantRole($tenantB, ['cgo.approval.approve'], ['code' => 'B-APPROVER']);
-        $approverInB = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+        $approverInB = $this->makeOperatorWith();
         $this->attachUserToTenant($approverInB, $tenantB, $roleInTenantB);
 
         $definitionId = $this->postJson('/api/v1/approval-definitions', [
@@ -82,10 +97,10 @@ class OrchestrationSecurityTest extends TestCase
         ])->json('data.id');
         $this->putJson("/api/v1/approval-definitions/{$definitionId}", ['status' => 'ACTIVE']);
 
-        $definition = \App\Models\ApprovalDefinition::find($definitionId);
-        [$request] = app(\App\Services\Approval\ApprovalService::class)->createRequest($definition, [], tenantId: $tenantA->id);
+        $definition = ApprovalDefinition::find($definitionId);
+        [$request] = app(ApprovalService::class)->createRequest($definition, [], tenantId: $tenantA->id);
 
-        \Laravel\Sanctum\Sanctum::actingAs($approverInB);
+        Sanctum::actingAs($approverInB);
         $this->postJson("/api/v1/approval-requests/{$request->id}/approve")
             ->assertStatus(403)
             ->assertJsonPath('error.code', 'TENANT_ACCESS_DENIED');
@@ -132,10 +147,10 @@ class OrchestrationSecurityTest extends TestCase
         // Holds cgo.workflow.execute, but scoped only to tenant B - must
         // not be able to execute tenant A's workflow via the same route.
         $roleInB = $this->makeTenantRole($tenantB, ['cgo.workflow.execute'], ['code' => 'WF-EXECUTOR-B']);
-        $userInB = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+        $userInB = $this->makeOperatorWith();
         $this->attachUserToTenant($userInB, $tenantB, $roleInB);
 
-        \Laravel\Sanctum\Sanctum::actingAs($userInB);
+        Sanctum::actingAs($userInB);
         $this->postJson("/api/v1/workflows/{$id}/execute")
             ->assertStatus(403)
             ->assertJsonPath('error.code', 'TENANT_ACCESS_DENIED');
@@ -143,8 +158,8 @@ class OrchestrationSecurityTest extends TestCase
 
     private function issueServiceAccountTokenLike(array $scopes): string
     {
-        $client = app(\Laravel\Passport\ClientRepository::class)->createClientCredentialsGrantClient('test-access-'.uniqid());
-        \App\Models\ServiceAccount::create(['oauth_client_id' => $client->id, 'name' => 'test-access', 'status' => 'ACTIVE']);
+        $client = app(ClientRepository::class)->createClientCredentialsGrantClient('test-access-'.uniqid());
+        ServiceAccount::create(['oauth_client_id' => $client->id, 'name' => 'test-access', 'status' => 'ACTIVE']);
 
         return $this->postJson('/api/v1/oauth/token', [
             'grant_type' => 'client_credentials', 'client_id' => $client->id, 'client_secret' => $client->plainSecret,

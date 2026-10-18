@@ -1,3 +1,5 @@
+import { hasMessage, useI18n } from '../i18n';
+
 const TONE_BY_STATUS: Record<string, string> = {
   ACTIVE: 'success',
   PUBLISHED: 'success',
@@ -34,7 +36,14 @@ const TONE_BY_STATUS: Record<string, string> = {
   ROTATED: 'neutral',
 };
 
-export function StatusBadge({ status }: { status: string }) {
-  const tone = TONE_BY_STATUS[status] ?? 'neutral';
-  return <span className={`badge badge-${tone}`}>{status}</span>;
+export function StatusBadge({ status, tone: forcedTone }: { status: string; tone?: 'success' | 'warning' | 'danger' | 'info' | 'neutral' }) {
+  const { translate } = useI18n();
+  const tone = forcedTone ?? TONE_BY_STATUS[status] ?? 'neutral';
+  const key = `status.${status}`;
+  return <span className={`badge badge-${tone}`}>{hasMessage(key) ? translate(key) : status}</span>;
+}
+
+/** A badge with its own text (already translated) and tone, for facts that are not a record status. */
+export function Badge({ tone, children, title }: { tone: 'success' | 'warning' | 'danger' | 'info' | 'neutral'; children: string; title?: string }) {
+  return <span className={`badge badge-${tone}`} title={title}>{children}</span>;
 }

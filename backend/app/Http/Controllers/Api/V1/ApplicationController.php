@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Api\V1\Concerns\ApiResponses;
 use App\Http\Controllers\Api\V1\Concerns\HandlesLifecycleTransitions;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\V1\ImportManifestRequest;
 use App\Http\Requests\V1\StoreApplicationRequest;
 use App\Http\Requests\V1\UpdateApplicationRequest;
 use App\Http\Resources\V1\ApplicationResource;
@@ -12,6 +13,7 @@ use App\Http\Resources\V1\CapabilityResource;
 use App\Http\Resources\V1\PermissionResource;
 use App\Models\Application;
 use App\Services\AuditService;
+use App\Services\Manifest\ManifestImportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -19,7 +21,10 @@ class ApplicationController extends Controller
 {
     use ApiResponses, HandlesLifecycleTransitions;
 
-    public function __construct(private readonly AuditService $audit) {}
+    public function __construct(
+        private readonly AuditService $audit,
+        private readonly ManifestImportService $manifests,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -57,7 +62,13 @@ class ApplicationController extends Controller
     public function update(UpdateApplicationRequest $request, Application $application): JsonResponse
     {
         $old = $application->toArray();
-        $application->update($request->validated());
+        $data = $request->validated();
+        // The manifest block (the product's declared contract, among it the seat limit key) is written only by the manifest import: a general
+        // edit of the metadata must not wipe it, or a seat-controlled product would silently become unlimited.
+        if (array_key_exists('metadata', $data) && isset($application->metadata['manifest'])) {
+            $data['metadata'] = [...($data['metadata'] ?? []), 'manifest' => $application->metadata['manifest']];
+        }
+        $application->update($data);
 
         $this->audit->record('application.updated', $request, resourceType: 'Application', resourceId: $application->id, oldValue: $old, newValue: $application->toArray(), applicationId: $application->id);
 
@@ -127,5 +138,25 @@ class ApplicationController extends Controller
         );
 
         return $this->ok(new ApplicationResource($application));
+    }
+
+    /**
+     * Additive import of the catalog a product publishes (capabilities, permissions, the delegable flag). `dry_run` reports
+     * what would change and changes nothing. See ManifestImportService for the rules.
+     */
+    public function importManifest(ImportManifestRequest $request, Application $application): JsonResponse
+    {
+        $data = $request->validated();
+
+        $summary = $this->manifests->import(
+            $application,
+            $data,
+            dryRun: (bool) ($data['dry_run'] ?? false),
+            allowDelegableWidening: (bool) ($data['allow_delegable_widening'] ?? false),
+            actor: $request->user(),
+            request: $request,
+        );
+
+        return $this->ok($summary);
     }
 }

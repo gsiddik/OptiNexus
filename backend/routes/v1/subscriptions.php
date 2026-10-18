@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('subscriptions')->name('subscriptions.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('subscriptions')->name('subscriptions.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [SubscriptionController::class, 'index'])->middleware('permission:cgo.subscription.view')->name('index');
     Route::post('/', [SubscriptionController::class, 'store'])->middleware('permission:cgo.subscription.create,tenant_id')->name('store');
     Route::get('/{subscription}', [SubscriptionController::class, 'show'])->middleware('permission:cgo.subscription.view,subscription')->name('show');

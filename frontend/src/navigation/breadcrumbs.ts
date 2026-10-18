@@ -1,10 +1,11 @@
 import { generatePath, matchPath } from 'react-router-dom';
+import type { MessageKey } from '../i18n';
 import { NAV_GROUPS } from './menu';
 
 /** One step of the breadcrumb trail. Without `to` it is plain text (the current page, or a menu group that has no page of its own). */
-export type Crumb = { label: string; to?: string };
+export type Crumb = { label: string; labelKey?: MessageKey; to?: string };
 
-type Meta = { label: string; group?: string; parent?: string };
+type Meta = { label: string; labelKey?: MessageKey; group?: string; groupKey?: MessageKey; parent?: string };
 
 const HOME = '/';
 const HOME_LABEL = 'Dashboard';
@@ -13,7 +14,7 @@ const META: Record<string, Meta> = {};
 
 // List pages come straight from the sidebar menu, so a menu entry always has a breadcrumb.
 for (const group of NAV_GROUPS) {
-  for (const item of group.items) META[item.to] = { label: item.label, group: group.label ?? undefined };
+  for (const item of group.items) META[item.to] = { label: item.label, labelKey: item.labelKey, group: group.label ?? undefined, groupKey: group.labelKey };
 }
 
 /** Pages that open one record of a list (`/:id`). */
@@ -22,16 +23,21 @@ const DETAIL_OF = [
   '/policies', '/workflows', '/workflow-instances', '/approval-definitions', '/approval-requests', '/integrations', '/event-catalog', '/feature-flags',
   '/notification-templates', '/notification-rules', '/notifications',
 ];
-for (const list of DETAIL_OF) META[`${list}/:id`] = { label: 'Details', parent: list };
+for (const list of DETAIL_OF) META[`${list}/:id`] = { label: 'Details', labelKey: 'nav.details', parent: list };
 
 // The entitlements page names its tenant parameter differently from the tenant detail page; this alias is a parent only.
-META['/tenants/:tenantId'] = { label: 'Details', parent: '/tenants' };
-META['/tenants/:tenantId/entitlements'] = { label: 'Entitlements', parent: '/tenants/:tenantId' };
+META['/tenants/:tenantId'] = { label: 'Details', labelKey: 'nav.details', parent: '/tenants' };
+META['/tenants/:tenantId/entitlements'] = { label: 'Entitlements', labelKey: 'nav.entitlements', parent: '/tenants/:tenantId' };
+// Per-tenant screens, reached from the tenant page or from the menu's tenant picker. The onboarding report links to the first two.
+META['/tenants/:tenantId/onboarding'] = { label: 'Onboarding', labelKey: 'nav.onboarding', parent: '/tenants/:tenantId' };
+META['/tenants/:tenantId/applications'] = { label: 'Applications', labelKey: 'nav.applications', parent: '/tenants/:tenantId' };
+META['/tenants/:tenantId/admins'] = { label: 'Admins', labelKey: 'nav.admins', parent: '/tenants/:tenantId' };
+META['/tenants/:tenantId/gateway'] = { label: 'Vehicle Mapping', labelKey: 'nav.gateway', parent: '/tenants/:tenantId' };
 
 /** Route patterns that have breadcrumb metadata but are not routes themselves. */
 export const PARENT_ONLY_PATTERNS = ['/tenants/:tenantId'];
 
-/** Every pattern that has breadcrumb metadata (a test keeps this in step with the routes in App.tsx). */
+/** Every pattern that has breadcrumb metadata (a test keeps this in step with the routes in routes.tsx). */
 export const BREADCRUMB_PATTERNS = Object.keys(META);
 
 const isDynamic = (pattern: string) => /\/:[^/]+$/.test(pattern);
@@ -53,21 +59,23 @@ function resolvePattern(pathname: string): { pattern: string; params: Record<str
  */
 export function buildTrail(pathname: string, headings: Record<string, string> = {}): Crumb[] {
   const resolved = resolvePattern(pathname);
-  if (!resolved) return [{ label: HOME_LABEL, to: HOME }, { label: 'Page not found' }];
+  if (!resolved) return [{ label: HOME_LABEL, labelKey: 'nav.dashboard', to: HOME }, { label: 'Page not found', labelKey: 'nav.notFound' }];
 
   const chain: string[] = [];
   for (let pattern: string | undefined = resolved.pattern; pattern; pattern = META[pattern].parent) chain.unshift(pattern);
 
   const trail: Crumb[] = [];
-  if (chain[0] !== HOME) trail.push({ label: HOME_LABEL, to: HOME });
-  const group = META[chain[0]].group;
-  if (group) trail.push({ label: group });
+  if (chain[0] !== HOME) trail.push({ label: HOME_LABEL, labelKey: 'nav.dashboard', to: HOME });
+  const first = META[chain[0]];
+  if (first.group) trail.push({ label: first.group, labelKey: first.groupKey });
   for (const pattern of chain) {
     const to = generatePath(pattern, resolved.params);
-    trail.push({ label: (isDynamic(pattern) ? headings[to] : undefined) ?? META[pattern].label, to });
+    const heading = isDynamic(pattern) ? headings[to] : undefined;
+    // A record's own title (its page heading) is data, not a translatable label.
+    trail.push(heading ? { label: heading, to } : { label: META[pattern].label, labelKey: META[pattern].labelKey, to });
   }
   const last = trail[trail.length - 1];
-  trail[trail.length - 1] = { label: last.label };
+  trail[trail.length - 1] = { label: last.label, labelKey: last.labelKey };
   return trail;
 }
 

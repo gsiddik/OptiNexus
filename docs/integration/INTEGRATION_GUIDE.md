@@ -153,6 +153,13 @@ an admin links it (`PUT /api/v1/gateway/tenants/{tenant}/vehicle-links/{link}`).
 ## 4. Other OptiNexus services you can use
 
 * `POST /api/v1/authorization/check`, `/entitlements/check`, `/access/evaluate` - server-side permission and module checks.
+* `POST /api/v1/authorization/effective-permissions` (`authorization.check`) - everything one user holds in one tenant for
+  your application, in a single request (use it instead of one `/authorization/check` per catalog permission). Your
+  application is the one your service account is bound to, so bind it (`application_id` on the service account);
+  an unbound account is refused. Reuse an answer for at most `ttl_seconds` (300), never after it, and never fall back to
+  "allowed" when OptiNexus cannot be reached.
+* Machine requests are limited per OAuth client (`M2M_RATE_PER_MINUTE`, default 600; bulk scopes have their own ceiling
+  in `config/m2m.php`), not per source address. On `429` wait `Retry-After` seconds before retrying.
 * `POST /api/v1/events` (`event.write`) - publish business events to the catalog for workflows and notifications.
   An application may only send the event keys registered to it (`optifleet.*` from the OptiFleet service account,
   `optiradar.*` from OptiRadar's). Any other key is refused with `403 EVENT_SOURCE_DENIED`, before anything about

@@ -1,8 +1,9 @@
 @extends('oidc.layout')
-@section('title', 'Choose organization')
+@section('title', __('oidc.tenant.title'))
+@section('language', '1')
 @section('content')
-    <h1>Choose an organization</h1>
-    <p class="lead">You have access to {{ $applicationName }} in more than one organization.</p>
+    <h1>{{ __('oidc.tenant.heading') }}</h1>
+    <p class="lead">{{ __('oidc.tenant.lead', ['application' => $applicationName]) }}</p>
     <form method="POST" action="{{ route('oidc.tenant.select') }}">
         @csrf
         @foreach ($tenants as $tenant)

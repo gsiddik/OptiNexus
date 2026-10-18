@@ -18,6 +18,7 @@ class ServiceAccountResource extends JsonResource
             'tenant_id' => $this->tenant_id,
             'client_id' => $this->oauth_client_id,
             'status' => $this->status,
+            'allowed_scopes' => $this->allowed_scopes,
             'last_used_at' => $this->last_used_at,
             'created_at' => $this->created_at,
         ];

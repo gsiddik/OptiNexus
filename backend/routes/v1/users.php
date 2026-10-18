@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('users')->name('users.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('users')->name('users.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [UserController::class, 'index'])->middleware('permission:cgo.user.view')->name('index');
     Route::post('/', [UserController::class, 'store'])->middleware('permission:cgo.user.create')->name('store');
     Route::get('/{user}', [UserController::class, 'show'])->middleware('permission:cgo.user.view')->name('show');

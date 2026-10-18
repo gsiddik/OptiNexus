@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\ProductController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('products')->name('products.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('products')->name('products.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [ProductController::class, 'index'])->middleware('permission:cgo.product.view')->name('index');
     Route::post('/', [ProductController::class, 'store'])->middleware('permission:cgo.product.create')->name('store');
     Route::get('/{product}', [ProductController::class, 'show'])->middleware('permission:cgo.product.view')->name('show');

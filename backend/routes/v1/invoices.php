@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\InvoiceController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/invoices', [InvoiceController::class, 'index'])->middleware('permission:cgo.invoice.view')->name('invoices.index');
     Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->middleware('permission:cgo.invoice.view,invoice')->name('invoices.show');
 

@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\TenantController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('tenants')->name('tenants.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('tenants')->name('tenants.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [TenantController::class, 'index'])->middleware('permission:cgo.tenant.view')->name('index');
     Route::post('/', [TenantController::class, 'store'])->middleware('permission:cgo.tenant.create')->name('store');
     Route::get('/{tenant}', [TenantController::class, 'show'])->middleware('permission:cgo.tenant.view,tenant')->name('show');
@@ -19,6 +19,8 @@ Route::prefix('tenants')->name('tenants.')->middleware('auth:sanctum')->group(fu
     Route::get('/{tenant}/applications', [TenantController::class, 'applications'])->middleware('permission:cgo.tenant.view,tenant')->name('applications.index');
     Route::post('/{tenant}/applications/{application}', [TenantController::class, 'attachApplication'])->middleware('permission:cgo.tenant.application.assign,tenant')->name('applications.attach');
     Route::delete('/{tenant}/applications/{application}', [TenantController::class, 'detachApplication'])->middleware('permission:cgo.tenant.application.assign,tenant')->name('applications.detach');
+
+    Route::get('/{tenant}/seats', [TenantController::class, 'seats'])->middleware('permission:cgo.tenant.view,tenant')->name('seats');
 
     Route::get('/{tenant}/admins', [TenantController::class, 'admins'])->middleware('permission:cgo.tenant.view,tenant')->name('admins.index');
     Route::post('/{tenant}/admins/{user}', [TenantController::class, 'addAdmin'])->middleware('permission:cgo.tenant.admin.assign,tenant')->name('admins.attach');

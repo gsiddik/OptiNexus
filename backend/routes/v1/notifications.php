@@ -5,7 +5,7 @@ use App\Http\Controllers\Api\V1\NotificationRuleController;
 use App\Http\Controllers\Api\V1\NotificationTemplateController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::prefix('notification-templates')->name('notification-templates.')->group(function () {
         Route::get('/', [NotificationTemplateController::class, 'index'])->middleware('permission:cgo.notification.template.manage')->name('index');
         Route::post('/', [NotificationTemplateController::class, 'store'])->middleware('permission:cgo.notification.template.manage')->name('store');

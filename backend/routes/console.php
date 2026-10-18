@@ -18,3 +18,8 @@ Schedule::command('gateway:sync-optiradar')
 Schedule::command('oidc:reconcile-access')
     ->everyMinute()
     ->withoutOverlapping();
+
+// Invitations whose link ran out are stamped EXPIRED (and audited) once an hour.
+Schedule::command('invitations:expire')
+    ->hourly()
+    ->withoutOverlapping();

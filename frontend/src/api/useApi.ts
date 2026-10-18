@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { unwrapError, type ApiEnvelope } from './client';
+import { describeError, unwrapError, type ApiEnvelope, type ApiRequestError } from './client';
 import type { Pagination } from './types';
 
 export function useApiList<T>(fetcher: (page: number) => Promise<ApiEnvelope<T[]>>, deps: unknown[] = []) {
@@ -7,7 +7,7 @@ export function useApiList<T>(fetcher: (page: number) => Promise<ApiEnvelope<T[]
   const [meta, setMeta] = useState<Pagination | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorInfo, setErrorInfo] = useState<ApiRequestError | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
   const reload = useCallback(() => setReloadToken((t) => t + 1), []);
@@ -15,7 +15,7 @@ export function useApiList<T>(fetcher: (page: number) => Promise<ApiEnvelope<T[]
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setError(null);
+    setErrorInfo(null);
     fetcher(page)
       .then((envelope) => {
         if (cancelled) return;
@@ -24,7 +24,7 @@ export function useApiList<T>(fetcher: (page: number) => Promise<ApiEnvelope<T[]
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(unwrapError(err).message);
+        setErrorInfo(unwrapError(err));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -40,13 +40,13 @@ export function useApiList<T>(fetcher: (page: number) => Promise<ApiEnvelope<T[]
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
-  return { rows, meta, page, setPage, loading, error, reload };
+  return { rows, meta, page, setPage, loading, error: errorInfo ? describeError(errorInfo) : null, errorInfo, reload };
 }
 
 export function useApiResource<T>(fetcher: () => Promise<T>, deps: unknown[] = []) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorInfo, setErrorInfo] = useState<ApiRequestError | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
   const reload = useCallback(() => setReloadToken((t) => t + 1), []);
@@ -54,13 +54,13 @@ export function useApiResource<T>(fetcher: () => Promise<T>, deps: unknown[] = [
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setError(null);
+    setErrorInfo(null);
     fetcher()
       .then((result) => {
         if (!cancelled) setData(result);
       })
       .catch((err) => {
-        if (!cancelled) setError(unwrapError(err).message);
+        if (!cancelled) setErrorInfo(unwrapError(err));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -71,5 +71,5 @@ export function useApiResource<T>(fetcher: () => Promise<T>, deps: unknown[] = [
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadToken, ...deps]);
 
-  return { data, loading, error, reload, setData };
+  return { data, loading, error: errorInfo ? describeError(errorInfo) : null, errorInfo, reload, setData };
 }

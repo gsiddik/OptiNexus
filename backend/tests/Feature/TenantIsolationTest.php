@@ -13,7 +13,7 @@ class TenantIsolationTest extends TestCase
 {
     use CreatesGovernanceFixtures, RefreshDatabase;
 
-    public function test_tenant_scoped_admin_cannot_read_a_different_tenant(): void
+    public function test_a_tenant_scoped_role_cannot_read_a_different_tenant(): void
     {
         $this->seedGovernanceBaseline();
 
@@ -22,7 +22,8 @@ class TenantIsolationTest extends TestCase
 
         $role = $this->makeTenantRole($tenantA, ['cgo.tenant.view', 'cgo.tenant.update']);
 
-        $user = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+        // The caller is a platform operator (ecosystem gate) whose only permission is the tenant-scoped role above.
+        $user = $this->makeOperatorWith();
         $this->attachUserToTenant($user, $tenantA, $role, isTenantAdmin: true);
 
         Sanctum::actingAs($user);
@@ -60,7 +61,7 @@ class TenantIsolationTest extends TestCase
         $tenant = $this->makeTenant();
         $role = $this->makeTenantRole($tenant, ['cgo.tenant.view']);
 
-        $user = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+        $user = $this->makeOperatorWith();
         $this->attachUserToTenant($user, $tenant, $role);
         $user->tenantMemberships()->where('tenant_id', $tenant->id)->update(['status' => 'SUSPENDED']);
 

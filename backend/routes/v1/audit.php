@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\AuditLogController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('audit-logs')->name('audit-logs.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('audit-logs')->name('audit-logs.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [AuditLogController::class, 'index'])->middleware('permission:cgo.audit.view')->name('index');
     Route::get('/{auditLog}', [AuditLogController::class, 'show'])->middleware('permission:cgo.audit.view')->name('show');
 });

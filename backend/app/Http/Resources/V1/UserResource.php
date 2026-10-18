@@ -18,6 +18,8 @@ class UserResource extends JsonResource
             'status' => $this->status,
             'mfa_enabled' => $this->mfa_enabled,
             'email_verified_at' => $this->email_verified_at,
+            'email_verification_method' => $this->email_verification_method,
+            'activation_state' => $this->activationState(),
             'last_login_at' => $this->last_login_at,
             'metadata' => $this->metadata,
             'created_at' => $this->created_at,

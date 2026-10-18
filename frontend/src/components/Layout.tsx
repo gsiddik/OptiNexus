@@ -1,14 +1,20 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
+import { useI18n } from '../i18n';
 import { buildTrail, parentOf } from '../navigation/breadcrumbs';
 import { BrandLogo } from './BrandLogo';
+import { ErrorBoundary } from './ErrorBoundary';
+import { LanguageSwitcher } from './LanguageSwitcher';
+import { LoadingSpinner } from './LoadingSpinner';
 import { BackButton, Breadcrumbs } from './PageNav';
 import { SidebarNav } from './SidebarNav';
+import { OfflineBanner } from './StateViews';
 
 /** Sidebar, top bar, breadcrumb and Back around every page. Used as a layout route, so it stays mounted while you move between pages. */
 export function Layout() {
   const { context, activeTenantId, setActiveTenantId, logout } = useAuth();
+  const { t } = useI18n();
   const location = useLocation();
   const navigate = useNavigate();
   const navigationType = useNavigationType();
@@ -47,8 +53,8 @@ export function Layout() {
 
   return (
     <div className="app-shell">
-      <a className="skip-link" href="#main">Skip to content</a>
-      <aside className={`sidebar${menuOpen ? ' open' : ''}`} id="sidebar" aria-label="Sidebar">
+      <a className="skip-link" href="#main">{t('shell.skip')}</a>
+      <aside className={`sidebar${menuOpen ? ' open' : ''}`} id="sidebar" aria-label={t('shell.sidebar')}>
         <BrandLogo to="/" />
         <SidebarNav />
       </aside>
@@ -58,7 +64,7 @@ export function Layout() {
           <button
             type="button"
             className="btn btn-ghost menu-btn"
-            aria-label="Open menu"
+            aria-label={t('shell.openMenu')}
             aria-expanded={menuOpen}
             aria-controls="sidebar"
             onClick={() => setOpenAt(menuOpen ? null : location.pathname)}
@@ -68,13 +74,13 @@ export function Layout() {
             </svg>
           </button>
           <div className="tenant-switcher">
-            <label htmlFor="tenant-select">Tenant:</label>
+            <label htmlFor="tenant-select">{t('shell.scope')}</label>
             <select
               id="tenant-select"
               value={activeTenantId ?? ''}
               onChange={(e) => setActiveTenantId(e.target.value || null)}
             >
-              <option value="">Global (platform scope)</option>
+              <option value="">{t('shell.scopeGlobal')}</option>
               {context?.available_tenants.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name} ({t.tenant_code})
@@ -83,16 +89,23 @@ export function Layout() {
             </select>
           </div>
           <div className="user-menu">
-            <span>{context?.user.name}</span>
-            <button className="btn btn-ghost" onClick={logout}>Log out</button>
+            <LanguageSwitcher />
+            <span className="user-name">{context?.user.name}</span>
+            <button className="btn btn-ghost" onClick={logout}>{t('shell.logout')}</button>
           </div>
         </header>
+        <OfflineBanner />
         <main className="content" id="main" ref={mainRef}>
           <div className="page-nav">
             {goBack && <BackButton onBack={goBack} />}
             <Breadcrumbs trail={trail} />
           </div>
-          <Outlet />
+          {/* A page that fails to load or to render is contained here: the menu, top bar and Log out keep working. */}
+          <ErrorBoundary scope="route" resetKey={location.pathname}>
+            <Suspense fallback={<LoadingSpinner />}>
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
     </div>

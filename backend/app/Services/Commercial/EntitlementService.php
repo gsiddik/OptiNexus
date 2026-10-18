@@ -112,9 +112,12 @@ class EntitlementService
     }
 
     /**
-     * @return Collection<int, array{entitlement_key:string, entitlement_type:string, value:mixed, source:string}>
+     * The entitlement rows in force right now (active, inside their window) for a tenant, narrowed to one application's own rows plus
+     * the tenant-wide ones. The raw material of effectiveEntitlements(); also what a caller needs to tell a missing value from an invalid one.
+     *
+     * @return Collection<int, Entitlement>
      */
-    public function effectiveEntitlements(Tenant $tenant, ?string $applicationCode = null): Collection
+    public function effectiveRows(Tenant $tenant, ?string $applicationCode = null): Collection
     {
         $applicationId = $applicationCode ? Application::query()->where('application_code', $applicationCode)->value('id') : null;
 
@@ -126,7 +129,15 @@ class EntitlementService
             $query->where(fn ($q) => $q->where('application_id', $applicationId)->orWhereNull('application_id'));
         }
 
-        $rows = $query->get();
+        return $query->get();
+    }
+
+    /**
+     * @return Collection<int, array{entitlement_key:string, entitlement_type:string, value:mixed, source:string}>
+     */
+    public function effectiveEntitlements(Tenant $tenant, ?string $applicationCode = null): Collection
+    {
+        $rows = $this->effectiveRows($tenant, $applicationCode);
 
         $groups = $rows->groupBy(fn (Entitlement $e) => $e->entitlement_type.':'.$e->entitlement_key);
 

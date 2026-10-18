@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Api\V1\Concerns\ApiResponses;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\StoreServiceAccountRequest;
+use App\Http\Requests\V1\UpdateServiceAccountScopesRequest;
 use App\Http\Resources\V1\ServiceAccountResource;
 use App\Models\ServiceAccount;
 use App\Services\AuditService;
@@ -52,6 +53,7 @@ class ServiceAccountController extends Controller
             'name' => $data['name'],
             'application_id' => $data['application_id'] ?? null,
             'tenant_id' => $data['tenant_id'] ?? null,
+            'allowed_scopes' => $data['allowed_scopes'] ?? null,
             'oauth_client_id' => $client->id,
             'status' => ServiceAccount::STATUS_ACTIVE,
             'created_by' => $request->user()?->id,
@@ -69,6 +71,17 @@ class ServiceAccountController extends Controller
 
     public function show(ServiceAccount $serviceAccount): JsonResponse
     {
+        return $this->ok(new ServiceAccountResource($serviceAccount));
+    }
+
+    /** Replaces the scope allow-list of an account (narrowing or widening is an operator decision and is audited). */
+    public function updateScopes(UpdateServiceAccountScopesRequest $request, ServiceAccount $serviceAccount): JsonResponse
+    {
+        $before = $serviceAccount->allowed_scopes;
+        $serviceAccount->update(['allowed_scopes' => array_values($request->validated()['allowed_scopes'])]);
+
+        $this->audit->record('service_account.scopes_updated', $request, resourceType: 'ServiceAccount', resourceId: $serviceAccount->id, oldValue: ['allowed_scopes' => $before], newValue: ['allowed_scopes' => $serviceAccount->allowed_scopes], applicationId: $serviceAccount->application_id, tenantId: $serviceAccount->tenant_id);
+
         return $this->ok(new ServiceAccountResource($serviceAccount));
     }
 

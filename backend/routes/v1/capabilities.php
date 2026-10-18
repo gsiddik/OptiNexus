@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\CapabilityController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('capabilities')->name('capabilities.')->middleware('auth:sanctum')->group(function () {
+Route::prefix('capabilities')->name('capabilities.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/{capability}', [CapabilityController::class, 'show'])->middleware('permission:cgo.capability.view')->name('show');
     Route::put('/{capability}', [CapabilityController::class, 'update'])->middleware('permission:cgo.capability.update')->name('update');
     Route::delete('/{capability}', [CapabilityController::class, 'destroy'])->middleware('permission:cgo.capability.delete')->name('destroy');

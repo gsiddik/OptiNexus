@@ -105,6 +105,63 @@ export interface User {
   metadata: Record<string, unknown> | null;
 }
 
+/** Where an account created by an operator (first Admin Tenant) stands. `null` for accounts that never went through that flow. */
+export type ActivationState = 'PASSWORD_CHANGE_REQUIRED' | 'CREDENTIAL_EXPIRED' | 'EMAIL_VERIFICATION_PENDING' | 'ACTIVATED';
+
+export interface AdminActivation {
+  managed: boolean;
+  state: ActivationState | null;
+  created_at: string | null;
+  email: {
+    verified: boolean;
+    verified_at: string | null;
+    method: 'INVITATION' | 'OPERATOR_MANUAL' | null;
+    verified_by: { id: string; name: string } | null;
+  };
+  password: {
+    change_required: boolean;
+    issued_at: string | null;
+    expires_at: string | null;
+    expired: boolean;
+    locked_seconds: number;
+    changed_at: string | null;
+  };
+  activated_at: string | null;
+  next_steps: Array<'verify_email' | 'reissue_credential' | 'hand_over_credential'>;
+}
+
+export interface AdminAccount {
+  user: { id: string; name: string; email: string; status: User['status']; created_at: string | null };
+  membership: { status: string | null; is_tenant_admin: boolean };
+  applications: Array<{ id: string; code: string; name: string }>;
+  roles: Array<{ id: string; code: string; name: string }>;
+  activation: AdminActivation;
+}
+
+/** The temporary password as the API returns it exactly once (on create and on reissue); never part of a list or a later read. */
+export interface TemporaryCredential {
+  password: string;
+  expires_at: string | null;
+  shown_once: boolean;
+}
+
+export type AdminAccountCreated = AdminAccount & {
+  /** `created` for a new identity, `linked` for an existing one (which never gets a credential). */
+  outcome: 'created' | 'linked';
+  temporary_credential: TemporaryCredential | null;
+};
+
+export type AdminAccountReissued = AdminAccount & { temporary_credential: TemporaryCredential | null };
+
+export interface AdminAccountCreate {
+  user_id?: string;
+  confirm_email?: string;
+  name?: string;
+  email?: string;
+  application_ids: string[];
+  role_ids?: string[];
+}
+
 export interface EffectivePermission {
   permission_key: string;
   scope: 'GLOBAL' | 'CUSTOMER' | 'TENANT' | 'APPLICATION' | 'OWN';
@@ -415,4 +472,127 @@ export interface Notification {
 export interface AccessEvaluation {
   allowed: boolean; checks: { entitlement: boolean; permission: boolean; policy: boolean; feature_flag: boolean };
   reason_code: string | null;
+}
+
+// ------------------------------------------------------- SSO (OpenID Connect)
+
+export interface OidcClient {
+  id: string;
+  application_id: string;
+  client_id: string;
+  name: string;
+  confidential: boolean;
+  redirect_uris: string[];
+  post_logout_redirect_uris: string[];
+  launch_url: string | null;
+  backchannel_logout_uri: string | null;
+  require_pkce: boolean;
+  status: 'ACTIVE' | 'REVOKED';
+  created_at: string;
+}
+
+/** What the create call accepts. `confidential` and `application_id` are fixed once the client exists. */
+export interface OidcClientCreate {
+  application_id: string;
+  name: string;
+  confidential: boolean;
+  require_pkce: boolean;
+  redirect_uris: string[];
+  post_logout_redirect_uris: string[];
+  launch_url: string | null;
+  backchannel_logout_uri: string | null;
+}
+
+export type OidcClientUpdate = Omit<OidcClientCreate, 'application_id' | 'confidential'>;
+
+// ------------------------------------------------------- Gateway (vehicle / device mapping)
+
+export type GatewayLinkStatus = 'ACTIVE' | 'UNMATCHED' | 'INACTIVE';
+
+export interface GatewayLink {
+  id: string;
+  telematics_source: string;
+  device_ref: string;
+  device_name: string | null;
+  device_registration: string | null;
+  link_type: 'AUTO' | 'MANUAL';
+  status: GatewayLinkStatus;
+  fleet_vehicle_id: string | null;
+  fleet_vehicle: { external_vehicle_id: string; registration_number: string } | null;
+}
+
+export interface GatewayVehicle {
+  id: string;
+  tenant_id?: string;
+  application_id?: string;
+  external_vehicle_id: string;
+  registration_number: string;
+  normalized_registration: string;
+  vin: string | null;
+  status: string;
+}
+
+export interface GatewayRequestLog {
+  id: string;
+  tenant_id?: string | null;
+  application_id: string | null;
+  service_account_id: string | null;
+  method: string;
+  path: string;
+  status_code: number;
+  duration_ms: number | null;
+  correlation_id: string | null;
+  created_at: string;
+}
+
+// ------------------------------------------------------- Ecosystem onboarding report
+
+export type OnboardingStatus = 'OK' | 'MISSING' | 'WARN';
+
+export interface OnboardingCheck {
+  key: string;
+  /** Application code the check belongs to; null for a tenant-level check. */
+  application: string | null;
+  status: OnboardingStatus;
+  /** Stable code of the finding; the portal owns the (bilingual) wording. */
+  message_code: string;
+  detail?: { count?: number } | null;
+  action?: { label_key: string; route: string } | null;
+}
+
+export interface OnboardingApplication {
+  code: string;
+  name: string;
+  subscribed: boolean;
+  oidc_client: { status: string; pkce_required: boolean; redirect_uris: number } | null;
+  service_account: { present: boolean; last_used_at: string | null };
+  manifest: { revision: string | null; synced_at: string | null };
+  users_with_access: number;
+  tenant_admins: number;
+}
+
+export interface OnboardingReport {
+  tenant: { id: string; code: string; name: string; status: string };
+  ready: boolean;
+  checks: OnboardingCheck[];
+  applications: OnboardingApplication[];
+}
+
+/** Seats of one application in one tenant, as OptiNexus counts them (GET /tenants/{id}/seats). Available is never negative; over-limit is separate. */
+export type SeatState = 'NOT_CONTROLLED' | 'LIMITED' | 'UNLIMITED' | 'ENTITLEMENT_MISSING' | 'ENTITLEMENT_INVALID' | 'ENTITLEMENT_UNAVAILABLE';
+
+export interface SeatStatus {
+  application_code: string;
+  controlled: boolean;
+  state: SeatState;
+  limit: number | null;
+  unlimited: boolean;
+  used: number;
+  reserved: number;
+  available: number | null;
+  over_limit: boolean;
+  over_by: number;
+  can_add: boolean;
+  blocked_reason: string | null;
+  limit_source: string | null;
 }

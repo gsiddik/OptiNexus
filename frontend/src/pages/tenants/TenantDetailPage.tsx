@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { applicationsApi, tenantsApi } from '../../api/endpoints';
 import { useApiResource } from '../../api/useApi';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
@@ -8,13 +8,21 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { LifecycleActions } from '../../components/LifecycleActions';
 import { useAuth } from '../../auth/useAuth';
 import { unwrapError } from '../../api/client';
+import { useI18n } from '../../i18n';
 import type { Application, Tenant, User } from '../../api/types';
+import { TenantAdminAccounts } from './TenantAdminAccounts';
+import { TenantSeats } from './TenantSeats';
 
-export function TenantDetailPage() {
-  const { id } = useParams<{ id: string }>();
+type Tab = 'details' | 'applications' | 'admins';
+
+export function TenantDetailPage({ initialTab = 'details' }: { initialTab?: Tab }) {
+  // The onboarding report links to /tenants/:tenantId/applications and /admins, which open this page on that tab.
+  const params = useParams<{ id: string; tenantId: string }>();
+  const id = params.id ?? params.tenantId;
   const { hasPermission } = useAuth();
+  const { t } = useI18n();
   const { data: tenant, loading, error, reload } = useApiResource<Tenant>(() => tenantsApi.get(id!), [id]);
-  const [tab, setTab] = useState<'details' | 'applications' | 'admins'>('details');
+  const [tab, setTab] = useState<Tab>(initialTab);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <ErrorAlert message={error} />;
@@ -41,6 +49,11 @@ export function TenantDetailPage() {
         ]}
       />
 
+      <div className="toolbar">
+        <Link className="btn btn-secondary btn-sm tab-link" to={`/tenants/${tenant.id}/onboarding`}>{t('nav.onboarding')}</Link>
+        <Link className="btn btn-secondary btn-sm tab-link" to={`/tenants/${tenant.id}/gateway`}>{t('nav.gateway')}</Link>
+      </div>
+
       <div className="tabs">
         <button className={tab === 'details' ? 'tab active' : 'tab'} onClick={() => setTab('details')}>Details</button>
         <button className={tab === 'applications' ? 'tab active' : 'tab'} onClick={() => setTab('applications')}>Applications</button>
@@ -58,7 +71,12 @@ export function TenantDetailPage() {
           </dl>
         </div>
       )}
-      {tab === 'applications' && <TenantApplications tenant={tenant} />}
+      {tab === 'applications' && (
+        <>
+          <TenantApplications tenant={tenant} />
+          <TenantSeats tenant={tenant} />
+        </>
+      )}
       {tab === 'admins' && <TenantAdmins tenant={tenant} />}
     </div>
   );
@@ -143,8 +161,12 @@ function TenantAdmins({ tenant }: { tenant: Tenant }) {
     }
   }
 
-  if (loading) return <LoadingSpinner />;
+  // Only the first load replaces the tab: a reload (after the panel above changed something) must not unmount it, or a temporary
+  // password it is showing would vanish before the operator could copy it.
+  if (loading && !admins) return <LoadingSpinner />;
   return (
+    <>
+    <TenantAdminAccounts tenant={tenant} onChanged={reload} />
     <div className="card">
       <ErrorAlert message={error ?? actionError} />
       <div className="toolbar">
@@ -161,5 +183,10 @@ function TenantAdmins({ tenant }: { tenant: Tenant }) {
         {!admins?.length && <span className="muted">No tenant admins yet.</span>}
       </ul>
     </div>
+    </>
   );
 }
+
+/** Opened by the onboarding report ("assign an application", "assign access"). */
+export const TenantApplicationsPage = () => <TenantDetailPage initialTab="applications" />;
+export const TenantAdminsPage = () => <TenantDetailPage initialTab="admins" />;

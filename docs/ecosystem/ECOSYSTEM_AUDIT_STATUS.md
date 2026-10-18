@@ -1,23 +1,26 @@
 # Ecosystem audit fixes: checkpoint
 
 Single source of status for A01-A29 / R01-R08 (matrix: `TRACEABILITY.md`; owner decisions: `DECISION_PACKAGE.md`; legacy installs:
-`LEGACY_MIGRATION_PLAN.md`). Product repos keep their own `docs/status/ECOSYSTEM_AUDIT_STATUS.md` for detail. Updated 2026-10-18 (batch 7, onboarding by invitation).
+`LEGACY_MIGRATION_PLAN.md`). Product repos keep their own `docs/status/ECOSYSTEM_AUDIT_STATUS.md` for detail. Updated 2026-10-18 (batch 8, first Admin Tenant without e-mail).
 Pushed does not mean tested: see section 4. Hard limits: no merge, no push to main, no force-push, no change to operational data.
 
 **Overall status (ecosystem): PARTIALLY_COMPLETE.** Not READY because (1) Radar and everything depending on it is deferred by the owner's decision of
 2026-10-17 (A10, R02, Radar live checks), (2) live runs cover only the flows listed in sections 5 and 5b; Radar, product-switcher round trip, Fleet-side
 delegation beyond invitations and Entry-side invitations were not run live, (3) Windows Podman and Alpine image builds could not run here, (4) business
-decisions are open (`DECISION_PACKAGE.md`), (5) the first Admin Tenant of a tenant still has no e-mail verification path (section 5b, gap 1).
+decisions are open (`DECISION_PACKAGE.md`), (5) seat policy, financial treatment and the default of direct user creation are still open owner decisions (the first-Admin-Tenant gap of batch 7 is closed by batch 8, section 5c).
 Live-test coverage was limited on purpose by the owner's decisions (2026-10-17, 2026-10-18).
 
 **Batch 7 status (onboarding by invitation, 2026-10-18): IMPLEMENTATION_COMPLETE; scoped live check PASSED (section 5b); two gaps reported, none silently decided.**
 This is a batch status, not ecosystem readiness.
 
+**Batch 8 status (first Admin Tenant without e-mail, owner decision 2026-10-18 06:29Z): IMPLEMENTATION_COMPLETE; scoped live check PASSED (section 5c).** Nexus only (Fleet and Entry
+needed no change: Fleet keeps its verified-e-mail check). Ecosystem status stays PARTIALLY_COMPLETE.
+
 ## 1. Repositories (branch `claude/project-thread-0cf20u` in all five)
 
 | Repo | main baseline | HEAD (pushed) | Commits ahead | Working tree |
 |---|---|---|---|---|
-| OptiNexus | b4e77c7 | see `git log` (last code change 741552f; later commits are docs) | 24 | clean |
+| OptiNexus | b4e77c7 | see `git log` (last code change b25b747; later commits are docs) | 28 | clean |
 | OptiFleet-v2 | 47b766d | bf86a23 (b9886e5 = previous checkpoint) | 19 | clean |
 | OptiAccounting (OptiEntry) | 20ee792 | b3855c2 (98d5932 = previous checkpoint) | 16 | clean |
 | optiradar | 06d6ae5 | cb9905f | 7 | clean; paused |
@@ -27,7 +30,7 @@ Draft pull requests (never merged by me): OptiNexus, OptiFleet-v2, OptiAccountin
 
 ## 2. Contracts and compatible SHA set
 
-Set S3 (current): N code 741552f (docs after), F@bf86a23, E@b3855c2, R@cb9905f, W@915903c. Set S2 (previous checkpoint, historical): N 4eda307, F@b9886e5, E@98d5932. Merge order for the three PRs: OptiNexus first
+Set S4 (current): N code b25b747 (docs after), F@bf86a23, E@b3855c2, R@cb9905f, W@915903c (batch 8 changed Nexus only, so F and E stay). Set S3 (previous): N 741552f. Set S2 (historical): N 4eda307, F@b9886e5, E@98d5932. Merge order for the three PRs: OptiNexus first
 (provider of every contract), then OptiFleet-v2 and OptiAccounting (independent of each other; the feed needs both).
 
 | Contract | Provider | Consumers | Notes |
@@ -38,6 +41,7 @@ Set S3 (current): N code 741552f (docs after), F@bf86a23, E@b3855c2, R@cb9905f, 
 | Financial feed `GET /integration/accounting-feed` (`high_water`, `pairing{nexus_tenant_id}`, `review.required`) | F@72b4541, e262d3d | E@6215ec7 and the E4 commits (pairing check, quarantine hold) | pair F >= 72b4541 with E >= the E4 commits |
 | Manifest v2 + import (`manifest_version` is the **string** `"2.0"`; `application` block for `--create-application`) | N@f0cf948 | E@98d5932, F@2b43df8 (both fixed after the live import refused them) | additive; delegable widening needs `--allow-delegable-widening` |
 | OIDC (code + PKCE required) | N existing | E, F, R | `require_pkce` always on |
+| First Admin Tenant by an operator, no e-mail: `/ecosystem/tenants/{id}/admin-accounts` (+ `/email-verification`, `/temporary-credential`) and the Nexus pages `/oidc/activate` (`GOVERNANCE_CONTRACTS.md` 2c) | N@b25b747 | operator console only; products unchanged (Fleet reads `email_verified` as before) | additive migration `2026_10_18_200001/200002`; new permission `cgo.user.email.verify` (PLATFORM_SUPERADMIN only) |
 | Invitations `/delegation/tenants/{id}/invitations` (+ resend, revoke) and the Nexus acceptance pages (`GOVERNANCE_CONTRACTS.md` 2b) | N@c8aeb52, 741552f | F@bf86a23, E@b3855c2 | additive; `POST /users` deprecated, still works; pair F >= bf86a23 and E >= b3855c2 with N >= c8aeb52 |
 
 Contract changes since the brief, with evidence: `entitled_capabilities` and the scope allow-list (Fleet gaps #1/#3, additive); manifest
@@ -47,7 +51,7 @@ fixes above (found by the live import 2026-10-17: Entry sent the integer 2, Flee
 
 Batch 6 (Fleet -> Entry feed, A01/A17-A22/A27/A28/A26 OA6 screens): implementation done and pushed; validated by unit, fake and
 real-database tests and by the one live flow (section 5). Batch 7 (onboarding by invitation, owner decision 2026-10-18): implemented in the three repositories, validated by unit, fake, real-database and
-scoped live evidence (section 5b). Backlog (not started, one batch at a time): A12 route matrix + smoke for F/E/R, A15 for E/F,
+scoped live evidence (section 5b). Batch 8 (first Admin Tenant without e-mail, owner decision 2026-10-18 06:29Z): Nexus backend, operator console and activation pages, validated by real-database tests, vitest and a scoped live check (section 5c). Backlog (not started, one batch at a time): A12 route matrix + smoke for F/E/R, A15 for E/F,
 A14 server-side match state, `provision` command in `ecosystem.ps1`. Deferred by owner: Radar and A10.
 
 ## 4. Validation log (executed in this session)
@@ -73,7 +77,10 @@ A14 server-side match state, `provision` command in `ecosystem.ps1`. Deferred by
 | Batch 7, Entry consumer against the repo's faked Nexus: `tests/Feature/Optinexus` 253, Security + Rename 16, vitest 1222, `tsc -b`, `oxlint`, build; screenshots at 1440/820/390 with a mocked API | PASS (worker report, spot-checked: branch clean and in sync) | E@b3855c2 |
 | Batch 7, the repositories' own CI on the new heads (historical rows above stay as evidence for b9886e5 / 98d5932 only) | PASS: Fleet PR #36 backend (full PHPUnit, PostgreSQL + MongoDB) and frontend green on bf86a23 (run 39096168646); Entry PR #10 backend and frontend green on b3855c2 (run 39096230224). OptiNexus has no CI | F@bf86a23, E@b3855c2 |
 | Batch 7, live on real Nexus + real Fleet with a local mail sink | PASS for the steps in section 5b | N@741552f, F@bf86a23 |
-| Sandbox compose stacks (Ubuntu php-fpm substitute images): Nexus, Fleet, Entry bootstrap, healthy, additive migrations applied | PASS | N, F, E heads above |
+| Batch 8, Nexus focused (real PostgreSQL): `TenantAdminBootstrapApiTest` 28, `AccountActivationFlowTest` 19 (browser-level OIDC sign-in, activation pages, EN/ID), `ManagedActivationDoorsTest` 2, `ActivationConcurrencyTest` 2 (6 parallel processes; exactly one wins) | PASS: 51 passed (526 assertions) | N working tree before b25b747 |
+| Batch 8, Nexus full backend (`php artisan test`, clean tree, sandbox stopped) | PASS except the existing sandbox-DNS failure: 450 passed, 1 failed (`OrchestrationSecurityTest` SSRF, "integration host could not be resolved"; same failure on the baseline), 3307 assertions, 212 s | N@b25b747 |
+| Batch 8, Nexus frontend: `tsc -b`, `oxlint` (one existing warning in `useApi.ts`), `vitest` 196 (11 new for the panel, one of them for the bug found live), `vite build`; screenshots at 1440/820/390 in EN and ID against the real stack (section 5c) | PASS | N@b25b747 |
+| Sandbox compose stacks (Ubuntu php-fpm substitute images): Nexus, Fleet, Entry bootstrap, healthy, additive migrations applied (batch 8: the two new migrations ran on the existing sandbox database) | PASS | N, F, E heads above |
 
 ## 5. The one live flow (executed 2026-10-18, sandbox, real services)
 
@@ -131,14 +138,44 @@ The Fleet tenant and master data come from the same fixture script as in section
 Screenshots (sandbox data only): project files `audit/onboarding-screenshots/` (real Chromium against the real stack, and the workers' mocked-API screens, labelled).
 
 **Gaps reported (not decided here):**
-1. First Admin Tenant of a tenant: an operator-created user has no way to verify its e-mail, so it cannot sign in to Fleet (verified e-mail required)
-   without a database edit. Delegated onboarding is covered; this operator path is not. Suggested follow-up (needs the owner): an operator action that
-   sends the Admin Tenant an invitation of the same kind. `DECISION_PACKAGE.md` item 3 is approved for delegated onboarding only.
+1. **Closed by batch 8 (section 5c, `DECISION_PACKAGE.md` item 10).** First Admin Tenant of a tenant: an operator-created user had no way to verify its e-mail, so it could not sign in to Fleet
+   (verified e-mail required) without a database edit. The owner chose an operator-side manual verification instead of an operator-side invitation e-mail.
 2. Seat limit (`user_limit`): not enforced by Nexus (invitations or `POST /users`) or Fleet. Entry pre-checks seats at invite time with its own existing rule.
    The policy stays open (`DECISION_PACKAGE.md` item 4); nothing was set silently.
 3. Not run live: Entry consumer, Fleet screens other than the invitation path, existing-identity linking by password, mail-transport failure (unit and real-database
    tests only); switcher round trip, Fleet delegation beyond invitations, Radar (out of scope by instruction).
 4. Compatibility: `POST /users` (with `initial_password`) still works and is deprecated by header; switching it off by default is an owner decision.
+
+## 5c. Batch 8 live check: first Admin Tenant without e-mail (executed 2026-10-18, sandbox, real Nexus + real Fleet)
+
+Scope as authorized by the owner and nothing more: operator creates a new Admin Tenant in the Nexus console; verifies the e-mail in the console without a database edit; the Admin Tenant signs in
+through Fleet, replaces the temporary password on Nexus, and enters Fleet through OIDC code + PKCE; that Admin Tenant sends ONE next-user invitation to the local mail sink. Sandbox: the existing
+throwaway databases (the two new migrations ran on them), compose stacks of Nexus and Fleet with the working copy mounted (N code b25b747, F@bf86a23), local SMTP sink, `*.test` addresses, a fresh tenant
+(`acme4`) created through the operator API as a fixture and its Fleet tenant switched to CENTRAL with the repository's command. Evidence kinds are kept apart: **browser** = real Chromium against the real stack,
+**API** = HTTP script, **DB** = read-only `pg_dump` piped to a counter (nothing stored), **unit** = test suites (sections 4).
+
+| Step | Kind | Result |
+|---|---|---|
+| Operator signs in to the console, opens tenant > Admins, creates "Acme Empat Owner" (new account, Fleet, a Fleet role). Nexus shows the temporary password once (23 characters, groups of five) in a dialog that asks before closing an uncopied password | browser | PASS; no password field exists in the form or the request |
+| Operator records the manual e-mail verification: a wrong address and a 5-character reason are refused in the form; then the right address and a reason are accepted | browser | PASS; row shows "E-mail verified, password change required", "Verified manually by <operator>" |
+| Admin Tenant opens the Fleet login, "Sign in with OptiNexus" (authorize request: `response_type=code`, `code_challenge_method=S256`, `state`), enters the temporary password on the Nexus sign-in page | browser | PASS: sent to `/oidc/activate` on Nexus; the product is not opened |
+| Activation page: mismatching repeat refused (stays on the page); then a new password is saved. The page also renders in Indonesian | browser | PASS |
+| After saving, the browser returns to Fleet (`/app/dashboard`) with an empty query string; callback carries `code`, `state`, `iss` only; no browser request URL contains either password | browser | PASS |
+| The operator list shows the account `ACTIVATED`, e-mail `OPERATOR_MANUAL` verified by the operator, password changed; no credential field anywhere in the list answer | API | PASS |
+| Admin Tenant at the Nexus operator portal with the new password: `403 ECOSYSTEM_ACCESS_REQUIRED`, no token; with the used temporary password: 401 | API | PASS |
+| OIDC sign-in with the used temporary password goes back to the sign-in page; with the new password it continues to Fleet's callback | API | PASS |
+| That Admin Tenant sends one invitation from the Fleet console (Users > Invite user); Fleet answers 201, the Invitations tab lists it PENDING, the mail reaches the sink | browser + API | PASS: 1 mail in the sink, to `staff@acme4.test` only |
+| No e-mail for create, reissue, verify, sign-in, password change and activation: the sink held 0 mails until the invitation | API (sink count) | PASS; also asserted by tests with `Mail::fake()`, `Notification::fake()`, `Queue::fake()` |
+| Audit trail: `tenant_admin.bootstrap_created`, `user.temporary_password_reissued`, `user.email_verified_manually` (operator id, time, verified address, reason in metadata), `activation.started`, `activation.password_changed`, `activation.completed`, `sso.login` | API (audit read) | PASS; no password value in any entry |
+| Passwords (display form, canonical form, new password) searched in the logs of Nexus api, web, worker, scheduler and Fleet api, web, worker, and in full dumps of both databases | logs + DB | PASS: 0 occurrences everywhere |
+
+**Found by the live run, fixed, covered by a regression test:** after "Create account" the operator console lost the one-time password dialog: the tab reloaded its list, the parent screen replaced the tab with a spinner and
+unmounted the panel and its dialog. The vitest mocks answered instantly, so unit tests had missed it. The password of the first sandbox account (`admin@acme4.test`) was never seen and the account was left pending
+(state "Account created") as a fixture; its dialog loss was the finding. Fix: only the first load of the tab shows the spinner; test `keeps the temporary password on screen while the rest of the tab reloads slowly` fails without it.
+Also corrected after the run: the actions column of the list stays in view on narrow screens (sticky).
+
+NOT_RUN live (covered by tests only): temporary-password expiry, wrong-attempt lock-out, concurrent submissions, reissue, existing-identity linking, e-mail change voiding verification, cross-tenant and privilege-escalation
+denials, a tenant user or Admin Tenant attempting to verify. Screenshots (sandbox data only; the one-time dialog was masked in the page before capture): project files `audit/admin-bootstrap-screenshots/`.
 
 ## 6. Environment blockers (VALIDATION_BLOCKED, design unchanged)
 
@@ -149,10 +186,10 @@ Screenshots (sandbox data only): project files `audit/onboarding-screenshots/` (
   container the `web` container keeps the old upstream address and answers 502 until restarted (nginx resolves it once). Not changed.
 - Sandbox shortcuts (not product behaviour; no production data touched): Entry `APP_ENV=local` so an http `base_url` is accepted (production requires https);
   in the first live flow (section 5) the sandbox admin's e-mail was marked verified by a database write because Nexus had no verification path
-  (historical: batch 7 added one for invited users and needs no such write, section 5b; the operator-created first Admin Tenant still has none); Entry accounting setup (COA template, fiscal year, rule/category defaults, bank account, profile) done through its API.
+  (historical: batch 7 added one for invited users and batch 8 one for the operator-created first Admin Tenant; neither needs such a write, sections 5b and 5c); Entry accounting setup (COA template, fiscal year, rule/category defaults, bank account, profile) done through its API.
 - Wider live coverage (six product combinations, Radar, browser round trips on real services): intentionally NOT_RUN (owner decision).
 
 ## 7. Owner decisions on record
 
-R01-R08 (2026-10-12); FX revaluation not implemented; Radar paused and live-test scope reduced (2026-10-17). 2026-10-18: onboarding of new users is by Nexus invitation link with Nexus e-mail verification (approved for this policy only; the rest of the decision package, including the financial recommendations, is not approved). Open business and policy
+R01-R08 (2026-10-12); FX revaluation not implemented; Radar paused and live-test scope reduced (2026-10-17). 2026-10-18: onboarding of new users is by Nexus invitation link with Nexus e-mail verification (approved for this policy only; the rest of the decision package, including the financial recommendations, is not approved). 2026-10-18 06:29Z: the first Admin Tenant of a tenant is created by an operator and activated without any e-mail: manual out-of-band verification recorded in an audited Nexus action (`cgo.user.email.verify`), one-time temporary password handed over by the operator (approved for this bootstrap only: seat policy, financial treatment, Radar and the direct-user-creation default are NOT decided by it). Open business and policy
 decisions are in one package: `DECISION_PACKAGE.md`.

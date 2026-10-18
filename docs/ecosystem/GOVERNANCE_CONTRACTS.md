@@ -99,6 +99,70 @@ deployment (`410 DIRECT_USER_CREATION_DISABLED`). Users created that way have no
 require one (Fleet). Products should stop calling it; switching the default off is an owner decision (`DECISION_PACKAGE.md`, item 3).
 Seat limits (`user_limit`) are not enforced by invitations or by `POST /users`; the policy is an open owner decision (item 4).
 
+## 2c. First Admin Tenant created by an operator, without e-mail (owner decision 2026-10-18, second batch) - operator API
+
+For the FIRST administrator of a tenant (nobody exists yet to invite them). Not available to products, tenant users or Admin Tenant: the routes sit
+under `/api/v1/ecosystem` (human operator token, `ecosystem` gate of section 1). **No e-mail of any kind is sent by this flow** (no invitation, OTP,
+verification or notification; asserted by a test with `Mail::fake()` and `Queue::fake()`). Later users still come in by invitation (section 2b).
+Nexus owns the identity; the e-mail address is a login/profile attribute, the authoritative identity is the stable central subject (`sub`).
+
+Base `/api/v1/ecosystem/tenants/{tenant}/admin-accounts` (answers use the usual `{success, data}` / `{success:false, error:{code,message,details}}` envelope).
+
+| Method | Path | Permission | Purpose |
+|---|---|---|---|
+| GET | `/` | `cgo.tenant.view` (tenant) | Admin Tenant accounts of the tenant with their activation view (never a credential) |
+| POST | `/` | `cgo.tenant.admin.assign` (tenant); the service also needs `cgo.user.create` (new account), `cgo.user.tenant.assign`, `cgo.user.application.assign`, and `cgo.user.role.assign` when roles are sent | Create a new identity or link an existing one as Admin Tenant, with application access and optional roles. 201 |
+| POST | `/{user}/email-verification` | `cgo.user.email.verify` (own permission, PLATFORM_SUPERADMIN only; not in PLATFORM_ADMIN's `*`) | Record the manual e-mail verification. 200 |
+| POST | `/{user}/temporary-credential` | `cgo.tenant.admin.assign` (tenant) | Issue a new temporary password for an account that has not chosen a password yet. 200 |
+
+`POST /` body: either a **new** account (`name`, `email`) or an **existing** one (`user_id` + `confirm_email`; never both, an existing account is never found by
+e-mail), plus `application_ids[]` (required, subscribed ACTIVE applications of the tenant, never `cgo`) and `role_ids[]?` (TENANT roles of this tenant or APPLICATION roles
+of the selected applications; platform roles are refused). **No password field exists**: Nexus generates the temporary password. The tenant must be usable.
+The privilege-escalation guard applies: the operator can hand over only what they could grant one step at a time in this tenant. Nothing is seeded to widen it.
+
+Response `data`: `user{id,name,email,status,created_at}`, `membership{status,is_tenant_admin}`, `applications[]`, `roles[]`, `activation{managed, state, email{verified,
+verified_at, method, verified_by}, password{change_required, issued_at, expires_at, expired, locked_seconds, changed_at}, activated_at, next_steps[]}`; on create also
+`outcome` (`created`|`linked`) and `temporary_credential{password, expires_at, shown_once:true}`. **`temporary_credential.password` appears only in the answer of the
+create (new identity) and of the reissue; never in a list, a later read, the audit trail, the logs or a frontend store.** These answers carry
+`Cache-Control: no-store, private`. A linked existing identity gets `temporary_credential: null`: its password is not shown, replaced or reset.
+
+`activation.state`: `null` (never in this flow), `PASSWORD_CHANGE_REQUIRED`, `CREDENTIAL_EXPIRED`, `EMAIL_VERIFICATION_PENDING` (password chosen, address not verified yet),
+`ACTIVATED`. The account stays `INVITED` (which every access check already refuses) until BOTH the address is verified AND the holder replaced the temporary password; whichever
+comes last completes the activation (`INVITED` -> `ACTIVE`) in the same transaction under a row lock. `next_steps[]` is a subset of `verify_email`, `reissue_credential`,
+`hand_over_credential`.
+
+`POST /{user}/email-verification` body: `email` (must equal the account's current address, case-insensitive) and `reason` (method and reason of the out-of-band check, 10-500
+characters; no identity documents are collected). Refusals: `SELF_VERIFICATION_DENIED` 403 (operator verifying their own address; audited `user.email_verification_denied`),
+`USER_NOT_IN_TENANT` 404, `ACCOUNT_NOT_ELIGIBLE` 409 (suspended/disabled), `EMAIL_MISMATCH` 422, `EMAIL_ALREADY_VERIFIED` 409, validation 422. It sets `email_verified_at`,
+`email_verification_method = OPERATOR_MANUAL` and `email_verified_by` and audits `user.email_verified_manually` (target user, verified address, operator, time, reason). It never
+changes a password, subject or membership. **A later change of the e-mail address clears the verification** (model hook; audited `user.email_verification_revoked`), so the new
+address needs an explicit re-verification; an invitation sets `email_verification_method = INVITATION`.
+
+`POST /{user}/temporary-credential`: only for an `INVITED` account in this flow that has not chosen a password (`ACTIVATION_NOT_PENDING` 409, `PASSWORD_ALREADY_CHOSEN` 409); the
+previous temporary password stops working at once; audited `user.temporary_password_reissued` (expiry, never the value).
+
+Other refusals of `POST /`: `TENANT_NOT_ACTIVE` 409, `APPLICATION_NOT_SUBSCRIBED` 422, `ROLE_NOT_ASSIGNABLE` 422, `PRIVILEGE_ESCALATION_DENIED` 403, `IDENTITY_CONFLICT` 409 (a
+new-account request whose e-mail exists; nothing is adopted by e-mail), `IDENTITY_NOT_FOUND` 404, `EMAIL_CONFIRMATION_MISMATCH` 422, `IDENTITY_NOT_LINKABLE` 409 (deleted, not
+active, an operator, or still in its own activation), `MEMBERSHIP_NOT_ACTIVE` 409. Audit: `tenant_admin.bootstrap_created|bootstrap_linked`.
+
+**Temporary password.** 20 characters from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` (about 100 bits; shown in groups of five; typed case-insensitively without dashes), stored only as the
+account's normal password hash, single use (replacing it consumes it), expires after `NEXUS_TEMP_PASSWORD_TTL_HOURS` (default 48; an expired one is replaced, never extended),
+at most `NEXUS_TEMP_PASSWORD_MAX_ATTEMPTS` wrong attempts (default 5) per account, then locked for `NEXUS_TEMP_PASSWORD_LOCKOUT_SECONDS` (default 900), plus the per-address
+throttle on the sign-in route (10/min) and on the activation route (10/min). The operator delivers it out of band.
+
+**First sign-in (browser, on Nexus).** The product starts the normal OIDC authorization (code + PKCE S256). `/oidc/login` accepts the temporary password for an account in this
+flow only to open a short **bootstrap session**; it does not authorize the product. The visitor is sent to `/oidc/activate` (EN or ID, `?lang=` or `Accept-Language`; pages are
+`no-store`, no-referrer, not framable), where they set a new password (min 12 characters, not equal to the temporary one). One transaction under a row lock re-checks state,
+expiry, issue time (a reissue cuts the session off) and the temporary password, so of several concurrent submissions exactly one succeeds. On success the temporary
+password is consumed, all sessions of the account (including the bootstrap session) are ended, and: if the address is already verified the account becomes `ACTIVE` and the
+visitor signs in with the NEW password and continues the pending authorization (code + PKCE) to the product; if not, the page says that activation waits for the operator and the
+product is not opened. Wrong/used/expired/locked states are separate pages. The change gives **no Nexus portal access**: the ecosystem gate (section 1) is unchanged for tenant users.
+Doors that would bypass this flow are closed for an account in it: the delegation API (`POST /users`, link-existing) and invitation acceptance refuse it
+(`IDENTITY_NOT_LINKABLE`), and `PUT /users/{id}/activate` answers `409 ACTIVATION_NOT_COMPLETE`.
+
+Fleet still requires `email_verified` in the ID token (no global bypass); it receives the claim from Nexus exactly as before. The onboarding report (`/ecosystem/onboarding`)
+reports a pending Admin Tenant as `tenant_admin_activation_pending`.
+
 ## 3. Product context for switchers (A29) - scope `authorization.check`
 
 `POST /api/v1/authorization/product-context` `{user_id, tenant_id}` -> `{schema_version, user_id, tenant{id,code,name}|null,

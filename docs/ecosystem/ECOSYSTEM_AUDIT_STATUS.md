@@ -1,11 +1,11 @@
 # Ecosystem audit fixes: checkpoint
 
 Single source of status for A01-A29 / R01-R08 (matrix: `TRACEABILITY.md`; owner decisions: `DECISION_PACKAGE.md`; legacy installs:
-`LEGACY_MIGRATION_PLAN.md`). Product repos keep their own `docs/status/ECOSYSTEM_AUDIT_STATUS.md` for detail. Updated 2026-10-17 22:30Z.
+`LEGACY_MIGRATION_PLAN.md`). Product repos keep their own `docs/status/ECOSYSTEM_AUDIT_STATUS.md` for detail. Updated 2026-10-18 02:30Z.
 Pushed does not mean tested: see section 4. Hard limits: no merge, no push to main, no force-push, no change to operational data.
 
 **Overall status: PARTIALLY_COMPLETE.** Not READY because (1) Radar and everything depending on it is deferred by the owner's decision of
-2026-10-17 (A10, R02, Radar live checks), (2) the one live flow ran only up to role composition and is waiting on one decision (section 5),
+2026-10-17 (A10, R02, Radar live checks), (2) the one live flow ran (section 5) but covers only Entry and Fleet; Radar, product-switcher round trip and Fleet-side delegation were not run,
 (3) Windows Podman and Alpine image builds could not run here, (4) business decisions are open (`DECISION_PACKAGE.md`).
 Live-test coverage was limited on purpose by the owner's decision (2026-10-17): one short flow, no extra scenarios.
 
@@ -41,7 +41,7 @@ fixes above (found by the live import 2026-10-17: Entry sent the integer 2, Flee
 ## 3. Batches
 
 Batch 6 (Fleet -> Entry feed, A01/A17-A22/A27/A28/A26 OA6 screens): implementation done and pushed; validated by unit, fake and
-real-database tests; the live flow is the open part. Backlog (not started, one batch at a time): A12 route matrix + smoke for F/E/R, A15 for E/F,
+real-database tests and by the one live flow (section 5). Backlog (not started, one batch at a time): A12 route matrix + smoke for F/E/R, A15 for E/F,
 A14 server-side match state, `provision` command in `ecosystem.ps1`. Deferred by owner: Radar and A10.
 
 ## 4. Validation log (executed in this session)
@@ -59,18 +59,31 @@ A14 server-side match state, `provision` command in `ecosystem.ps1`. Deferred by
 | Radar server: `org.traccar.governance` 178; whole suite 894 passed / 0 failed / 26 skipped / 1 aborted (pre-existing assumption); checkstyle clean; web `npm test` 25, browser 80 checks | PASS (workers' reports of their own runs; Gradle itself NOT_RUN, scratch runner with the same sources) | R@cb9905f, W@915903c |
 | Real Nexus, import of both manifests (`ecosystem:import-manifest --create-application`): Entry 44 capabilities + 136 permissions, Fleet 16 + 259 created | PASS after the two manifest fixes (first attempt refused both) | N@4eda307 |
 | Real Nexus, `ecosystem:register-oidc-client` and `register-service-account` for both products (PKCE, secrets to 0600 files) | PASS | N@4eda307 |
-| Bulk permissions against a real Nexus (136 calls -> 1 request) | PASS (earlier, Entry baseline vs fix) | E baseline + 7bc779d |
+| Bulk permissions against a real Nexus (136 calls -> 1 request) | PASS (earlier, Entry baseline vs fix); again on the live flow: Admin Tenant sign-in to Entry = exactly 1 bulk request | E baseline + 7bc779d; N@656caa8, E@98d5932 |
+| Live flow on real Nexus + Fleet + Entry (section 5) | PASS for the steps listed there | N@656caa8, F@b9886e5, E@98d5932 |
 | Sandbox compose stacks (Ubuntu php-fpm substitute images): Nexus, Fleet, Entry bootstrap, healthy, additive migrations applied | PASS | N, F, E heads above |
 
-## 5. The one live flow: where it stands
+## 5. The one live flow (executed 2026-10-18, sandbox, real services)
 
-Done on real services: stacks up, additive migrations, manifests imported, OIDC clients and service accounts registered, two contract
-bugs found and fixed. **Stopped at**: creating the tenant roles. Nexus answers `403 PRIVILEGE_ESCALATION_DENIED` because the platform
-super admin role only holds a newly imported product's permissions after the bootstrap seeder runs again (documented in
-`MANIFEST_IMPORT.md`, "Order of operations"). Re-running the bootstrap in the sandbox, and an automatic grant at import time, were both
-blocked by the permission checker as privilege grants, so I stopped and asked the owner (decision card). Until answered:
-SSO login of an Admin Tenant, bulk check on the live stack, delegation action and Fleet invoice -> Entry journal are **NOT_RUN**.
-Nothing is faked or inferred from unit tests.
+Real OptiNexus + OptiFleet-v2 + OptiEntry stacks (compose, php-fpm substitute images, throwaway databases; owner allowed re-running the
+Nexus bootstrap in the sandbox). Scope kept short on purpose (owner decision 2026-10-17): no other scenarios.
+
+| Step | Result |
+|---|---|
+| Import both manifests, register OIDC clients and service accounts, bootstrap, tenant + subscription + roles + users + Admin Tenant (Nexus API) | PASS (after the two manifest fixes; users created through the API are INVITED and must be activated) |
+| Admin Tenant SSO sign-in to Entry and to Fleet: OIDC code + PKCE S256, one-time ticket exchange, no token in the URL | PASS; Entry sign-in made exactly 1 bulk effective-permissions request |
+| Delegation: Admin Tenant creates a user from Entry; the user exists in Nexus with an audit entry | PASS |
+| Entry `nexus:check` (clients, service principal, scopes) | PASS, all OK |
+| Fleet tenant LOCAL -> CENTRAL (`optinexus:governance:enable`), pairing ready, feed credential issued | PASS |
+| Real workshop invoice recorded in Fleet through its API (INV-LIVE-0001, 999000.0000 IDR incl. 99000.0000 tax) | PASS |
+| Entry connection to Fleet (create, activate with pairing probe), `integration:pull`, `integration:process`, `integration:health --json` | PASS: 2 events received, `high_water` 2, lag 0, health OK |
+| Entry result: memo event INFORMATIONAL (no journal); invoice event JOURNAL_POSTED -> AP invoice + posted journal, Dr 6900 900000.0000 + Dr 1150 99000.0000, Cr 2110 999000.0000, source link to the Fleet invoice | PASS |
+
+Received is not in the ledger: the first pull ran before the Entry accounting profile existed, so the invoice stayed `NEEDS_REVIEW`
+(`ACCOUNTING_NOT_CONFIGURED`) with `books.IN_LEDGER = 0`; after saving/activating the profile a manual retry (reason required) posted it
+(`books.IN_LEDGER = 1`). A repeated pull returned 0 new events, but only because the pull interval was not due: re-pull idempotency was not
+forced live (covered by tests). **NOT_RUN live:** product-switcher round trip, Fleet-side delegation action, Radar (deferred), Windows Podman.
+Nothing is inferred from unit tests.
 
 ## 6. Environment blockers (VALIDATION_BLOCKED, design unchanged)
 
@@ -79,6 +92,9 @@ Nothing is faked or inferred from unit tests.
 - `pwsh` is not installed here: `ecosystem.ps1` is NOT_RUN end to end.
 - Sandbox: the Docker daemon restarts between turns (`dockerd --data-root /var/lib/docker-opti`); after `compose up -d` recreates an `api`
   container the `web` container keeps the old upstream address and answers 502 until restarted (nginx resolves it once). Not changed.
+- Sandbox shortcuts (not product behaviour; no production data touched): Entry `APP_ENV=local` so an http `base_url` is accepted (production requires https);
+  the sandbox admin's e-mail was marked verified by a database write because Fleet refuses unverified e-mail and Nexus has no verification path
+  (`DECISION_PACKAGE.md` item 3); Entry accounting setup (COA template, fiscal year, rule/category defaults, bank account, profile) done through its API.
 - Wider live coverage (six product combinations, Radar, browser round trips on real services): intentionally NOT_RUN (owner decision).
 
 ## 7. Owner decisions on record

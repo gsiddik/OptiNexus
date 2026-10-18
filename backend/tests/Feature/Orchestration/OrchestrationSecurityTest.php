@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\ClientRepository;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\Concerns\CreatesGovernanceFixtures;
 use Tests\Concerns\CreatesOrchestrationFixtures;
 use Tests\TestCase;
@@ -40,8 +41,17 @@ class OrchestrationSecurityTest extends TestCase
         ];
     }
 
+    /**
+     * The only check that resolves a real public name. Needs working DNS: where there is none (an offline sandbox) it is skipped, never passed;
+     * the deterministic equivalents are in SsrfSafeHttpClientTest. Run it on a host with DNS: `php artisan test --group=network`.
+     */
+    #[Group('network')]
     public function test_ssrf_client_allows_a_public_host(): void
     {
+        if (gethostbyname('example.com') === 'example.com') {
+            $this->markTestSkipped('NOT_RUN: this host cannot resolve public DNS names; run `php artisan test --group=network` where DNS works.');
+        }
+
         [$host, $port, $ip] = app(SsrfSafeHttpClient::class)->validateUrl('https://example.com/webhook');
         $this->assertSame('example.com', $host);
         $this->assertSame(443, $port);

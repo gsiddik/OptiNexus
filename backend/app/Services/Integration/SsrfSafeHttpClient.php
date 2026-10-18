@@ -41,7 +41,7 @@ class SsrfSafeHttpClient
             throw new SsrfProtectedException('localhost is not an allowed integration target.');
         }
 
-        $ip = filter_var($host, FILTER_VALIDATE_IP) ? $host : gethostbyname($host);
+        $ip = filter_var($host, FILTER_VALIDATE_IP) ? $host : $this->resolveHost($host);
         if (! filter_var($ip, FILTER_VALIDATE_IP)) {
             throw new SsrfProtectedException('The integration host could not be resolved.');
         }
@@ -63,6 +63,15 @@ class SsrfSafeHttpClient
             'allow_redirects' => false,
             'curl' => [CURLOPT_RESOLVE => ["{$host}:{$port}:{$ip}"]],
         ])->send($method, $url, $options);
+    }
+
+    /**
+     * The one place a name is turned into an address (IPv4, as gethostbyname does; it returns the name unchanged when it cannot resolve it).
+     * A seam so tests can feed fixed answers instead of the network; production behaviour is unchanged.
+     */
+    protected function resolveHost(string $host): string
+    {
+        return gethostbyname($host);
     }
 
     private function isBlockedIp(string $ip): bool
@@ -88,11 +97,11 @@ class SsrfSafeHttpClient
         }
 
         $first = ord($bin[0]);
-        if (($first & 0xfe) === 0xfc) { // fc00::/7 (unique local)
+        if (($first & 0xFE) === 0xFC) { // fc00::/7 (unique local)
             return true;
         }
 
-        return $first === 0xfe && (ord($bin[1]) & 0xc0) === 0x80; // fe80::/10 (link-local)
+        return $first === 0xFE && (ord($bin[1]) & 0xC0) === 0x80; // fe80::/10 (link-local)
     }
 
     private function ipv4InRange(string $ip, string $range): bool

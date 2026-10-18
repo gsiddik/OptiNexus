@@ -36,10 +36,14 @@ application. Any failure of the acting user answers `403 ACTOR_NOT_TENANT_ADMIN`
 The delegable set is explicit: `permissions.delegable = true` AND status ACTIVE AND (no capability, or the capability is ACTIVE
 and the tenant holds an active CAPABILITY entitlement for it). It is never derived from what the Admin Tenant holds
 personally. Roles created here are APPLICATION roles bound to the tenant and the application (`origin = DELEGATION`).
+The ceiling is enforced when a role is written or assigned; it is not re-applied to roles that already exist. Clearing a permission's `delegable`
+flag, or a capability lapsing, stops new grants at once but does not strip the permission from existing delegated roles (known limit, reviewed
+2026-10-18): a product that must honour a lapsed capability gates on `entitled_capabilities` in the effective-permissions answer.
 
 Refusals: `PERMISSION_NOT_DELEGABLE` (422, with `details.permissions`), `ROLE_NOT_ASSIGNABLE` (422), `ROLE_NOT_EDITABLE` (404),
 `ROLE_IN_USE` (409), `USER_NOT_IN_TENANT` (404), `TENANT_ADMIN_PROTECTED` (409), `IDENTITY_NOT_LINKABLE` (409: operator,
-disabled/suspended/deleted identity), `MEMBERSHIP_NOT_ACTIVE` (409), `SELF_REVOCATION_DENIED` (409), `TENANT_MISMATCH`,
+disabled/suspended/deleted identity), `IDENTITY_NOT_VERIFIED` (409: an identity of another tenant whose e-mail was never verified is not attached
+by e-mail alone; invite it instead), `INVITATION_PENDING` (409: a newer invitation for the e-mail is open), `MEMBERSHIP_NOT_ACTIVE` (409), `SELF_REVOCATION_DENIED` (409), `TENANT_MISMATCH`,
 `SERVICE_ACCOUNT_NOT_BOUND`, `APPLICATION_NOT_DELEGABLE`, `APPLICATION_NOT_SUBSCRIBED`, `TENANT_NOT_ACTIVE`,
 `APPLICATION_NOT_ACTIVE` (403). Not reachable by design: other tenants, other applications, `cgo.*`, ecosystem roles,
 plans/entitlements/subscriptions, the Admin Tenant flag, tenant-wide membership of other products. Every change is audited

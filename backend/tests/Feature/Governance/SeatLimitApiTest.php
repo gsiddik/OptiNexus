@@ -148,7 +148,7 @@ class SeatLimitApiTest extends TestCase
 
     public function test_an_invalid_limit_refuses_additions_and_is_not_read_as_zero_or_unlimited(): void
     {
-        foreach (['abc', '-2', '2.5', ''] as $bad) {
+        foreach (['abc', '-2', '2.5', '', '1e999', ' unlimited', '9999999999'] as $bad) {
             $row = $this->limit($bad);
             $this->assertSame('ENTITLEMENT_INVALID', $this->seats()['state'], "value [{$bad}]");
             $this->invite('a@example.test')->assertStatus(409)->assertJsonPath('error.code', 'SEAT_ENTITLEMENT_INVALID');

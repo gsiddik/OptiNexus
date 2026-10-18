@@ -289,9 +289,10 @@ class SeatService
         }
 
         foreach ($rows as $row) {
-            $raw = trim((string) $row->value);
+            $raw = (string) $row->value;
 
-            if ($raw !== 'unlimited' && ! is_numeric($raw)) {
+            // Only the exact word is unlimited. A number that overflows to INF ("1e999") or is absurdly large is invalid, never unlimited.
+            if ($raw !== 'unlimited' && (! is_numeric($raw) || ! is_finite((float) $raw) || (float) $raw > 2_000_000_000)) {
                 return $this->invalid('non_numeric_value');
             }
         }

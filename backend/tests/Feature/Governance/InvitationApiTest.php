@@ -209,6 +209,16 @@ class InvitationApiTest extends TestCase
         $this->assertTrue(AuditLog::query()->where('action', 'invitation.expired')->exists());
     }
 
+    public function test_resending_an_expired_invitation_while_a_newer_one_is_open_is_a_conflict_not_a_server_error(): void
+    {
+        $old = $this->invite('twice@example.test')->assertCreated()->json('data.id');
+        $this->travel(73)->hours();
+        $new = $this->invite('twice@example.test')->assertCreated()->json('data.id');
+
+        $this->delegate('POST', "/invitations/{$old}/resend")->assertStatus(409)->assertJsonPath('error.code', 'INVITATION_PENDING');
+        $this->assertSame(['EXPIRED', 'PENDING'], [UserInvitation::query()->findOrFail($old)->status, UserInvitation::query()->findOrFail($new)->status]);
+    }
+
     public function test_the_expire_command_stamps_stale_invitations(): void
     {
         $this->invite('cmd@example.test')->assertCreated();

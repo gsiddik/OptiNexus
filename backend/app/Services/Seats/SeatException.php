@@ -5,6 +5,7 @@ namespace App\Services\Seats;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 
@@ -67,7 +68,7 @@ final class SeatException extends RuntimeException
                     'operation' => $this->context['operation'] ?? null,
                     'path' => $this->context['path'] ?? null,
                     'service_account_id' => $request->attributes->get('service_account')?->id,
-                    'acting_user_id' => $request->input('acting_user_id'),
+                    'acting_user_id' => is_string($request->input('acting_user_id')) && Str::isUuid($request->input('acting_user_id')) ? $request->input('acting_user_id') : null, // never an unvalidated value in the audit trail
                 ], fn ($v) => $v !== null));
         } catch (Throwable $e) {
             report($e);

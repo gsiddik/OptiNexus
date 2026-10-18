@@ -325,6 +325,12 @@ class DelegationService
             throw new DelegationException('IDENTITY_NOT_LINKABLE', 'This email belongs to an identity that cannot be added from a product.', 409);
         }
 
+        // An e-mail alone never attaches an identity to a second tenant: someone else may have registered it first and know its password.
+        // An identity this tenant already holds is re-used; any other must have proven its e-mail (invitation, or the operator's check).
+        if ($membership === null && $existing->email_verified_at === null) {
+            throw new DelegationException('IDENTITY_NOT_VERIFIED', 'This email belongs to an identity that has not verified it yet, so it cannot be added by email alone. Send an invitation instead.', 409);
+        }
+
         if ($membership && $membership->status !== TenantMembership::STATUS_ACTIVE) {
             throw new DelegationException('MEMBERSHIP_NOT_ACTIVE', 'The tenant membership of this user was suspended by an operator.', 409);
         }

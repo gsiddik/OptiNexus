@@ -38,6 +38,14 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->throttleApi();
+
+        // Behind the shipped nginx chain (and any TLS edge) every request reaches PHP from a proxy address, so rate limits, audit rows and the
+        // secure-cookie decision see the proxy, not the caller. Name the proxies allowed to set X-Forwarded-* (comma separated; "*" only when PHP
+        // can be reached through them alone). Unset keeps the framework default.
+        $proxies = (string) env('TRUSTED_PROXIES', '');
+        if (trim($proxies) !== '') {
+            $middleware->trustProxies(at: trim($proxies) === '*' ? '*' : array_map('trim', explode(',', $proxies)));
+        }
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

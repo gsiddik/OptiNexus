@@ -239,6 +239,23 @@ class SeatLimitPathsTest extends TestCase
         $send(['entitlement_limit_keys' => ['Bad Key!']])->assertStatus(422);
     }
 
+    public function test_a_general_edit_of_an_application_cannot_wipe_its_seat_contract(): void
+    {
+        $this->actingAsSuperAdmin();
+        $seats = app(SeatService::class);
+        $this->assertTrue($seats->declares($this->entry->refresh()));
+
+        foreach ([['metadata' => []], ['metadata' => null], ['metadata' => ['owner_team' => 'billing']], ['name' => 'Entry Renamed']] as $body) {
+            $this->putJson("/api/v1/applications/{$this->entry->id}", $body)->assertOk();
+            $this->assertTrue($seats->declares($this->entry->refresh()), 'seat contract after '.json_encode($body));
+        }
+        $this->assertSame('billing', $this->entry->metadata['owner_team']);
+
+        // A limit that exists keeps being enforced after the edit (0 seats: the first grant is refused).
+        $this->limit(0);
+        $this->grant($this->person())->assertStatus(409)->assertJsonPath('error.code', 'SEAT_LIMIT_REACHED');
+    }
+
     // ---------------------------------------------------------------- read-only inventory and reconciliation
 
     public function test_the_inventory_reports_seats_and_anomalies_and_changes_nothing(): void

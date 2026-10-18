@@ -328,6 +328,28 @@ class TenantDelegationApiTest extends TestCase
         $this->assertSame($beforeOther, TenantMembership::query()->where('user_id', $traveller->id)->where('tenant_id', $otherTenant->id)->count());
     }
 
+    public function test_an_identity_that_never_proved_its_email_is_not_attached_to_a_second_tenant_by_email_alone(): void
+    {
+        // Another tenant pre-registered the address with a password it knows; nobody has proven the mailbox. Adding it here would hand this
+        // tenant's roles to whoever holds that password.
+        $otherTenant = $this->makeTenant();
+        $squatted = $this->member(tenant: $otherTenant, name: 'Squatted');
+        User::query()->whereKey($squatted->id)->update(['email_verified_at' => null]);
+
+        $this->delegate('POST', '/users', ['email' => $squatted->email, 'name' => 'Squatted', 'role_ids' => []])
+            ->assertStatus(409)->assertJsonPath('error.code', 'IDENTITY_NOT_VERIFIED');
+        $this->assertDatabaseMissing('tenant_memberships', ['user_id' => $squatted->id, 'tenant_id' => $this->tenant->id]);
+        $this->assertDatabaseMissing('user_application_access', ['user_id' => $squatted->id, 'tenant_id' => $this->tenant->id]);
+
+        // Once the mailbox is proven (invitation acceptance or the operator's check) it links as before.
+        User::query()->whereKey($squatted->id)->update(['email_verified_at' => now()]);
+        $this->delegate('POST', '/users', ['email' => $squatted->email, 'name' => 'Squatted'])->assertOk()->assertJsonPath('data.outcome', 'linked');
+
+        // An unverified identity this tenant itself created stays addable here: the same call again is idempotent.
+        $this->delegate('POST', '/users', ['email' => 'own@example.test', 'name' => 'Own', 'initial_password' => 'a-long-initial-secret'])->assertCreated();
+        $this->delegate('POST', '/users', ['email' => 'own@example.test', 'name' => 'Own'])->assertOk()->assertJsonPath('data.outcome', 'existing');
+    }
+
     public function test_identities_that_must_not_be_linked_are_refused(): void
     {
         $operator = $this->makeOperatorWith();

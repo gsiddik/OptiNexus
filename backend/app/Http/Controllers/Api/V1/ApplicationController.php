@@ -62,7 +62,13 @@ class ApplicationController extends Controller
     public function update(UpdateApplicationRequest $request, Application $application): JsonResponse
     {
         $old = $application->toArray();
-        $application->update($request->validated());
+        $data = $request->validated();
+        // The manifest block (the product's declared contract, among it the seat limit key) is written only by the manifest import: a general
+        // edit of the metadata must not wipe it, or a seat-controlled product would silently become unlimited.
+        if (array_key_exists('metadata', $data) && isset($application->metadata['manifest'])) {
+            $data['metadata'] = [...($data['metadata'] ?? []), 'manifest' => $application->metadata['manifest']];
+        }
+        $application->update($data);
 
         $this->audit->record('application.updated', $request, resourceType: 'Application', resourceId: $application->id, oldValue: $old, newValue: $application->toArray(), applicationId: $application->id);
 

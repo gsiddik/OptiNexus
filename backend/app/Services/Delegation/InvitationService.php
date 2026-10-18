@@ -136,44 +136,49 @@ class InvitationService
     {
         $token = $this->newToken();
 
-        $invitation = DB::transaction(function () use ($context, $id, $token): UserInvitation {
-            $this->seats->lock($context->tenant->id, [$context->application->id]);
+        try {
+            $invitation = DB::transaction(function () use ($context, $id, $token): UserInvitation {
+                $this->seats->lock($context->tenant->id, [$context->application->id]);
 
-            $invitation = $this->lockedScoped($context, $id);
+                $invitation = $this->lockedScoped($context, $id);
 
-            if (! in_array($invitation->effectiveStatus(), [UserInvitation::STATUS_PENDING, UserInvitation::STATUS_EXPIRED], true)) {
-                throw $this->notPending($invitation);
-            }
+                if (! in_array($invitation->effectiveStatus(), [UserInvitation::STATUS_PENDING, UserInvitation::STATUS_EXPIRED], true)) {
+                    throw $this->notPending($invitation);
+                }
 
-            if ($invitation->send_count > config('invitations.max_resends')) {
-                throw new DelegationException('INVITATION_RESEND_LIMIT', 'This invitation was already resent the maximum number of times. Revoke it and invite again.', 409);
-            }
+                if ($invitation->send_count > config('invitations.max_resends')) {
+                    throw new DelegationException('INVITATION_RESEND_LIMIT', 'This invitation was already resent the maximum number of times. Revoke it and invite again.', 409);
+                }
 
-            $reference = $invitation->delivery_attempted_at ?? $invitation->last_sent_at ?? $invitation->created_at;
-            $wait = (int) config('invitations.resend_cooldown_seconds') - (now()->getTimestamp() - $reference->getTimestamp());
-            if ($invitation->delivery_status !== UserInvitation::DELIVERY_FAILED && $wait > 0) {
-                throw new DelegationException('INVITATION_RESEND_COOLDOWN', 'Wait a moment before sending this invitation again.', 429, ['retry_after' => $wait]);
-            }
+                $reference = $invitation->delivery_attempted_at ?? $invitation->last_sent_at ?? $invitation->created_at;
+                $wait = (int) config('invitations.resend_cooldown_seconds') - (now()->getTimestamp() - $reference->getTimestamp());
+                if ($invitation->delivery_status !== UserInvitation::DELIVERY_FAILED && $wait > 0) {
+                    throw new DelegationException('INVITATION_RESEND_COOLDOWN', 'Wait a moment before sending this invitation again.', 429, ['retry_after' => $wait]);
+                }
 
-            $this->delegation->resolveAssignableRoles($context, $invitation->role_ids ?? []);
+                $this->delegation->resolveAssignableRoles($context, $invitation->role_ids ?? []);
 
-            // Resending an open invitation reserves nothing new; re-opening an expired one needs a seat again.
-            if ($invitation->effectiveStatus() === UserInvitation::STATUS_EXPIRED) {
-                $this->seats->authorize(SeatOperation::Reserve, $context->tenant, $context->application, $invitation->email);
-            }
+                // Resending an open invitation reserves nothing new; re-opening an expired one needs a seat again.
+                if ($invitation->effectiveStatus() === UserInvitation::STATUS_EXPIRED) {
+                    $this->seats->authorize(SeatOperation::Reserve, $context->tenant, $context->application, $invitation->email);
+                }
 
-            $invitation->forceFill([
-                'token_hash' => UserInvitation::hashToken($token),
-                'status' => UserInvitation::STATUS_PENDING,
-                'invited_by' => $context->actor->id,
-                'expires_at' => now()->addHours(config('invitations.ttl_hours')),
-                'send_count' => $invitation->send_count + 1,
-                'delivery_status' => UserInvitation::DELIVERY_QUEUED,
-                'delivery_error_code' => null,
-            ])->save();
+                $invitation->forceFill([
+                    'token_hash' => UserInvitation::hashToken($token),
+                    'status' => UserInvitation::STATUS_PENDING,
+                    'invited_by' => $context->actor->id,
+                    'expires_at' => now()->addHours(config('invitations.ttl_hours')),
+                    'send_count' => $invitation->send_count + 1,
+                    'delivery_status' => UserInvitation::DELIVERY_QUEUED,
+                    'delivery_error_code' => null,
+                ])->save();
 
-            return $invitation;
-        });
+                return $invitation;
+            });
+        } catch (UniqueConstraintViolationException) {
+            // The expired invitation cannot be re-opened because a newer one for the same e-mail is open: say so instead of failing with a 500.
+            throw new DelegationException('INVITATION_PENDING', 'A newer invitation for this e-mail is already open. Use that one, or revoke it first.', 409);
+        }
 
         $this->audit->record('invitation.resent', $request, actor: $context->actor, tenantId: $context->tenant->id,
             applicationId: $context->application->id, resourceType: 'UserInvitation', resourceId: $invitation->id,

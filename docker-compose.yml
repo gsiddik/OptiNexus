@@ -27,6 +27,8 @@ x-nexus-env: &nexus-env
   CACHE_STORE: database
   LOG_CHANNEL: stderr
   PASSPORT_KEY_PATH: /var/keys
+  # Proxies allowed to set X-Forwarded-* (comma separated, or * when PHP is reachable only through them). Empty keeps the framework default.
+  TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
   # Mail for invitations (owner decision 2026-10-18). Runtime settings only; credentials come from the untracked .env, never from Git.
   # MAIL_MAILER=log writes mail to the container log and delivers nothing (ecosystem:preflight warns about it).
   MAIL_MAILER: ${MAIL_MAILER:-log}

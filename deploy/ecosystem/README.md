@@ -68,12 +68,22 @@ OIDC client with the exact redirect URIs `<console URL>/api/v1/auth/sso/callback
 for Radar, service account), put the resulting client ids and secrets into `.state\<product>.env`, and run `ecosystem.ps1 up` again (containers are re-created,
 nothing is rebuilt). Per-product steps: OptiEntry `docs/integration/OPTINEXUS_ONBOARDING.md`, OptiFleet `docs/status/OPTINEXUS_INTEGRATION_STATUS.md`, OptiRadar `docs/optinexus-sso.md`.
 
+## Behind a proxy or a TLS edge (OptiNexus)
+
+PHP only sees the address of the proxy in front of it unless it is told which proxies to trust. Without that, every IP-keyed control (login and
+invitation throttles, the failed machine-authentication counter) shares one bucket for all callers, audit rows record the proxy, and behind a TLS edge
+redirects and the session cookie are built for `http`. Set `TRUSTED_PROXIES` in `.state\nexus.env` (never in Git) to the proxy addresses or CIDRs
+(comma separated; `*` only when the PHP container cannot be reached except through them). With it set, `X-Forwarded-For` and `X-Forwarded-Proto` are
+honoured from those proxies only, and the session cookie becomes `Secure` on its own for `https` requests. The shipped UI nginx forwards both headers;
+when a TLS edge sits in front of it, the UI nginx must pass the edge's `X-Forwarded-Proto` on instead of its own `$scheme`. This is a precondition for
+exposing OptiNexus beyond a local trial; the default (unset) keeps the previous behaviour.
+
 ## Mail for invitations (OptiNexus)
 
 New people are added from a product by an invitation link that OptiNexus e-mails (`docs/ecosystem/GOVERNANCE_CONTRACTS.md` section 2b). Set the
 mail transport in `.state\nexus.env` (never in Git): `MAIL_MAILER=smtp`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`,
 `MAIL_SCHEME` (empty, `smtp` or `smtps`), `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME`; `INVITATION_TTL_HOURS` (default 72) is optional. The default
-`MAIL_MAILER=log` delivers nothing: `ecosystem:preflight` reports it as a warning. For a local trial point `MAIL_HOST` at a local SMTP sink
+`MAIL_MAILER=log` delivers nothing and writes the invitation link (a credential) to the container log: `ecosystem:preflight` reports it as a warning, and it is acceptable for a local trial only. For a local trial point `MAIL_HOST` at a local SMTP sink
 (no real mail is sent); the worker container sends the mail, so the queue worker must be running. `NEXUS_DELEGATION_DIRECT_USERS=false`
 switches off the deprecated direct user creation (`POST .../users`) once every product uses invitations.
 

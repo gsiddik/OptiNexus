@@ -33,8 +33,8 @@ export function TenantSeats({ tenant }: { tenant: Tenant }) {
       header: t('seats.col.state'),
       render: (s) => (
         <span className="badge-row">
-          <span className={`badge badge-${TONE[s.state]}`}>{t(`seats.state.${s.state}` as 'seats.state.LIMITED')}</span>
-          {s.over_limit && <span className="badge badge-danger">{t('seats.overBy', { n: s.over_by })}</span>}
+          <span className={`badge badge-${TONE[s.state]} nowrap`}>{t(`seats.state.${s.state}` as 'seats.state.LIMITED')}</span>
+          {s.over_limit && <span className="badge badge-danger nowrap">{t('seats.overBy', { n: s.over_by })}</span>}
         </span>
       ),
     },

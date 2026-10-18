@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
     <title>@yield('title', 'OptiNexus') · OptiNexus</title>
     <style>
         :root { color-scheme: light dark; --bg:#f4f6fa; --card:#fff; --text:#1d2433; --muted:#5b6475; --accent:#2457d6; --border:#d8dde7; --danger:#b42318; }
@@ -10,11 +12,20 @@
         * { box-sizing: border-box; }
         body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding:16px; }
         .card { width:100%; max-width:400px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:28px; }
-        .brand { font-weight:700; letter-spacing:.02em; color:var(--accent); margin-bottom:4px; }
-        h1 { font-size:20px; margin:0 0 6px; }
+        .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+        .brand { font-weight:700; letter-spacing:.02em; color:var(--accent); }
+        .lang { font-size:13px; color:var(--muted); }
+        .lang a { color:var(--muted); text-decoration:none; padding:2px 4px; border-radius:4px; }
+        .lang a[aria-current="true"] { color:var(--accent); font-weight:700; }
+        h1 { font-size:20px; margin:8px 0 6px; }
+        p { margin:0 0 12px; }
         p.lead { color:var(--muted); margin:0 0 20px; }
+        p.action { font-weight:600; }
         label { display:block; font-weight:600; margin:14px 0 6px; }
-        input[type=email], input[type=password] { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:transparent; color:inherit; font:inherit; }
+        input[type=email], input[type=password], input[type=text] { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:transparent; color:inherit; font:inherit; }
+        input[readonly] { color:var(--muted); }
+        .hint { color:var(--muted); font-size:13px; margin:4px 0 0; }
+        .notice { border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:14px; color:var(--muted); margin:12px 0; }
         button { width:100%; margin-top:20px; padding:11px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
         .error { color:var(--danger); margin-top:8px; font-size:14px; }
         .tenant { display:block; width:100%; text-align:left; margin-top:10px; background:transparent; color:inherit; border:1px solid var(--border); }
@@ -23,7 +34,15 @@
 </head>
 <body>
 <main class="card">
-    <div class="brand">OptiNexus</div>
+    <div class="top">
+        <div class="brand">{{ __('oidc.brand') }}</div>
+        @hasSection('language')
+            <nav class="lang" aria-label="{{ __('oidc.language') }}">
+                <a href="{{ url()->current() }}?lang=en" @if(app()->getLocale() === 'en') aria-current="true" @endif>EN</a> |
+                <a href="{{ url()->current() }}?lang=id" @if(app()->getLocale() === 'id') aria-current="true" @endif>ID</a>
+            </nav>
+        @endif
+    </div>
     @yield('content')
 </main>
 </body>

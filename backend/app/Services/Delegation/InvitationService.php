@@ -355,7 +355,7 @@ class InvitationService
 
         $becameVerified = $user->email_verified_at === null;
         if ($becameVerified) {
-            $user->forceFill(['email_verified_at' => now()])->save();
+            $user->forceFill(['email_verified_at' => now(), 'email_verification_method' => User::EMAIL_VERIFIED_BY_INVITATION])->save();
         }
 
         $this->delegation->ensureMembershipAndAccess($context, $user);
@@ -395,7 +395,10 @@ class InvitationService
     {
         $membership = TenantMembership::query()->where('user_id', $existing->id)->where('tenant_id', $context->tenant->id)->first();
 
+        // An account an operator created through the first Admin Tenant flow finishes through that flow (temporary password + operator
+        // verification), never through an invitation: the invitation would otherwise replace its password and skip the gate.
         $linkable = ! $existing->trashed()
+            && ! $existing->isInManagedActivation()
             && ($existing->isActive() || ($existing->status === User::STATUS_INVITED && $membership !== null))
             && ! $this->authorization->hasEcosystemAccess($existing)
             && ($membership === null || $membership->status === TenantMembership::STATUS_ACTIVE);

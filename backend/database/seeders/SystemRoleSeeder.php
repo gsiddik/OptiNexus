@@ -20,8 +20,8 @@ class SystemRoleSeeder extends Seeder
         ],
         'PLATFORM_ADMIN' => [
             'name' => 'Platform Administrator',
-            'description' => 'Platform-wide administrative access, excluding service-account credential management.',
-            'permissions' => ['*', '!cgo.service_account.manage'],
+            'description' => 'Platform-wide administrative access, excluding service-account credential management and manual e-mail verification.',
+            'permissions' => ['*', '!cgo.service_account.manage', '!'.Permission::EMAIL_VERIFY],
         ],
         'CUSTOMER_ADMIN' => [
             'name' => 'Customer Administrator',

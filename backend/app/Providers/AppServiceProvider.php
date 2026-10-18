@@ -58,6 +58,9 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(20)->by('invitation-submit-id:'.($request->session()->get('invitation.id') ?? $request->ip())),
         ]);
 
+        // First Admin Tenant: the password-change page (owner decision 2026-10-18, second batch). Its own counter, so it cannot eat the sign-in budget.
+        RateLimiter::for('activation-submit', fn ($request) => Limit::perMinute(10)->by('activation-submit:'.$request->ip()));
+
         Passport::enablePasswordGrant(false);
 
         // Coarse-grained M2M API scopes for integrated applications

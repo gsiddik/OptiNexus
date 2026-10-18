@@ -1,11 +1,26 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useI18n } from '../i18n';
+
+/** Texts that differ when the secret is not an SSO client secret (e.g. a temporary password); each falls back to the client-secret wording. */
+export interface SecretDialogLabels {
+  identity: string;
+  secret: string;
+  once: string;
+  copy: string;
+  copyFailed: string;
+  notCopied: string;
+  close: string;
+  closeAnyway: string;
+}
 
 interface SecretDialogProps {
   title: string;
   clientId: string;
   secret: string;
   onClose: () => void;
+  labels?: Partial<SecretDialogLabels>;
+  /** Extra facts shown under the secret (e.g. when a temporary password expires). */
+  note?: ReactNode;
 }
 
 /**
@@ -13,8 +28,19 @@ interface SecretDialogProps {
  * written to storage, the address bar or the console, and the dialog cannot be dismissed by a stray click outside it. Closing without
  * having copied it asks once more, because there is no way to see the secret again.
  */
-export function SecretDialog({ title, clientId, secret, onClose }: SecretDialogProps) {
+export function SecretDialog({ title, clientId, secret, onClose, labels, note }: SecretDialogProps) {
   const { t } = useI18n();
+  const text: SecretDialogLabels = {
+    identity: t('oidc.secret.clientId'),
+    secret: t('oidc.secret.secret'),
+    once: t('oidc.secret.once'),
+    copy: t('oidc.secret.copy'),
+    copyFailed: t('oidc.secret.copyFailed'),
+    notCopied: t('oidc.secret.notCopied'),
+    close: t('oidc.secret.close'),
+    closeAnyway: t('oidc.secret.closeAnyway'),
+    ...labels,
+  };
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
@@ -59,19 +85,20 @@ export function SecretDialog({ title, clientId, secret, onClose }: SecretDialogP
         <div className="modal-header">
           <h3 id="secret-title">{title}</h3>
         </div>
-        <p className="alert alert-warning" id="secret-once">{t('oidc.secret.once')}</p>
+        <p className="alert alert-warning" id="secret-once">{text.once}</p>
         <dl className="definition-list">
-          <dt>{t('oidc.secret.clientId')}</dt>
+          <dt>{text.identity}</dt>
           <dd><code>{clientId}</code></dd>
-          <dt>{t('oidc.secret.secret')}</dt>
+          <dt>{text.secret}</dt>
           <dd><code className="secret-value" ref={secretRef} data-testid="client-secret">{secret}</code></dd>
         </dl>
-        {copyFailed && <div className="alert alert-error" role="alert">{t('oidc.secret.copyFailed')}</div>}
-        {confirmClose && !copied && <div className="alert alert-error" role="alert">{t('oidc.secret.notCopied')}</div>}
+        {note}
+        {copyFailed && <div className="alert alert-error" role="alert">{text.copyFailed}</div>}
+        {confirmClose && !copied && <div className="alert alert-error" role="alert">{text.notCopied}</div>}
         <div className="modal-actions">
-          <button type="button" className="btn btn-secondary" onClick={copy}>{copied ? t('common.copied') : t('oidc.secret.copy')}</button>
+          <button type="button" className="btn btn-secondary" onClick={copy}>{copied ? t('common.copied') : text.copy}</button>
           <button type="button" ref={closeRef} className={confirmClose && !copied ? 'btn btn-danger' : 'btn btn-primary'} onClick={requestClose}>
-            {confirmClose && !copied ? t('oidc.secret.closeAnyway') : t('oidc.secret.close')}
+            {confirmClose && !copied ? text.closeAnyway : text.close}
           </button>
         </div>
       </div>

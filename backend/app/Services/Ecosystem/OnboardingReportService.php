@@ -32,8 +32,12 @@ class OnboardingReportService
         $admins = TenantMembership::query()->where('tenant_id', $tenant->id)->where('is_tenant_admin', true)
             ->where('status', TenantMembership::STATUS_ACTIVE)
             ->whereIn('user_id', User::query()->where('status', User::STATUS_ACTIVE)->select('id'))->count();
-        $checks[] = $this->check('tenant.admin', $admins > 0, 'no_tenant_admin',
-            ['label_key' => 'onboarding.action.assign_admin', 'route' => "/tenants/{$tenant->id}/admins"], detail: ['count' => $admins]);
+        // Admin Tenants an operator created that are not usable yet (activation open): the report names the actual gap.
+        $pendingAdmins = TenantMembership::query()->where('tenant_id', $tenant->id)->where('is_tenant_admin', true)
+            ->where('status', TenantMembership::STATUS_ACTIVE)
+            ->whereIn('user_id', User::query()->where('status', User::STATUS_INVITED)->whereNotNull('activation_started_at')->whereNull('activated_at')->select('id'))->count();
+        $checks[] = $this->check('tenant.admin', $admins > 0, $pendingAdmins > 0 ? 'tenant_admin_activation_pending' : 'no_tenant_admin',
+            ['label_key' => 'onboarding.action.assign_admin', 'route' => "/tenants/{$tenant->id}/admins"], detail: ['count' => $admins, 'pending_activation' => $pendingAdmins]);
 
         $applications = $tenant->applications()->wherePivot('status', 'ACTIVE')->where('applications.application_code', '!=', 'cgo')->orderBy('name')->get();
         $checks[] = $this->check('tenant.applications', $applications->isNotEmpty(), 'no_application_assigned',

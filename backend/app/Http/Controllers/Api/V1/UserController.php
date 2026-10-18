@@ -83,15 +83,28 @@ class UserController extends Controller
     public function update(UpdateUserRequest $request, User $user): JsonResponse
     {
         $old = $user->only(['name', 'email']);
+        $wasVerified = $user->email_verified_at !== null;
         $user->update($request->validated());
 
         $this->audit->record('user.updated', $request, resourceType: 'User', resourceId: $user->id, oldValue: $old, newValue: $user->only(['name', 'email']));
+
+        // A verified address belongs to that address: the model drops the verification when the e-mail changes, and it is recorded here.
+        if ($wasVerified && $user->email_verified_at === null) {
+            $this->audit->record('user.email_verification_revoked', $request, resourceType: 'User', resourceId: $user->id,
+                oldValue: ['email' => $old['email']], newValue: ['email' => $user->email],
+                metadata: ['reason' => 'email_changed', 'reverification' => 'required']);
+        }
 
         return $this->ok(new UserResource($user));
     }
 
     public function activate(Request $request, User $user): JsonResponse
     {
+        // An account in the first Admin Tenant flow becomes active only when its e-mail was verified AND its holder chose a password.
+        if ($user->isInManagedActivation()) {
+            return $this->fail('ACTIVATION_NOT_COMPLETE', 'This account activates itself when its e-mail address is verified and its holder has chosen a password. It cannot be activated by hand.', 409, ['state' => $user->activationState()]);
+        }
+
         return $this->transitionTo($request, $user, User::STATUS_ACTIVE, [User::STATUS_INVITED, User::STATUS_SUSPENDED]);
     }
 

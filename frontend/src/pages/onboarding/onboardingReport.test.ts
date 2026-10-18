@@ -71,7 +71,7 @@ describe('application status also reads the facts', () => {
 
 describe('wording', () => {
   it('has English and Indonesian text for every message code the API uses', () => {
-    const codes = ['ok', 'tenant_not_active', 'no_tenant_admin', 'no_application_assigned', 'oidc_client_missing', 'oidc_pkce_not_required', 'launch_url_missing', 'service_account_missing', 'manifest_not_imported', 'nothing_delegable', 'no_user_has_access', 'no_tenant_admin_has_access'];
+    const codes = ['ok', 'tenant_not_active', 'no_tenant_admin', 'no_application_assigned', 'oidc_client_missing', 'oidc_pkce_not_required', 'launch_url_missing', 'service_account_missing', 'manifest_not_imported', 'nothing_delegable', 'no_user_has_access', 'no_tenant_admin_has_access', 'tenant_admin_activation_pending'];
     for (const locale of ['en', 'id'] as const) {
       setLocale(locale);
       for (const code of codes) expect(checkMessage(check({ message_code: code, status: 'MISSING' })), `${locale}/${code}`).not.toMatch(/^onboarding\./);

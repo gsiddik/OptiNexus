@@ -10,6 +10,7 @@ import { useAuth } from '../../auth/useAuth';
 import { unwrapError } from '../../api/client';
 import { useI18n } from '../../i18n';
 import type { Application, Tenant, User } from '../../api/types';
+import { TenantAdminAccounts } from './TenantAdminAccounts';
 
 type Tab = 'details' | 'applications' | 'admins';
 
@@ -154,8 +155,12 @@ function TenantAdmins({ tenant }: { tenant: Tenant }) {
     }
   }
 
-  if (loading) return <LoadingSpinner />;
+  // Only the first load replaces the tab: a reload (after the panel above changed something) must not unmount it, or a temporary
+  // password it is showing would vanish before the operator could copy it.
+  if (loading && !admins) return <LoadingSpinner />;
   return (
+    <>
+    <TenantAdminAccounts tenant={tenant} onChanged={reload} />
     <div className="card">
       <ErrorAlert message={error ?? actionError} />
       <div className="toolbar">
@@ -172,6 +177,7 @@ function TenantAdmins({ tenant }: { tenant: Tenant }) {
         {!admins?.length && <span className="muted">No tenant admins yet.</span>}
       </ul>
     </div>
+    </>
   );
 }
 

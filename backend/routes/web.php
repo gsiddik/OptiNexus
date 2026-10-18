@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\InvitationPageController;
 use App\Http\Controllers\Oidc\OidcProviderController;
+use App\Http\Middleware\ActivationPageHeaders;
 use App\Http\Middleware\InvitationPageHeaders;
 use Illuminate\Support\Facades\Route;
 
@@ -13,8 +14,14 @@ Route::get('/', function () {
 Route::get('/.well-known/openid-configuration', [OidcProviderController::class, 'discovery'])->name('oidc.discovery');
 Route::get('/oidc/jwks', [OidcProviderController::class, 'jwks'])->name('oidc.jwks');
 Route::get('/oidc/authorize', [OidcProviderController::class, 'authorize'])->name('oidc.authorize');
-Route::get('/oidc/login', [OidcProviderController::class, 'showLogin'])->name('oidc.login');
-Route::post('/oidc/login', [OidcProviderController::class, 'login'])->middleware('throttle:10,1')->name('oidc.login.submit');
+// The sign-in and first-password pages take a (temporary) password: nothing cached, referred or framed. A new Admin Tenant an operator
+// created is sent from the sign-in to /oidc/activate to choose its own password (GOVERNANCE_CONTRACTS.md 2c).
+Route::middleware(ActivationPageHeaders::class)->group(function () {
+    Route::get('/oidc/login', [OidcProviderController::class, 'showLogin'])->name('oidc.login');
+    Route::post('/oidc/login', [OidcProviderController::class, 'login'])->middleware('throttle:10,1')->name('oidc.login.submit');
+    Route::get('/oidc/activate', [OidcProviderController::class, 'showActivation'])->name('oidc.activate');
+    Route::post('/oidc/activate', [OidcProviderController::class, 'activate'])->middleware('throttle:activation-submit')->name('oidc.activate.submit');
+});
 Route::post('/oidc/tenant', [OidcProviderController::class, 'selectTenant'])->name('oidc.tenant.select');
 Route::get('/oidc/logout', [OidcProviderController::class, 'logout'])->name('oidc.logout');
 

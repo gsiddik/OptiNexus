@@ -316,7 +316,7 @@ class DelegationService
         // An invited identity (no sign-in yet) is only ever re-used by the tenant that invited it; any other state must be active.
         $usable = $existing->isActive() || ($existing->status === User::STATUS_INVITED && $membership !== null);
 
-        if ($existing->trashed() || ! $usable || $this->authorization->hasEcosystemAccess($existing)) {
+        if ($existing->trashed() || ! $usable || $existing->isInManagedActivation() || $this->authorization->hasEcosystemAccess($existing)) {
             throw new DelegationException('IDENTITY_NOT_LINKABLE', 'This email belongs to an identity that cannot be added from a product.', 409);
         }
 

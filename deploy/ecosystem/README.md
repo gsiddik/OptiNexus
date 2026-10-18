@@ -77,6 +77,25 @@ mail transport in `.state\nexus.env` (never in Git): `MAIL_MAILER=smtp`, `MAIL_H
 (no real mail is sent); the worker container sends the mail, so the queue worker must be running. `NEXUS_DELEGATION_DIRECT_USERS=false`
 switches off the deprecated direct user creation (`POST .../users`) once every product uses invitations.
 
+## First Admin Tenant of a tenant (operator runbook, no e-mail)
+
+Contract: `docs/ecosystem/GOVERNANCE_CONTRACTS.md` section 2c. Done by a Nexus operator in the portal (tenant > Admins > "First Admin Tenant account"), **no e-mail is sent
+at any step**. The tenant must be active and have its applications assigned. Verifying an address needs the permission `cgo.user.email.verify` (held by PLATFORM_SUPERADMIN only; it is
+not part of PLATFORM_ADMIN's wildcard) and an operator can never verify their own address.
+
+1. **Create** ("Create admin account"): name, e-mail, applications (and optional roles). Nexus shows a one-time temporary password. Copy it now: it is not stored, not e-mailed and cannot
+   be shown again (if lost, use "New temporary password"). Status: *Account created*. An existing Nexus account is linked by its ID instead (it keeps its password; nothing is shown).
+2. **Verify the e-mail address outside OptiNexus** (for example call the customer's known contact and have them confirm the address). Then "Record e-mail verification": retype the address,
+   write the method and reason (10+ characters; no passwords or identity documents). Status: *E-mail verified, password change required*. It is audited with your name, the time and the reason.
+3. **Hand the temporary password over personally**, not by e-mail or chat, and not through a ticket. It expires after `NEXUS_TEMP_PASSWORD_TTL_HOURS` (48 h by default); *Temporary password
+   expired* means issue a new one. Five wrong attempts lock the account for 15 minutes.
+4. The Admin Tenant opens the product (for example Fleet), is sent to OptiNexus, signs in with the temporary password and **must choose a new password** on the OptiNexus page. Then they
+   return to the product through the normal sign-in (code + PKCE). Status: *Activation complete*. If step 2 is still open the page says so and the product stays closed.
+5. If the address on the account changes later, the verification is cleared; record it again (step 2). The product (Fleet) keeps requiring a verified address.
+
+Settings (`.state\nexus.env`, never in Git): `NEXUS_TEMP_PASSWORD_TTL_HOURS`, `NEXUS_TEMP_PASSWORD_MAX_ATTEMPTS`, `NEXUS_TEMP_PASSWORD_LOCKOUT_SECONDS`. The temporary password itself is never configured.
+Existing deployments: `php artisan migrate` (additive) adds the columns and attaches `cgo.user.email.verify` to PLATFORM_SUPERADMIN; giving it to another role is a deliberate, audited choice.
+
 ## Day-two operations
 
 | Task | Command | Notes |

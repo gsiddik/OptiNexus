@@ -7,6 +7,8 @@ use App\Models\OidcClient;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\AuditService;
+use App\Services\Ecosystem\AccountActivationService;
+use App\Services\Ecosystem\ActivationException;
 use App\Services\Oidc\OidcKeyService;
 use App\Services\Oidc\OidcTokenService;
 use App\Services\Oidc\SessionRevocationService;
@@ -16,6 +18,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
@@ -32,12 +35,18 @@ class OidcProviderController extends Controller
 {
     private const PENDING_KEY = 'oidc.pending';
 
+    /** Set while a new Admin Tenant is choosing its password: the only thing that session may do (no sign-in, no code, no token). */
+    private const ACTIVATION_KEY = 'oidc.activation';
+
+    private const LANG_KEY = 'oidc.lang';
+
     public function __construct(
         private readonly OidcKeyService $keys,
         private readonly OidcTokenService $tokens,
         private readonly SsoAccessResolver $access,
         private readonly AuditService $audit,
         private readonly SessionRevocationService $revocation,
+        private readonly AccountActivationService $activation,
     ) {}
 
     public function discovery(): JsonResponse
@@ -73,6 +82,7 @@ class OidcProviderController extends Controller
 
     public function authorize(Request $request): Response|View
     {
+        $this->applyLocale($request);
         $client = OidcClient::query()->where('client_id', (string) $request->query('client_id'))->first();
         $redirectUri = (string) $request->query('redirect_uri');
 
@@ -138,6 +148,7 @@ class OidcProviderController extends Controller
 
     public function showLogin(Request $request): View|Response
     {
+        $this->applyLocale($request);
         $pending = $request->session()->get(self::PENDING_KEY);
         if (! $pending) {
             return $this->errorPage('Open the application you want to use and choose "Sign in with OptiNexus".', 400);
@@ -148,8 +159,9 @@ class OidcProviderController extends Controller
         return view('oidc.login', ['applicationName' => $client?->application?->name ?? $client?->name]);
     }
 
-    public function login(Request $request): Response|View
+    public function login(Request $request): Response|View|RedirectResponse
     {
+        $this->applyLocale($request);
         $pending = $request->session()->get(self::PENDING_KEY);
         if (! $pending) {
             return $this->errorPage('Your sign-in request has expired. Start again from the application.', 400);
@@ -162,11 +174,16 @@ class OidcProviderController extends Controller
 
         $user = User::query()->where('email', $credentials['email'])->first();
 
+        // A new Admin Tenant an operator created: the account is still INVITED, so it can only run the activation steps, never sign in.
+        if ($user && $user->status === User::STATUS_INVITED && $user->isInManagedActivation()) {
+            return $this->loginDuringActivation($request, $user, $credentials);
+        }
+
         if (! $user || ! $user->password || ! Hash::check($credentials['password'], $user->password) || ! $user->isActive()) {
             $this->audit->record('sso.login_failed', $request, actorIdentity: $credentials['email'], source: 'oidc');
 
             return back()->withInput(['email' => $credentials['email']])
-                ->withErrors(['email' => 'These credentials do not match an active OptiNexus account.']);
+                ->withErrors(['email' => __('oidc.errors.invalid_credentials')]);
         }
 
         Auth::guard('web')->login($user);
@@ -188,6 +205,7 @@ class OidcProviderController extends Controller
 
     public function selectTenant(Request $request): Response|View
     {
+        $this->applyLocale($request);
         $pending = $request->session()->get(self::PENDING_KEY);
         $user = Auth::guard('web')->user();
 
@@ -204,6 +222,202 @@ class OidcProviderController extends Controller
         $pending['auth_time'] = $request->session()->get('oidc.auth_time', time());
 
         return $this->continueAuthorization($request, $client, $user, $pending);
+    }
+
+    // ---------------------------------------------------------------- first Admin Tenant: password choice
+
+    /**
+     * The credentials of an account in managed activation. Nothing here signs the account in: a correct temporary password opens the
+     * password-change page (a session that can do nothing else), and a chosen password still waits for the operator's e-mail
+     * verification. Wrong attempts count per account, whatever address they come from.
+     *
+     * @param  array{email: string, password: string}  $credentials
+     */
+    private function loginDuringActivation(Request $request, User $user, array $credentials): Response|View|RedirectResponse
+    {
+        $back = fn (string $message) => back()->withInput(['email' => $credentials['email']])->withErrors(['email' => $message]);
+
+        if ($seconds = $this->activation->lockedFor($user)) {
+            $this->activation->denied($user, $request, 'locked');
+
+            return $back(__('activation.errors.locked', ['minutes' => max(1, (int) ceil($seconds / 60))]));
+        }
+
+        $correct = $user->password_change_required
+            ? $this->activation->matchesTemporaryPassword($user, $credentials['password'])
+            : ($user->password !== null && Hash::check($credentials['password'], $user->password));
+
+        if (! $correct) {
+            $this->activation->recordFailure($user);
+            $this->audit->record('sso.login_failed', $request, actorIdentity: $credentials['email'], source: 'oidc');
+
+            return $back(__('oidc.errors.invalid_credentials'));
+        }
+
+        if (! $user->password_change_required) {
+            // The holder already chose a password; the e-mail verification is the operator's step and has not been recorded yet.
+            RateLimiter::clear($this->activation->lockKey($user));
+            $this->activation->denied($user, $request, 'email_verification_pending');
+
+            return response()->view('oidc.activation-pending');
+        }
+
+        if ($user->temporaryPasswordExpired()) {
+            $this->activation->denied($user, $request, 'expired');
+
+            return $back(__('activation.errors.expired'));
+        }
+
+        $request->session()->regenerate();
+        $request->session()->put(self::ACTIVATION_KEY, ['user_id' => $user->id, 'issued_at' => $user->temporary_password_issued_at->timestamp]);
+
+        $this->audit->record('activation.started', $request, actor: $user, resourceType: 'User', resourceId: $user->id, source: 'activation');
+
+        return redirect()->route('oidc.activate');
+    }
+
+    public function showActivation(Request $request): Response|View
+    {
+        $this->applyLocale($request);
+        $user = $this->activationUser($request);
+
+        if (! $user) {
+            return $this->errorPage(__('activation.errors.session'), 400);
+        }
+
+        if ($user->temporaryPasswordExpired()) {
+            return $this->activationState('expired', 410);
+        }
+
+        return $this->activationForm($user);
+    }
+
+    public function activate(Request $request): Response|View|RedirectResponse
+    {
+        $this->applyLocale($request);
+        $user = $this->activationUser($request);
+
+        if (! $user) {
+            return $this->errorPage(__('activation.errors.session'), 400);
+        }
+
+        $temporary = (string) $request->input('temporary_password');
+        $password = (string) $request->input('password');
+        $errors = $this->validateActivation($temporary, $password, (string) $request->input('password_confirmation'));
+
+        if ($errors !== []) {
+            return $this->activationForm($user, $errors, 422);
+        }
+
+        try {
+            $result = $this->activation->changePassword($user->id, $user->temporary_password_issued_at->timestamp, $temporary, $password, $request);
+        } catch (ActivationException $e) {
+            return match ($e->state) {
+                ActivationException::WRONG_PASSWORD => $this->activationForm($user, ['temporary_password' => __('activation.errors.wrong_password', ['left' => $this->activation->attemptsLeft($user)])], 422),
+                ActivationException::SAME_PASSWORD => $this->activationForm($user, ['password' => __('activation.errors.same_password')], 422),
+                ActivationException::LOCKED => $this->activationState('locked', 429, $e->retryAfter),
+                ActivationException::EXPIRED => $this->activationState('expired', 410),
+                ActivationException::USED => $this->activationState('used', 410),
+                default => $this->activationState('invalid', 409),
+            };
+        }
+
+        // The bootstrap session ends here. What survives is the pending sign-in request and the chosen language, nothing else.
+        $pending = $request->session()->get(self::PENDING_KEY);
+        $lang = $request->session()->get(self::LANG_KEY);
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        $request->session()->put(array_filter([self::PENDING_KEY => $pending, self::LANG_KEY => $lang]));
+
+        if (! $result['activated']) {
+            return response()->view('oidc.activation-pending');
+        }
+
+        // Both conditions hold: this is now an ordinary sign-in, proven by the password just chosen, in a brand-new session.
+        $client = $pending ? OidcClient::query()->where('client_id', $pending['client_id'])->first() : null;
+        if (! $client || ! $client->isActive()) {
+            return $this->errorPage('The application is no longer registered with OptiNexus.', 400);
+        }
+
+        $member = $result['user']->refresh();
+        Auth::guard('web')->login($member);
+        $request->session()->put('oidc.auth_time', time());
+        $member->forceFill(['last_login_at' => now()])->save();
+
+        $this->audit->record('sso.login', $request, actor: $member, applicationId: $client->application_id, source: 'oidc');
+
+        $pending['auth_time'] = time();
+
+        return $this->continueAuthorization($request, $client, $member, $pending);
+    }
+
+    /** The account whose password change this browser session was opened for, or null when that is no longer valid. */
+    private function activationUser(Request $request): ?User
+    {
+        $state = $request->session()->get(self::ACTIVATION_KEY);
+        $user = is_array($state) && isset($state['user_id']) ? User::query()->find($state['user_id']) : null;
+
+        if (! $user || $user->status !== User::STATUS_INVITED || ! $user->isInManagedActivation() || ! $user->password_change_required
+            || $user->temporary_password_issued_at?->timestamp !== ($state['issued_at'] ?? null)) {
+            $request->session()->forget(self::ACTIVATION_KEY);
+
+            return null;
+        }
+
+        return $user;
+    }
+
+    /** @return array<string, string> */
+    private function validateActivation(string $temporary, string $password, string $confirmation): array
+    {
+        $errors = [];
+        $min = (int) config('activation.password_min_length');
+
+        if ($temporary === '') {
+            $errors['temporary_password'] = __('activation.errors.temporary_required');
+        }
+
+        if ($password === '') {
+            $errors['password'] = __('activation.errors.password_required');
+        } elseif (mb_strlen($password) < $min || mb_strlen($password) > 128) {
+            $errors['password'] = __('activation.errors.password_min', ['min' => $min]);
+        } elseif (! hash_equals($password, $confirmation)) {
+            $errors['password'] = __('activation.errors.password_confirmed');
+        }
+
+        return $errors;
+    }
+
+    /** @param  array<string, string>  $errors */
+    private function activationForm(User $user, array $errors = [], int $status = 200): Response
+    {
+        return response()->view('oidc.activate', ['email' => $user->email, 'errors' => $errors], $status);
+    }
+
+    private function activationState(string $state, int $status, ?int $retryAfter = null): Response
+    {
+        $minutes = $retryAfter ? max(1, (int) ceil($retryAfter / 60)) : (int) ceil(config('activation.lockout_seconds') / 60);
+        $response = response()->view('oidc.activation-state', ['state' => $state, 'minutes' => $minutes], $status);
+
+        if ($retryAfter) {
+            $response->headers->set('Retry-After', (string) $retryAfter);
+        }
+
+        return $response;
+    }
+
+    /** English or Bahasa Indonesia: the visitor's choice (?lang=), else the browser's preference, else English. */
+    private function applyLocale(Request $request): void
+    {
+        $locales = config('activation.locales');
+        $lang = $request->query('lang');
+
+        if (is_string($lang) && in_array($lang, $locales, true)) {
+            $request->session()->put(self::LANG_KEY, $lang);
+        }
+
+        $chosen = $request->session()->get(self::LANG_KEY) ?? $request->getPreferredLanguage($locales) ?? 'en';
+        app()->setLocale(in_array($chosen, $locales, true) ? $chosen : 'en');
     }
 
     public function token(Request $request): JsonResponse

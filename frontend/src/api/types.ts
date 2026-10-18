@@ -105,6 +105,63 @@ export interface User {
   metadata: Record<string, unknown> | null;
 }
 
+/** Where an account created by an operator (first Admin Tenant) stands. `null` for accounts that never went through that flow. */
+export type ActivationState = 'PASSWORD_CHANGE_REQUIRED' | 'CREDENTIAL_EXPIRED' | 'EMAIL_VERIFICATION_PENDING' | 'ACTIVATED';
+
+export interface AdminActivation {
+  managed: boolean;
+  state: ActivationState | null;
+  created_at: string | null;
+  email: {
+    verified: boolean;
+    verified_at: string | null;
+    method: 'INVITATION' | 'OPERATOR_MANUAL' | null;
+    verified_by: { id: string; name: string } | null;
+  };
+  password: {
+    change_required: boolean;
+    issued_at: string | null;
+    expires_at: string | null;
+    expired: boolean;
+    locked_seconds: number;
+    changed_at: string | null;
+  };
+  activated_at: string | null;
+  next_steps: Array<'verify_email' | 'reissue_credential' | 'hand_over_credential'>;
+}
+
+export interface AdminAccount {
+  user: { id: string; name: string; email: string; status: User['status']; created_at: string | null };
+  membership: { status: string | null; is_tenant_admin: boolean };
+  applications: Array<{ id: string; code: string; name: string }>;
+  roles: Array<{ id: string; code: string; name: string }>;
+  activation: AdminActivation;
+}
+
+/** The temporary password as the API returns it exactly once (on create and on reissue); never part of a list or a later read. */
+export interface TemporaryCredential {
+  password: string;
+  expires_at: string | null;
+  shown_once: boolean;
+}
+
+export type AdminAccountCreated = AdminAccount & {
+  /** `created` for a new identity, `linked` for an existing one (which never gets a credential). */
+  outcome: 'created' | 'linked';
+  temporary_credential: TemporaryCredential | null;
+};
+
+export type AdminAccountReissued = AdminAccount & { temporary_credential: TemporaryCredential | null };
+
+export interface AdminAccountCreate {
+  user_id?: string;
+  confirm_email?: string;
+  name?: string;
+  email?: string;
+  application_ids: string[];
+  role_ids?: string[];
+}
+
 export interface EffectivePermission {
   permission_key: string;
   scope: 'GLOBAL' | 'CUSTOMER' | 'TENANT' | 'APPLICATION' | 'OWN';

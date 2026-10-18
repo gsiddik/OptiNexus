@@ -21,6 +21,9 @@ class Permission extends Model
      */
     public const ECOSYSTEM_ACCESS = 'cgo.ecosystem.access';
 
+    /** Records that an operator verified an e-mail address outside the system. Held by the super administrator only by default. */
+    public const EMAIL_VERIFY = 'cgo.user.email.verify';
+
     public const STATUS_ACTIVE = 'ACTIVE';
 
     public const STATUS_DEPRECATED = 'DEPRECATED';

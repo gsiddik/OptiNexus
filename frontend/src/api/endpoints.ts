@@ -1,6 +1,10 @@
 import { apiClient, type ApiEnvelope } from './client';
 import type {
   AccessEvaluation,
+  AdminAccount,
+  AdminAccountCreate,
+  AdminAccountCreated,
+  AdminAccountReissued,
   Addon,
   AddonLimit,
   ApprovalDefinition,
@@ -538,4 +542,15 @@ export const gatewayAdminApi = {
 // ------------------------------------------------------------- Ecosystem onboarding
 export const onboardingApi = {
   report: (tenantId: string) => unwrap<OnboardingReport>(apiClient.get(`/ecosystem/onboarding/tenants/${encodeURIComponent(tenantId)}`)),
+};
+
+// ------------------------------------------------------------- First Admin Tenant (operator-created accounts)
+const adminAccountsBase = (tenantId: string) => `/ecosystem/tenants/${encodeURIComponent(tenantId)}/admin-accounts`;
+export const adminAccountsApi = {
+  list: (tenantId: string) => unwrap<AdminAccount[]>(apiClient.get(adminAccountsBase(tenantId))),
+  create: (tenantId: string, payload: AdminAccountCreate) => unwrap<AdminAccountCreated>(apiClient.post(adminAccountsBase(tenantId), payload)),
+  verifyEmail: (tenantId: string, userId: string, payload: { email: string; reason: string }) =>
+    unwrap<AdminAccount>(apiClient.post(`${adminAccountsBase(tenantId)}/${encodeURIComponent(userId)}/email-verification`, payload)),
+  reissueCredential: (tenantId: string, userId: string) =>
+    unwrap<AdminAccountReissued>(apiClient.post(`${adminAccountsBase(tenantId)}/${encodeURIComponent(userId)}/temporary-credential`)),
 };

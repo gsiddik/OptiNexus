@@ -1,7 +1,7 @@
 # Ecosystem audit fixes: checkpoint
 
 Single source of status for A01-A29 / R01-R08 (matrix: `TRACEABILITY.md`; owner decisions: `DECISION_PACKAGE.md`; legacy installs:
-`LEGACY_MIGRATION_PLAN.md`). Product repos keep their own `docs/status/ECOSYSTEM_AUDIT_STATUS.md` for detail. Updated 2026-10-18 (batch 9, central seat limits).
+`LEGACY_MIGRATION_PLAN.md`). Product repos keep their own `docs/status/ECOSYSTEM_AUDIT_STATUS.md` for detail. Updated 2026-10-18 (batch 10, pre-merge review of the three draft PRs).
 Pushed does not mean tested: see section 4. Hard limits: no merge, no push to main, no force-push, no change to operational data.
 
 **Overall status (ecosystem): PARTIALLY_COMPLETE.** Not READY because (1) Radar and everything depending on it is deferred by the owner's decision of
@@ -19,13 +19,15 @@ needed no change: Fleet keeps its verified-e-mail check). Ecosystem status stays
 **Batch 9 status (central seat limits, owner decision 2026-10-18 09:11Z, `DECISION_PACKAGE.md` item 4): IMPLEMENTATION_COMPLETE; scoped live check PASSED (section 5d).** Nexus counts and enforces for every adding path;
 Entry and Fleet only show the figures and pass the refusals on. Fleet and Radar declare no `user_limit`: not controlled, nothing invented. Ecosystem status stays PARTIALLY_COMPLETE.
 
+**Batch 10 status (final pre-merge review, owner request 2026-10-18 10:58Z): AI-assisted self-review, not an independent review.** Verdicts per PR in section 5e. Four read-only reviewers plus my own verification of every finding in the code; confirmed blockers fixed with tests (Entry 8f10478, Nexus 51773cc); Fleet needed no code change. Nothing merged, nothing deployed. Ecosystem status stays PARTIALLY_COMPLETE.
+
 ## 1. Repositories (branch `claude/project-thread-0cf20u` in all five)
 
 | Repo | main baseline | HEAD (pushed) | Commits ahead | Working tree |
 |---|---|---|---|---|
-| OptiNexus | b4e77c7 | see `git log` (last code change 7f58e12; later commits are docs) | 32 + docs | clean |
+| OptiNexus | b4e77c7 | see `git log` (last code change 51773cc; later commits are docs) | 33 + docs | clean |
 | OptiFleet-v2 | 47b766d | 8781ecd (bf86a23 = previous checkpoint) | 20 | clean |
-| OptiAccounting (OptiEntry) | 20ee792 | 0d2f110 (b3855c2 = previous checkpoint) | 19 | clean |
+| OptiAccounting (OptiEntry) | 20ee792 | 8f10478 (0d2f110 = previous checkpoint) | 20 | clean |
 | optiradar | 06d6ae5 | cb9905f | 7 | clean; paused |
 | optiradar-web | bf15a24 | 915903c | 6 | clean; paused |
 
@@ -33,7 +35,7 @@ Draft pull requests (never merged by me): OptiNexus, OptiFleet-v2, OptiAccountin
 
 ## 2. Contracts and compatible SHA set
 
-Set S5 (current): N code 7f58e12 (docs after), F@8781ecd, E@0d2f110, R@cb9905f, W@915903c. Set S4 (previous): N b25b747, F@bf86a23, E@b3855c2. Set S3: N 741552f. Set S2 (historical): N 4eda307, F@b9886e5, E@98d5932. Merge order for the three PRs: OptiNexus first
+Set S6 (current, batch 10): N code 51773cc (docs after), F@8781ecd, E@8f10478, R@cb9905f, W@915903c; contracts unchanged since S5 (the Nexus fixes only tighten refusals: `IDENTITY_NOT_VERIFIED`, `INVITATION_PENDING`). Set S5 (previous): N 7f58e12, F@8781ecd, E@0d2f110. Set S4: N b25b747, F@bf86a23, E@b3855c2. Set S3: N 741552f. Set S2 (historical): N 4eda307, F@b9886e5, E@98d5932. Merge order for the three PRs: OptiNexus first
 (provider of every contract), then OptiFleet-v2 and OptiAccounting (independent of each other; the feed needs both).
 
 | Contract | Provider | Consumers | Notes |
@@ -92,6 +94,12 @@ A14 server-side match state, `provision` command in `ecosystem.ps1`. Deferred by
 | Batch 9, Entry consumer against the repo's faked Nexus: full backend (standalone mode, Postgres 16) | Local: `tests/Feature/Optinexus` 260 passed (4016 assertions, 100 s); neighbouring suites (capacity, entitlement, service principal, security, rename, tenant isolation, subscription, seeder) 117 passed (1572 assertions, 182 s). Local full backend NOT_RUN for the same reason as Fleet; the full run is the repository's CI (run 39117640157, backend job completed green in 34 min on this head) | E@0d2f110 |
 | Batch 9, Entry frontend: vitest, `tsc -b`, `oxlint`, build | Local: `tsc -b` clean, vitest 1237 passed (57 files); CI frontend job (run 39117640157): PASS | E@0d2f110 |
 | Batch 9, live on a real Nexus + real Entry with a local mail sink (section 5d) | PASS for the steps in section 5d; one forced POST answered 419 (CSRF) instead of reaching the seat check, see there | N@7f58e12, E@0d2f110 |
+| Batch 10, SSRF/DNS failure (Nexus): cause = the one allow test needs public DNS; the sandbox resolves nothing. Not a regression of this PR (same on the baseline). Fix: the client's lookup is a seam (`resolveHost`), new deterministic `SsrfSafeHttpClientTest` (private, loopback, link-local, 0/8, IPv6 ranges, mixed names, port by scheme, pinned `CURLOPT_RESOLVE`, redirect not followed, nothing sent when refused); the one real-network check stays as `#[Group('network')]` and is skipped here | PASS deterministic (41 passed, 1 skipped in the focused run); the real-network test is **NOT_RUN (VALIDATION_BLOCKED)**: run `php artisan test --group=network` on a host with public DNS | N@92126a9 |
+| Batch 10, Nexus focused after the review fixes: `SeatLimitApiTest`, `SeatLimitPathsTest`, `TenantDelegationApiTest`, `InvitationApiTest` (incl. the 5 new cases) | PASS: 85 passed (930 assertions) | N@51773cc code |
+| Batch 10, Nexus full backend (`php artisan test`, sandbox stopped, cache files removed; run on the working tree that became 51773cc, only docs differ) | PASS: 523 passed, 1 skipped (the network-group test above), 3939 assertions, 270 s | N@51773cc code |
+| Batch 10, Entry: `tests/Feature/Integration` (141, incl. the 2 new ordering tests), frontend `vitest` integration + i18n (82), `tsc -b`, Pint on changed files | PASS (local). Full Entry backend NOT re-run locally on the new SHA: see the CI row | E@8f10478 |
+| Batch 10, the repositories' own CI | Fleet PR #36 on 8781ecd: backend and frontend green (no Fleet change in this batch). Entry PR #10 on 8f10478: ENTRY_CI_RESULT | F@8781ecd, E@8f10478 |
+| Batch 10, upgrade and fresh-install rehearsal on throwaway databases (`UPGRADE_AND_COMPATIBILITY.md` section 1): base to PR head for Nexus, Entry, Fleet | PASS: migrations additive, no existing row changed by the migrations, seeders idempotent and no grant widened beyond the intended permissions, fresh installs create no tenant/user/entitlement | N@92126a9 migrations (same set at 51773cc), F@8781ecd, E@0d2f110 migrations (same set at 8f10478) |
 | Sandbox compose stacks (Ubuntu php-fpm substitute images): Nexus, Fleet, Entry bootstrap, healthy, additive migrations applied (batch 8: the two new migrations ran on the existing sandbox database) | PASS | N, F, E heads above |
 
 ## 5. The one live flow (executed 2026-10-18, sandbox, real services)
@@ -218,6 +226,39 @@ sandbox data only, project files `audit/seat-screenshots/`, not in the repositor
 NOT_RUN live (covered by tests only): the last seat contested by parallel requests on the real stack (real-database parallel-process test), first Admin Tenant refused for lack of a seat, Fleet consumer (no `user_limit`),
 unreadable entitlement source, mail-transport failure.
 
+## 5e. Batch 10: final pre-merge review (2026-10-18; AI-assisted self-review, no independent reviewer)
+
+Method: diffs of the three PRs against their real bases read by four reviewers (Nexus security/governance, Nexus seat paths, Entry accounting feed, Fleet feed and consumers with the mixed-version table) without running anything; I
+then checked every reported finding in the code myself before acting. Kinds: **C** confirmed bug (code traced), **I** inference, **T** test limitation, **O** optional improvement. A design preference is not listed as a blocker.
+
+| ID | Repo | Severity / kind | Finding | Status |
+|---|---|---|---|---|
+| B1 | E | HIGH / C | `corrected`/`cancelled` had no ordering per source invoice: a cancellation processed while the earlier correction was FAILED or in review, then the correction retried, booked the cancelled invoice again as a posted liability (`WorkshopInvoiceBooking`, `EventProcessor`, `IntegrationRunner`, `GapService`) | **FIXED** E@8f10478 (`EARLIER_EVENT_UNRESOLVED`, 2 tests, docs, EN+ID label) |
+| B2 | N | MEDIUM / C | Deprecated `POST /delegation/.../users` pre-registers an unverified identity with a password the Admin Tenant knows; another tenant's Admin Tenant adding that e-mail linked it by e-mail alone (`linkExisting`), handing it that tenant's roles | **FIXED** N@51773cc (`IDENTITY_NOT_VERIFIED` unless the tenant already holds the identity; test). The default of direct creation is untouched (owner item 3) |
+| B3 | N | MEDIUM / C | A general `PUT /applications/{id}` with metadata replaced `metadata.manifest`, silently turning a seat-controlled product into an uncontrolled one (fail open on configuration loss) | **FIXED** N@51773cc (manifest block preserved; test) |
+| B4 | N | LOW / C | A seat limit of `1e999` (overflow to INF) was read as unlimited; huge numbers and padded words were not rejected | **FIXED** N@51773cc (vetting; 3 new cases) |
+| B5 | N | LOW / C | Resend of an expired invitation while a newer one is open returned 500 | **FIXED** N@51773cc (409 `INVITATION_PENDING`; test) |
+| B6 | N | LOW / C | `seat.denied` audit wrote an unvalidated `acting_user_id` | **FIXED** N@51773cc (uuid only) |
+| B7 | N | MEDIUM / I | No trusted-proxy configuration: behind the shipped nginx chain every IP-keyed limit shares one bucket, audit rows show the proxy, secure cookie/redirects wrong behind TLS | **Mitigated in code** (optional `TRUSTED_PROXIES`, default unchanged, behaviour checked by hand for unset, matching, non-matching and `*`) and **deployment precondition** (runbook) |
+| B8 | N | LOW / C | `MAIL_MAILER=log` default writes the invitation link (a credential) to the container log; the invitation is still marked sent | **Deployment precondition** (runbook; `ecosystem:preflight` warns). Not changed |
+| B9 | N | MEDIUM / I | Plan/add-on `user_limit` rows carry no application, so two subscriptions that both define `user_limit` would add up across products. Needs a plan-level `user_limit` on a second product, which the owner has not approved (Fleet/Radar get none) | **Not changed**; known limit; set seat limits as application-scoped overrides (runbook). Optional improvement |
+| B10 | N | LOW / I | The delegable ceiling is enforced when roles are written/assigned, not re-applied to existing roles | Documented (`GOVERNANCE_CONTRACTS.md`); products gate on `entitled_capabilities` |
+| B11 | E | MEDIUM-LOW / C | Entry creates a local user from an unverified SSO e-mail (Fleet refuses) | **Decision item 11** (policy), no code change; not a blocker |
+| O | all | LOW / O | Optional, not fixed: Entry duplicate-source guard for `recorded`/`payment` (unreachable with the current producer), lenient `review.required` reading (test pins it), composite FK on conflicts, a duplicate `cancelled` counted as a journal, no alert for a generic NEEDS_REVIEW backlog, cutover compares `occurred_at`, `base_url` has no private-address guard; Fleet no negative cache/circuit breaker toward Nexus (fail closed, break-glass exists), Entry permission schema strictly `1.0`, Entry/Fleet URL validation and token-lifetime differences, readiness without a bulk probe, shared feed throttle, `rotate-credential` on a revoked credential; Nexus reserve rule "already holds a seat" not applied on create/resend of an expired invitation (fails closed), per-account temporary-password lock, `verifyEmail` not limited to managed accounts, `/authorization/check` not bound to the caller's tenant (existing) | Recorded here |
+| T | all | T | No test for `SEAT_CONTENTION`; parallel-process seat tests cover four doors, not the multi-application first Admin Tenant, resend-expired or operator-vs-delegation races; the "no code writes an assignment outside the seat service" guard is a text match; 419 on the public POSTs not testable under the framework test mode; token redaction in nginx logs verified live only; Fleet/Entry projector savepoint path not in the concurrency tests | Recorded; the live gaps stay NOT_RUN |
+
+**Verdicts (self-review; label: `self-review berbantuan AI`).** Code-merge blockers = none open. Deployment/production blockers are separate and listed below.
+
+| PR | Reviewed SHA | Verdict | Code-merge blockers | Deployment/production blockers | Deliberately deferred | Optional |
+|---|---|---|---|---|---|---|
+| Nexus #10 | 51773cc (code; docs after) | **MERGE_RECOMMENDED** (first in order). The real-network SSRF check is VALIDATION_BLOCKED, not PASS | none | real mail transport (not `log`), `TRUSTED_PROXIES` and TLS edge, manifest re-import and preflight after deploy, Alpine/Podman builds NOT_RUN, owner items still OPEN (financial treatment, direct-creation default, items 5-9, 11) | Radar/A10, product pricing and seat numbers | B9, B10, test items |
+| Fleet #36 | 8781ecd (unchanged) | **MERGE_RECOMMENDED**; CI green on this SHA; local full backend not rerun (CI is the evidence) | none | pairs with Nexus >= 51773cc for CENTRAL tenants (default LOCAL); backfill only after Entry is upgraded; Alpine/Podman NOT_RUN | Radar-dependent items | no negative cache toward Nexus |
+| Entry #10 | 8f10478 | **MERGE_RECOMMENDED once its CI is green on this SHA** (ENTRY_CI_RESULT) | none | `optientry:sync-permissions`, per-tenant connection setup; Nexus must be upgraded first in `optinexus` mode | FX revaluation (decided), unapproved financial treatments stay inactive | the Entry items in row O |
+
+Merge order and a partial-merge note: Nexus first (provider of every contract), then Fleet and Entry in either order; merging only Nexus is safe (fail-closed table in `UPGRADE_AND_COMPATIBILITY.md` section 3); merging Fleet or Entry without Nexus
+leaves their new governance features unusable (CENTRAL/optinexus modes answer 503) while the default LOCAL/standalone paths keep working. Whether a merge to `main` triggers a deployment cannot be seen from the repositories: no workflow
+deploys (Fleet `regression.yml` and Entry `ci.yml` only test; Nexus has no CI), but a hosting integration outside the repositories would not show here: **the owner confirms this before any merge**.
+
 ## 6. Environment blockers (VALIDATION_BLOCKED, design unchanged)
 
 - Alpine/production image builds, Windows Podman Desktop run: NOT_RUN (no Alpine mirror, no Podman, no Windows). Run on a Windows host:
@@ -229,6 +270,8 @@ unreadable entitlement source, mail-transport failure.
   in the first live flow (section 5) the sandbox admin's e-mail was marked verified by a database write because Nexus had no verification path
   (historical: batch 7 added one for invited users and batch 8 one for the operator-created first Admin Tenant; neither needs such a write, sections 5b and 5c); Entry accounting setup (COA template, fiscal year, rule/category defaults, bank account, profile) done through its API.
 - Wider live coverage (six product combinations, Radar, browser round trips on real services): intentionally NOT_RUN (owner decision).
+- Real-network SSRF allow check (`php artisan test --group=network`): NOT_RUN here (no public DNS in the sandbox). Exact step: run that command on a host with public DNS; baseline fails the same way, which does not make it a pass.
+- Batch 10 live scenarios: none added beyond the earlier authorization; if wanted, propose exactly: (a) pre-registration/link refusal over HTTP between two tenants, (b) Entry ordering with a forced failed correction. Both are covered by tests only.
 
 ## 7. Owner decisions on record
 

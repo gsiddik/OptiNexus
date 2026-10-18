@@ -1,5 +1,10 @@
 # Traceability A01-A29 and R01-R08
 
+Decision-11 delta (2026-10-18): Entry `630543d`, Nexus documentation on `codex/entry-email-review-20261018`.
+R03/R05/R06 next-login verification gate: implemented, focused PGlite 100 PASS / frontend 48 PASS / mocked-browser 6 PASS;
+native PG16 CI and real Nexus verification transition remain separate gates. Details: `SSO_EMAIL_VERIFICATION_REVIEW.md`.
+The snapshot and original SHA set below remain historical; no claim of full-ecosystem readiness is added.
+
 Snapshot 2026-10-18 (batch 10 added), SHA set S6 (N 51773cc, F 8781ecd, E 8f10478; rows not mentioning batches 7 to 9 are as of S2) (checkpoint, validation log and live-flow status: `ECOSYSTEM_AUDIT_STATUS.md`). Columns are separate on purpose: **Impl** = code exists on the
 branch, **Valid** = what was actually executed (pushed is not tested), **Open** = blocker or remaining work.
 Codes: DONE / PARTIAL / DEFERRED (owner decision, Radar paused 2026-10-17) / BACKLOG. Valid: PASS-unit (own repo tests), PASS-fake (against a

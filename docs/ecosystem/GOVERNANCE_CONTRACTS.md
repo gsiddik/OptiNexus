@@ -97,7 +97,7 @@ Compatibility: `POST /users` keeps working (including `initial_password`) but is
 `Deprecation: true` and `Link: <.../invitations>; rel="successor-version"`, `NEXUS_DELEGATION_DIRECT_USERS=false` switches it off per
 deployment (`410 DIRECT_USER_CREATION_DISABLED`). Users created that way have no verified e-mail and cannot sign in to products that
 require one (Fleet). Products should stop calling it; switching the default off is an owner decision (`DECISION_PACKAGE.md`, item 3).
-Seat limits (`user_limit`) are not enforced by invitations or by `POST /users`; the policy is an open owner decision (item 4).
+Seat limits (`user_limit`) are enforced centrally for every way of adding access, invitations and `POST /users` included (section 2d).
 
 ## 2c. First Admin Tenant created by an operator, without e-mail (owner decision 2026-10-18, second batch) - operator API
 
@@ -162,6 +162,54 @@ Doors that would bypass this flow are closed for an account in it: the delegatio
 
 Fleet still requires `email_verified` in the ID token (no global bypass); it receives the claim from Nexus exactly as before. The onboarding report (`/ecosystem/onboarding`)
 reports a pending Admin Tenant as `tenant_admin_activation_pending`.
+
+## 2d. Seat limits (owner decision 2026-10-18 09:11Z, item 4 of `DECISION_PACKAGE.md`) - central, in OptiNexus
+
+**One authority.** OptiNexus counts and enforces seats per tenant and application; a product shows the figures and passes the refusals on, it keeps no counter.
+Computed on demand from the source rows, never stored (nothing to drift): **used** = distinct, non-deleted people holding an ACTIVE `user_application_access`
+(once, whatever their roles; suspended people still count while the assignment exists; an Admin Tenant counts; service principals are not people and are not
+counted: they are identified by the immutable identity type, never by an e-mail pattern); **reserved** = open, unexpired invitations whose recipient (lower-cased
+e-mail) holds no assignment (and so a resend adds nothing, an accepted invitation turns its reservation into usage without a double count, an expired or revoked
+one releases it, and an invitation past `expires_at` stops reserving at once, before the sweeper marks it). Revoking the assignment of one product releases that
+product's seat only; identity, membership, history and other products' access stay.
+
+**Which products.** An application is seat-controlled only when its manifest declares `user_limit` in `entitlement_limit_keys` (Entry does; Fleet and Radar declare
+none, so their state is `NOT_CONTROLLED`: no limit is applied and none is invented). The limit is the tenant's `user_limit` entitlement; there is no number in code,
+config or a seeder. State of the limit: `LIMITED` (explicit number), `UNLIMITED` (explicit), `NOT_CONTROLLED`, `ENTITLEMENT_MISSING`, `ENTITLEMENT_INVALID`
+(non-numeric, negative, fractional, conflicting overrides), `ENTITLEMENT_UNAVAILABLE` (the source could not be read). Missing, invalid or unreadable never means
+unlimited: additions are refused (existing access is never touched).
+
+**Rule.** Reserve (invitation create, reopening an expired one): nothing if the person already holds a seat or a reservation, else `used + reserved + 1 <= limit`.
+Take (direct add, delegation add, operator or first-Admin-Tenant bootstrap, acceptance): nothing if the person already holds the seat; with a reservation of
+their own `used + 1 <= limit`, otherwise `used + reserved + 1 <= limit`. A limit lowered below usage: nothing is removed or cancelled, `available` stays 0 (never negative),
+`over_limit` is true with `over_by`, additions stay refused until usage and reservations fit again; reducing usage is always allowed. A pending invitation that no longer
+fits when it is accepted is refused at acceptance (the page says so, the invitation stays PENDING until it expires or is revoked) with the recovery below.
+
+**Paths.** Every code path that grants access goes through `SeatService::grantAccess` / `authorize` (a static test fails when code writes `user_application_access`
+elsewhere): delegation add (create or link a person), invitation create / resend / accept, operator user and access grants, first Admin Tenant bootstrap, seeders. No operator bypass.
+**Atomicity.** A transaction-scoped advisory lock per tenant and application (`seat:<tenant>:<app>`), taken first, polled up to `SEATS_LOCK_WAIT_SECONDS` (5);
+several pairs lock in sorted order. No lock is held across a network or mail call. If the lock stays busy the answer is `SEAT_CONTENTION` (retry), never a half change.
+
+`GET /api/v1/delegation/tenants/{tenant}/seats` (scope `tenant.delegate`, acting user as in section 2) and `GET /api/v1/tenants/{tenant}/seats` (operator, `cgo.tenant.view`) answer the
+picture of one product: `{application_code, controlled, state, limit, unlimited, used, reserved, available, over_limit, over_by, can_add, blocked_reason, limit_source}`.
+The same object is `meta.seats` of the delegation users and invitations lists. `available` is null unless `LIMITED`; `can_add` is the server's verdict now (UX only).
+
+Refusals (envelope of section 1; `details` carries `application_code`, `limit`, `used`, `reserved`, `available`, `over_limit`, `recovery`; this tenant's numbers only, never another
+tenant's or product's; audit `seat.denied` with the code and numbers, never a credential or token):
+
+| Code | HTTP | Meaning | `details.recovery` |
+| --- | --- | --- | --- |
+| `SEAT_LIMIT_REACHED` | 409 | no seat left for this addition | `FREE_SEAT_OR_RAISE_LIMIT` |
+| `SEAT_OVER_LIMIT` | 409 | usage + reservations already exceed the limit | `REDUCE_USAGE_OR_RAISE_LIMIT` |
+| `SEAT_ENTITLEMENT_MISSING` | 409 | the controlled product has no `user_limit` entitlement for this tenant | `SET_ENTITLEMENT` |
+| `SEAT_ENTITLEMENT_INVALID` | 409 | the entitlement value cannot be used | `FIX_ENTITLEMENT` |
+| `SEAT_ENTITLEMENT_UNAVAILABLE` | 503 + `Retry-After` | the limit could not be read now (nothing was added) | `RETRY` |
+| `SEAT_CONTENTION` | 503 + `Retry-After` | the seat lock was busy (nothing was added) | `RETRY` |
+
+Consumers: the 503 pair is a refusal, not an outage (the change was not made). Versions: additive to contract 1.x (new codes, new `meta.seats`, new `/seats`); a product that does
+not read them keeps working. Compatible SHAs are in `ECOSYSTEM_AUDIT_STATUS.md` section 5d. Existing data: nothing is deleted, backfilled or corrected to fit a quota;
+`php artisan ecosystem:seats:inventory [--tenant= --application= --only-problems --json --strict]` is the read-only preview (used, reserved, limit, over-limit, anomalies such as
+an ACTIVE assignment of a deleted user), also the migration plan input. After deploying, re-register the manifest of products that declare `user_limit` so Nexus knows the key.
 
 ## 3. Product context for switchers (A29) - scope `authorization.check`
 

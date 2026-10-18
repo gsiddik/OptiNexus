@@ -11,6 +11,7 @@ use App\Services\Delegation\DelegationContext;
 use App\Services\Delegation\DelegationException;
 use App\Services\Delegation\DelegationService;
 use App\Services\Delegation\InvitationService;
+use App\Services\Seats\SeatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -26,7 +27,17 @@ class DelegationController extends Controller
 {
     use ApiResponses;
 
-    public function __construct(private readonly DelegationService $delegation, private readonly InvitationService $invitations) {}
+    public function __construct(
+        private readonly DelegationService $delegation,
+        private readonly InvitationService $invitations,
+        private readonly SeatService $seats,
+    ) {}
+
+    /** Used, reserved, limit and what is left for this tenant and product, as OptiNexus counts them (the only count that decides). */
+    public function seats(Request $request, string $tenant): JsonResponse
+    {
+        return $this->guarded($request, $tenant, fn (DelegationContext $context) => $this->ok($this->seats->status($context->tenant, $context->application)->toArray()));
+    }
 
     public function catalog(Request $request, string $tenant): JsonResponse
     {
@@ -38,7 +49,7 @@ class DelegationController extends Controller
         return $this->guarded($request, $tenant, function (DelegationContext $context) use ($request) {
             $result = $this->delegation->listUsers($context, $request->query('search'), (int) $request->query('per_page', 25));
 
-            return $this->ok($result['items'], ['pagination' => $result['pagination']]);
+            return $this->ok($result['items'], ['pagination' => $result['pagination'], 'seats' => $this->seats->status($context->tenant, $context->application)->toArray()]);
         });
     }
 
@@ -80,7 +91,7 @@ class DelegationController extends Controller
 
             $result = $this->invitations->list($context, $data['status'] ?? null, $data['search'] ?? null, (int) ($data['per_page'] ?? 25));
 
-            return $this->ok($result['items'], ['pagination' => $result['pagination']]);
+            return $this->ok($result['items'], ['pagination' => $result['pagination'], 'seats' => $this->seats->status($context->tenant, $context->application)->toArray()]);
         });
     }
 

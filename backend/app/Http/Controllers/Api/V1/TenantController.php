@@ -16,6 +16,7 @@ use App\Models\TenantMembership;
 use App\Models\User;
 use App\Services\AuditService;
 use App\Services\Oidc\SessionRevocationService;
+use App\Services\Seats\SeatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -27,6 +28,7 @@ class TenantController extends Controller
     public function __construct(
         private readonly AuditService $audit,
         private readonly SessionRevocationService $revocation,
+        private readonly SeatService $seats,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -109,6 +111,12 @@ class TenantController extends Controller
     public function applications(Tenant $tenant): JsonResponse
     {
         return $this->ok(ApplicationResource::collection($tenant->applications));
+    }
+
+    /** Seats of every application the tenant has, as OptiNexus counts them (used, reserved, limit, available, over-limit). Read-only. */
+    public function seats(Tenant $tenant): JsonResponse
+    {
+        return $this->ok($this->seats->forTenant($tenant)->map(fn ($status): array => $status->toArray())->all());
     }
 
     public function attachApplication(Request $request, Tenant $tenant, Application $application): JsonResponse

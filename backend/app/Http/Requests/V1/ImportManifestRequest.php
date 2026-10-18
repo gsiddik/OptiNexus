@@ -34,6 +34,9 @@ class ImportManifestRequest extends FormRequest
             'permissions.*.description' => ['nullable', 'string', 'max:1000'],
             'permissions.*.capability_code' => ['nullable', 'string', 'max:100'],
             'permissions.*.delegable' => ['sometimes', 'boolean'],
+            // The limits the product bounds itself by (`user_limit` = seat control, GOVERNANCE_CONTRACTS.md 2d). Omitted = unchanged.
+            'entitlement_limit_keys' => ['sometimes', 'array', 'max:50'],
+            'entitlement_limit_keys.*' => ['string', 'max:64', 'regex:/^[a-z][a-z0-9_]*$/'],
         ];
     }
 

@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('delegation/tenants/{tenant}')->name('delegation.')->middleware(['service_account:tenant.delegate'])->group(function () {
     Route::get('/catalog', [DelegationController::class, 'catalog'])->name('catalog');
 
+    // Seat budget of this tenant for the calling product (contract: GOVERNANCE_CONTRACTS.md 2d). Read-only; the same figures ride in the
+    // `meta.seats` of the users and invitations lists, and every add that would exceed them is refused with a SEAT_* code.
+    Route::get('/seats', [DelegationController::class, 'seats'])->name('seats');
+
     Route::get('/users', [DelegationController::class, 'users'])->name('users.index');
     Route::post('/users', [DelegationController::class, 'addUser'])->name('users.store');
     Route::put('/users/{user}/roles', [DelegationController::class, 'setUserRoles'])->name('users.roles');

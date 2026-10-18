@@ -21,6 +21,7 @@ use App\Services\AuditService;
 use App\Services\AuthorizationService;
 use App\Services\Oidc\SessionRevocationService;
 use App\Services\PrivilegeEscalationGuard;
+use App\Services\Seats\SeatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -33,6 +34,7 @@ class UserController extends Controller
         private readonly AuthorizationService $authorization,
         private readonly PrivilegeEscalationGuard $escalationGuard,
         private readonly SessionRevocationService $revocation,
+        private readonly SeatService $seats,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -175,13 +177,8 @@ class UserController extends Controller
             return $this->fail('TENANT_ACCESS_DENIED', 'The user must have an active membership in this tenant before receiving application access.', 422);
         }
 
-        $access = UserApplicationAccess::query()->firstOrCreate(
-            ['user_id' => $user->id, 'tenant_id' => $validated['tenant_id'], 'application_id' => $application->id],
-            ['status' => UserApplicationAccess::STATUS_ACTIVE],
-        );
-        if (! $access->wasRecentlyCreated) {
-            $access->update(['status' => UserApplicationAccess::STATUS_ACTIVE]);
-        }
+        // Operators obey the seat limit like every other path (no bypass); a refusal is a SeatException the API answers with its code.
+        $this->seats->grantAccess(Tenant::query()->findOrFail($validated['tenant_id']), $application, $user);
 
         $this->audit->record('user.application_access_granted', $request, resourceType: 'User', resourceId: $user->id, newValue: ['application_id' => $application->id, 'tenant_id' => $validated['tenant_id']], tenantId: $validated['tenant_id'], applicationId: $application->id);
 

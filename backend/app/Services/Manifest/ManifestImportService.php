@@ -63,6 +63,11 @@ class ManifestImportService
             }
 
             $metadata = $application->metadata ?? [];
+            // The limit keys a product declares (`user_limit` makes it seat-controlled). A manifest that does not mention them leaves
+            // the earlier declaration alone; one that lists them (even an empty list) replaces it.
+            $limitKeys = array_key_exists('entitlement_limit_keys', $manifest)
+                ? array_values(array_unique(array_map('strtolower', (array) $manifest['entitlement_limit_keys'])))
+                : ($metadata['manifest']['entitlement_limit_keys'] ?? []);
             $metadata['manifest'] = [
                 'version' => $manifest['manifest_version'],
                 'revision' => $manifest['revision'],
@@ -70,6 +75,7 @@ class ManifestImportService
                 'synced_by' => $actor?->id,
                 'capabilities' => count($capabilities),
                 'permissions' => count($permissions),
+                'entitlement_limit_keys' => $limitKeys,
             ];
             $application->update(['metadata' => $metadata]);
 

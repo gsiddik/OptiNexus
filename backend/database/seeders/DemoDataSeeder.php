@@ -11,7 +11,7 @@ use App\Models\ServiceAccount;
 use App\Models\Tenant;
 use App\Models\TenantMembership;
 use App\Models\User;
-use App\Models\UserApplicationAccess;
+use App\Services\Seats\SeatService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 use Laravel\Passport\ClientRepository;
@@ -117,10 +117,7 @@ class DemoDataSeeder extends Seeder
             ['status' => TenantMembership::STATUS_ACTIVE, 'is_tenant_admin' => true],
         );
 
-        UserApplicationAccess::query()->firstOrCreate(
-            ['user_id' => $demoUser->id, 'tenant_id' => $tenant->id, 'application_id' => $optifleet->id],
-            ['status' => UserApplicationAccess::STATUS_ACTIVE],
-        );
+        app(SeatService::class)->grantAccess($tenant, $optifleet, $demoUser);
 
         foreach ([$tenantAdminRole, $applicationAdminRole] as $role) {
             if (! $demoUser->userRoles()->where('role_id', $role->id)->where('tenant_id', $tenant->id)->exists()) {

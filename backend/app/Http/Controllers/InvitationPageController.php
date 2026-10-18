@@ -51,8 +51,9 @@ class InvitationPageController extends Controller
 
         try {
             $this->invitations->assertOpen($invitation);
+            $this->invitations->assertSeatAvailable($invitation);
         } catch (InvitationException $e) {
-            return $this->stateResponse($request, $e->state, $e->status, $invitation);
+            return $this->stateResponse($request, $e->state, $e->status, $invitation, $e->retryAfter);
         }
 
         return $this->form($request, $invitation);

@@ -1,6 +1,6 @@
 import axios, { type AxiosError } from 'axios';
 import { storage } from '../auth/storage';
-import { translate } from '../i18n';
+import { hasMessage, translate } from '../i18n';
 import type { ApiError, Pagination } from './types';
 
 export const TOKEN_STORAGE_KEY = 'cgo_token';
@@ -79,6 +79,12 @@ function requestIdOf(err: AxiosError): string | undefined {
 }
 
 /** Turns anything a request can throw into one error type. Messages the client makes up (network, timeout, no JSON) are in the screen's language. */
+/** A seat refusal (SEAT_* codes, GOVERNANCE_CONTRACTS.md 2d) is shown in the screen's language; the code and details stay as sent. */
+function localized(error: ApiError): ApiError {
+  const key = `seats.error.${error.code}`;
+  return error.code.startsWith('SEAT_') && hasMessage(key) ? { ...error, message: translate(key) } : error;
+}
+
 export function unwrapError(err: unknown): ApiRequestError {
   if (err instanceof ApiRequestError) return err;
   const axiosErr = err as AxiosError<{ error?: ApiError }>;
@@ -86,7 +92,7 @@ export function unwrapError(err: unknown): ApiRequestError {
   const status = axiosErr?.response?.status;
 
   if (axiosErr?.response?.data?.error) {
-    return new ApiRequestError(axiosErr.response.data.error, status, requestId);
+    return new ApiRequestError(localized(axiosErr.response.data.error), status, requestId);
   }
   if (axiosErr?.isAxiosError && !axiosErr.response) {
     if (axiosErr.code === 'ECONNABORTED' || axiosErr.code === 'ETIMEDOUT') {

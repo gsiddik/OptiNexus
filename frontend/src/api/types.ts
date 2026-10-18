@@ -577,3 +577,22 @@ export interface OnboardingReport {
   checks: OnboardingCheck[];
   applications: OnboardingApplication[];
 }
+
+/** Seats of one application in one tenant, as OptiNexus counts them (GET /tenants/{id}/seats). Available is never negative; over-limit is separate. */
+export type SeatState = 'NOT_CONTROLLED' | 'LIMITED' | 'UNLIMITED' | 'ENTITLEMENT_MISSING' | 'ENTITLEMENT_INVALID' | 'ENTITLEMENT_UNAVAILABLE';
+
+export interface SeatStatus {
+  application_code: string;
+  controlled: boolean;
+  state: SeatState;
+  limit: number | null;
+  unlimited: boolean;
+  used: number;
+  reserved: number;
+  available: number | null;
+  over_limit: boolean;
+  over_by: number;
+  can_add: boolean;
+  blocked_reason: string | null;
+  limit_source: string | null;
+}

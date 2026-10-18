@@ -84,6 +84,16 @@ return [
             'text' => 'Akun untuk alamat e-mail ini baru saja dibuat.',
             'action' => 'Buka tautan undangan sekali lagi dan konfirmasi dengan kata sandi akun tersebut.',
         ],
+        'no_seat' => [
+            'title' => 'Tidak ada kursi kosong untuk akses ini',
+            'text' => 'Organisasi Anda sedang tidak memiliki kursi kosong untuk aplikasi ini, sehingga tidak ada akses yang diberikan.',
+            'action' => 'Minta administrator organisasi Anda mengosongkan kursi atau menaikkan batas pengguna, lalu buka undangan ini lagi.',
+        ],
+        'seat_retry' => [
+            'title' => 'Kursi Anda belum dapat dipesan saat ini',
+            'text' => 'Kursi tidak dapat diperiksa saat ini. Tidak ada akses yang diberikan dan undangan Anda masih berlaku.',
+            'action' => 'Tunggu sebentar lalu buka tautan undangan lagi.',
+        ],
         'wrong_password' => [
             'title' => 'Kata sandi tidak benar',
             'text' => 'Kata sandi saat ini tidak dapat dikonfirmasi.',

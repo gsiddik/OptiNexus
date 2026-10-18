@@ -12,6 +12,7 @@ use App\Models\UserRole;
 use App\Services\AuditService;
 use App\Services\AuthorizationService;
 use App\Services\PrivilegeEscalationGuard;
+use App\Services\Seats\SeatService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
@@ -39,6 +40,7 @@ class TenantAdminBootstrapService
         private readonly PrivilegeEscalationGuard $escalationGuard,
         private readonly AccountActivationService $activation,
         private readonly AuditService $audit,
+        private readonly SeatService $seats,
     ) {}
 
     /**
@@ -58,9 +60,14 @@ class TenantAdminBootstrapService
         $this->assertOperatorMayGrant($actor, $tenant, $roles, creating: ! $linking);
 
         try {
-            $result = DB::transaction(fn (): array => $linking
+            $result = DB::transaction(function () use ($tenant, $data, $applications, $roles, $actor, $linking): array {
+                // Seat locks first (all applications, in a fixed order), before anything is created: a refusal leaves nothing behind.
+                $this->seats->lock($tenant->id, $applications->pluck('id')->all());
+
+                return $linking
                 ? $this->linkExisting($tenant, (string) $data['user_id'], (string) ($data['confirm_email'] ?? ''), $applications, $roles, $actor)
-                : $this->createNew($tenant, (string) $data['name'], (string) $data['email'], $applications, $roles, $actor));
+                : $this->createNew($tenant, (string) $data['name'], (string) $data['email'], $applications, $roles, $actor);
+            });
         } catch (UniqueConstraintViolationException) {
             // A concurrent request created the same identity first: report it, never create or adopt a second one.
             throw $this->emailConflict(Str::lower(trim((string) ($data['email'] ?? ''))));
@@ -259,13 +266,7 @@ class TenantAdminBootstrapService
         }
 
         foreach ($applications as $application) {
-            $access = UserApplicationAccess::query()->firstOrCreate(
-                ['user_id' => $user->id, 'tenant_id' => $tenant->id, 'application_id' => $application->id],
-                ['status' => UserApplicationAccess::STATUS_ACTIVE],
-            );
-            if ($access->status !== UserApplicationAccess::STATUS_ACTIVE) {
-                $access->update(['status' => UserApplicationAccess::STATUS_ACTIVE]);
-            }
+            $this->seats->grantAccess($tenant, $application, $user);
         }
 
         foreach ($roles as $role) {

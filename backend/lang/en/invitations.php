@@ -84,6 +84,16 @@ return [
             'text' => 'An account for this e-mail address was created a moment ago.',
             'action' => 'Open the invitation link again and confirm it with that account\'s password.',
         ],
+        'no_seat' => [
+            'title' => 'There is no free seat for this access',
+            'text' => 'Your organization has no free seat for this application right now, so nothing was granted.',
+            'action' => 'Ask the administrator of your organization to free a seat or raise the user limit, then open this invitation again.',
+        ],
+        'seat_retry' => [
+            'title' => 'We could not reserve your seat just now',
+            'text' => 'The seat could not be checked this moment. Nothing was granted and your invitation is still valid.',
+            'action' => 'Wait a moment and open the invitation link again.',
+        ],
         'wrong_password' => [
             'title' => 'The password is not correct',
             'text' => 'The current password could not be confirmed.',

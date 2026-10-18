@@ -30,6 +30,12 @@ final class InvitationException extends RuntimeException
 
     public const CONFLICT = 'conflict';
 
+    /** The tenant has no seat for this application right now (limit reached or lowered, entitlement missing or invalid). */
+    public const NO_SEAT = 'no_seat';
+
+    /** The seat could not be judged this moment (busy or unreadable source); nothing was granted. */
+    public const SEAT_RETRY = 'seat_retry';
+
     public function __construct(
         public readonly string $state,
         public readonly int $status,

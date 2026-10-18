@@ -45,6 +45,7 @@ import type {
   Price,
   Product,
   Role,
+  SeatStatus,
   ServiceAccount,
   Subscription,
   Tenant,
@@ -109,6 +110,7 @@ export const tenantsApi = {
     apiClient.post(`/tenants/${id}/applications/${applicationId}`),
   detachApplication: (id: string, applicationId: string) =>
     apiClient.delete(`/tenants/${id}/applications/${applicationId}`),
+  seats: (id: string) => unwrap<SeatStatus[]>(apiClient.get(`/tenants/${id}/seats`)),
   admins: (id: string) => unwrap<User[]>(apiClient.get(`/tenants/${id}/admins`)),
   addAdmin: (id: string, userId: string) => apiClient.post(`/tenants/${id}/admins/${userId}`),
   removeAdmin: (id: string, userId: string) => apiClient.delete(`/tenants/${id}/admins/${userId}`),

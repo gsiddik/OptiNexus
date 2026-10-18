@@ -11,6 +11,7 @@ import { unwrapError } from '../../api/client';
 import { useI18n } from '../../i18n';
 import type { Application, Tenant, User } from '../../api/types';
 import { TenantAdminAccounts } from './TenantAdminAccounts';
+import { TenantSeats } from './TenantSeats';
 
 type Tab = 'details' | 'applications' | 'admins';
 
@@ -70,7 +71,12 @@ export function TenantDetailPage({ initialTab = 'details' }: { initialTab?: Tab 
           </dl>
         </div>
       )}
-      {tab === 'applications' && <TenantApplications tenant={tenant} />}
+      {tab === 'applications' && (
+        <>
+          <TenantApplications tenant={tenant} />
+          <TenantSeats tenant={tenant} />
+        </>
+      )}
       {tab === 'admins' && <TenantAdmins tenant={tenant} />}
     </div>
   );

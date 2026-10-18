@@ -11,6 +11,9 @@ use App\Models\UserInvitation;
 use App\Models\UserRole;
 use App\Services\AuditService;
 use App\Services\AuthorizationService;
+use App\Services\Seats\SeatException;
+use App\Services\Seats\SeatOperation;
+use App\Services\Seats\SeatService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
@@ -34,6 +37,7 @@ class InvitationService
         private readonly DelegationService $delegation,
         private readonly AuthorizationService $authorization,
         private readonly AuditService $audit,
+        private readonly SeatService $seats,
     ) {}
 
     // ---------------------------------------------------------------- product-facing (delegation API)
@@ -55,12 +59,18 @@ class InvitationService
 
         try {
             $invitation = DB::transaction(function () use ($context, $email, $data, $locale, $roleIds, $token): UserInvitation {
+                // The seat lock first, before any row lock (one global order for every path that adds a seat).
+                $this->seats->lock($context->tenant->id, [$context->application->id]);
+
                 $this->expireStale($context->tenant->id, $context->application->id, $email);
 
                 $open = $this->openInvitationFor($context->tenant->id, $context->application->id, $email, lock: true);
                 if ($open) {
                     throw $this->pendingConflict($open);
                 }
+
+                // An invitation reserves a seat; with none free it is refused here, not when the invitee tries to accept.
+                $this->seats->authorize(SeatOperation::Reserve, $context->tenant, $context->application, $email);
 
                 return UserInvitation::create([
                     'tenant_id' => $context->tenant->id,
@@ -127,6 +137,8 @@ class InvitationService
         $token = $this->newToken();
 
         $invitation = DB::transaction(function () use ($context, $id, $token): UserInvitation {
+            $this->seats->lock($context->tenant->id, [$context->application->id]);
+
             $invitation = $this->lockedScoped($context, $id);
 
             if (! in_array($invitation->effectiveStatus(), [UserInvitation::STATUS_PENDING, UserInvitation::STATUS_EXPIRED], true)) {
@@ -144,6 +156,11 @@ class InvitationService
             }
 
             $this->delegation->resolveAssignableRoles($context, $invitation->role_ids ?? []);
+
+            // Resending an open invitation reserves nothing new; re-opening an expired one needs a seat again.
+            if ($invitation->effectiveStatus() === UserInvitation::STATUS_EXPIRED) {
+                $this->seats->authorize(SeatOperation::Reserve, $context->tenant, $context->application, $invitation->email);
+            }
 
             $invitation->forceFill([
                 'token_hash' => UserInvitation::hashToken($token),
@@ -309,7 +326,7 @@ class InvitationService
             if ($e->state === InvitationException::WRONG_PASSWORD) {
                 RateLimiter::hit($lockKey, (int) config('invitations.confirm_lockout_seconds'));
             }
-            $this->denied($invitationId, $request, $e->state);
+            $this->denied($invitationId, $request, $e->state, in_array($e->state, [InvitationException::NO_SEAT, InvitationException::SEAT_RETRY], true) ? $e->getMessage() : null);
 
             throw $e;
         }
@@ -322,6 +339,17 @@ class InvitationService
     /** @return array{user: User, outcome: string, invitation: UserInvitation} */
     private function acceptLocked(string $invitationId, string $tokenHash, array $input, Request $request): array
     {
+        // The seat lock before the invitation row lock, like every other path (create and direct add take it first too).
+        $pair = UserInvitation::query()->select(['id', 'tenant_id', 'application_id'])->find($invitationId);
+
+        if ($pair) {
+            try {
+                $this->seats->lock($pair->tenant_id, [$pair->application_id]);
+            } catch (SeatException $e) {
+                throw $this->seatState($e);
+            }
+        }
+
         $invitation = UserInvitation::query()->with(['application', 'tenant'])->lockForUpdate()->find($invitationId);
 
         if (! $invitation || ! hash_equals($invitation->token_hash, $tokenHash)) {
@@ -358,7 +386,13 @@ class InvitationService
             $user->forceFill(['email_verified_at' => now(), 'email_verification_method' => User::EMAIL_VERIFIED_BY_INVITATION])->save();
         }
 
-        $this->delegation->ensureMembershipAndAccess($context, $user);
+        // Reserved becomes used here, in the same transaction: the invitation turns ACCEPTED below, so the seat is never counted twice.
+        // Everything made so far (identity, verification) is rolled back with a refusal.
+        try {
+            $this->delegation->ensureMembershipAndAccess($context, $user);
+        } catch (SeatException $e) {
+            throw $this->seatState($e);
+        }
         foreach ($roles as $role) {
             UserRole::query()->firstOrCreate(
                 ['user_id' => $user->id, 'role_id' => $role->id, 'tenant_id' => $invitation->tenant_id],
@@ -447,13 +481,39 @@ class InvitationService
         return ($lock ? $query->lockForUpdate() : $query)->first();
     }
 
-    private function denied(string $invitationId, Request $request, string $reason): void
+    private function denied(string $invitationId, Request $request, string $reason, ?string $code = null): void
     {
         $invitation = UserInvitation::query()->find($invitationId);
 
         $this->audit->record('invitation.accept_denied', $request, actorIdentity: 'invitee', tenantId: $invitation?->tenant_id,
             applicationId: $invitation?->application_id, resourceType: 'UserInvitation', resourceId: $invitation?->id,
-            metadata: ['reason' => $reason], source: 'invitation');
+            metadata: array_filter(['reason' => $reason, 'seat_code' => $code]), source: 'invitation');
+    }
+
+    /** What the invitee is told when no seat can be given: the page state, never the numbers of the tenant. */
+    private function seatState(SeatException $e): InvitationException
+    {
+        return new InvitationException(
+            $e->retryable() ? InvitationException::SEAT_RETRY : InvitationException::NO_SEAT,
+            $e->retryable() ? 503 : 409,
+            $e->errorCode,
+            $e->retryAfter,
+        );
+    }
+
+    /**
+     * For the page the invitee opens: tells at once, without locking, that the seat is gone (limit lowered, entitlement lost) so a
+     * password is not typed for nothing. accept() decides again under the lock.
+     *
+     * @throws InvitationException
+     */
+    public function assertSeatAvailable(UserInvitation $invitation): void
+    {
+        try {
+            $this->seats->authorize(SeatOperation::Take, $invitation->tenant, $invitation->application, $invitation->email, $this->identityFor($invitation->email)?->id);
+        } catch (SeatException $e) {
+            throw $this->seatState($e);
+        }
     }
 
     // ---------------------------------------------------------------- helpers

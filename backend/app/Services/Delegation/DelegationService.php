@@ -17,6 +17,7 @@ use App\Services\AuditService;
 use App\Services\AuthorizationService;
 use App\Services\Commercial\EntitlementService;
 use App\Services\Oidc\SessionRevocationService;
+use App\Services\Seats\SeatService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
@@ -48,6 +49,7 @@ class DelegationService
         private readonly EntitlementService $entitlements,
         private readonly SessionRevocationService $revocation,
         private readonly AuditService $audit,
+        private readonly SeatService $seats,
     ) {}
 
     public function context(ServiceAccount $serviceAccount, Tenant $tenant, string $actingUserId): DelegationContext
@@ -262,6 +264,9 @@ class DelegationService
         $roles = $this->resolveAssignableRoles($context, $roleIds);
 
         $result = DB::transaction(function () use ($context, $data, $email) {
+            // The seat lock comes first (before any row is touched): the same global order every seat-adding path follows.
+            $this->seats->lock($context->tenant->id, [$context->application->id]);
+
             $existing = User::withTrashed()->whereRaw('lower(email) = ?', [$email])->first();
 
             if ($existing) {
@@ -341,14 +346,8 @@ class DelegationService
             ['status' => TenantMembership::STATUS_ACTIVE, 'is_tenant_admin' => false],
         );
 
-        $access = UserApplicationAccess::query()->firstOrCreate(
-            ['user_id' => $user->id, 'tenant_id' => $context->tenant->id, 'application_id' => $context->application->id],
-            ['status' => UserApplicationAccess::STATUS_ACTIVE],
-        );
-
-        if ($access->status !== UserApplicationAccess::STATUS_ACTIVE) {
-            $access->update(['status' => UserApplicationAccess::STATUS_ACTIVE]);
-        }
+        // The one choke point for a new or re-activated assignment: seat limit enforced by OptiNexus, never by the caller.
+        $this->seats->grantAccess($context->tenant, $context->application, $user);
     }
 
     /** Takes this application away from a user of the tenant: sessions end, the application roles go, the identity stays. */

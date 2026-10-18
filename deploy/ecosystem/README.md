@@ -96,6 +96,26 @@ not part of PLATFORM_ADMIN's wildcard) and an operator can never verify their ow
 Settings (`.state\nexus.env`, never in Git): `NEXUS_TEMP_PASSWORD_TTL_HOURS`, `NEXUS_TEMP_PASSWORD_MAX_ATTEMPTS`, `NEXUS_TEMP_PASSWORD_LOCKOUT_SECONDS`. The temporary password itself is never configured.
 Existing deployments: `php artisan migrate` (additive) adds the columns and attaches `cgo.user.email.verify` to PLATFORM_SUPERADMIN; giving it to another role is a deliberate, audited choice.
 
+## Seat limits (operator runbook)
+
+Contract: `docs/ecosystem/GOVERNANCE_CONTRACTS.md` section 2d; owner decision 2026-10-18 (`DECISION_PACKAGE.md` item 4). OptiNexus is the only place that counts and enforces seats; a product only shows
+the figures it is given. A seat is one person in one tenant for one product (several roles still count once; suspended people count; service accounts do not). A pending invitation reserves a seat until it
+is accepted, revoked or expired. Every way of adding someone (invitation, delegation, direct creation, first Admin Tenant, operator assignment) takes the same decision.
+
+* **Which products.** Only products whose manifest declares `user_limit` in `entitlement_limit_keys` (today OptiEntry). OptiFleet and OptiRadar declare none: they stay *not controlled*, nothing is invented
+  for them. After upgrading OptiEntry, re-import its manifest (`MANIFEST_IMPORT.md`) so OptiNexus learns the contract; until then nothing is controlled.
+* **Setting the limit.** The tenant's `user_limit` entitlement comes from its plan (and add-ons) at subscription activation. Seeders never create or widen one. For a running subscription a plan edit does
+  not change what the tenant already holds (seen in the live check): record a tenant entitlement override instead (type `LIMIT`, key `user_limit`, the application, a reason; audited). **To change an
+  override, suspend the old one first**: two active overrides with different values read as invalid and nobody can be added (`SEAT_ENTITLEMENT_INVALID`) until one is suspended. A seat-controlled
+  product with no `user_limit` at all refuses additions (`SEAT_ENTITLEMENT_MISSING`); a missing, unreadable or invalid value is never read as unlimited. Unlimited is an explicit value.
+* **Look before and after an upgrade** (read-only, changes nothing): `php artisan ecosystem:seats:inventory [--tenant=CODE] [--application=CODE] [--only-problems] [--json] [--strict]` lists used, reserved,
+  limit, over-limit and anomalies per tenant and product (`--strict` exits non-zero when something needs attention).
+* **Existing data.** Nothing is deleted, revoked or backfilled. A tenant already above its limit is reported *over the limit*: its people keep access, additions are refused
+  (`SEAT_OVER_LIMIT`) until usage and reservations fit again, and reducing usage is always allowed. Revoking a product assignment frees that seat only; the identity, membership and history stay.
+* **For support.** A refusal carries `application_code`, `limit`, `used`, `reserved`, `available`, `over_limit` and a `recovery` word (`FREE_SEAT_OR_RAISE_LIMIT`, `REDUCE_USAGE_OR_RAISE_LIMIT`,
+  `SET_ENTITLEMENT`, `FIX_ENTITLEMENT`, `RETRY`); every refusal is audited as `seat.denied` (no credentials, tokens or links in it). `SEAT_CONTENTION` (503 with `Retry-After`) means another change
+  held the tenant's seat lock; retry. There is no operator bypass: raise the limit through an override instead.
+
 ## Day-two operations
 
 | Task | Command | Notes |

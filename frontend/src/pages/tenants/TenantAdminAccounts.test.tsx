@@ -161,6 +161,43 @@ describe('first Admin Tenant panel', () => {
     expect(document.body.textContent).not.toContain(PASSWORD);
   });
 
+  it('never writes the temporary password to browser storage, the address bar, the history or the console', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+    const consoleSinks = (['log', 'info', 'warn', 'error', 'debug'] as const).map((method) => vi.spyOn(console, method).mockImplementation(() => undefined));
+    serve(ALL, (call) => {
+      if (call.url === '/ecosystem/tenants/t-1/admin-accounts' && call.method === 'POST') {
+        rows = [...rows, account('new', 'New Admin', activation())];
+        return { status: 201, data: { success: true, data: { ...rows[rows.length - 1], outcome: 'created', temporary_credential: { password: PASSWORD, expires_at: '2026-10-20T07:00:00Z', shown_once: true } } } };
+      }
+      return undefined;
+    });
+
+    /** Everything a reload could bring back: both storages, cookies, the address and the history state. */
+    const persisted = () => {
+      const dump = (store: Storage) => Array.from({ length: store.length }, (_, i) => [store.key(i), store.getItem(store.key(i) ?? '')]);
+      return JSON.stringify({ local: dump(window.localStorage), session: dump(window.sessionStorage), cookie: document.cookie, url: window.location.href, state: window.history.state });
+    };
+
+    renderApp('/tenants/t-1/admins');
+    await rowOf('Created Admin');
+    await user.click(screen.getByRole('button', { name: 'Create admin account' }));
+    const form = screen.getByRole('dialog', { name: 'Create the first Admin Tenant' });
+    await user.type(within(form).getByLabelText('Name', { exact: true }), 'New Admin');
+    await user.type(within(form).getByLabelText(/^E-mail address/), 'new@example.test');
+    await user.click(within(form).getByRole('button', { name: 'Create account' }));
+
+    const dialog = await screen.findByTestId('secret-dialog');
+    expect(within(dialog).getByTestId('client-secret').textContent).toBe(PASSWORD);
+    expect(persisted()).not.toContain(PASSWORD); // while it is on screen
+    await user.click(within(dialog).getByRole('button', { name: 'Copy password' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(screen.queryByTestId('secret-dialog')).toBeNull());
+
+    expect(persisted()).not.toContain(PASSWORD); // after it was closed
+    expect(JSON.stringify(consoleSinks.map((sink) => sink.mock.calls))).not.toContain(PASSWORD);
+  });
+
   it('keeps the temporary password on screen while the rest of the tab reloads slowly', async () => {
     const user = userEvent.setup();
     let adminsCalls = 0;

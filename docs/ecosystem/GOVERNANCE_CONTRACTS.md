@@ -67,7 +67,10 @@ Same base, authentication and `acting_user_id` rule as section 2 (Admin Tenant o
 Invitation view (`data`): `id`, `email`, `name`, `status` (an unaccepted invitation past `expires_at` is reported as `EXPIRED`),
 `locale`, `role_ids[]`, `roles[]{id,code,name}`, `invited_by{id,name}`, `created_at`, `expires_at`, `last_sent_at`, `send_count`,
 `delivery{status: QUEUED\|SENT\|FAILED, attempted_at, error_code}`, `accepted_at`, `revoked_at`, `can_resend`, `can_revoke`. The token and
-its hash are never part of any API answer.
+its hash are never part of any API answer. The list answers `{data: [view...], meta: {pagination}}` like `/users`. `delivery.error_code` is
+`MAIL_TRANSPORT_FAILED` or null (no other value exists). `can_resend` is false once the invitation is accepted or revoked or the resend limit
+is reached (the 60 s cooldown is not part of it: it answers `INVITATION_RESEND_COOLDOWN`); `can_revoke` is true for `PENDING` and `EXPIRED`.
+An `EXPIRED` invitation does not block a new invitation for the same e-mail: creating again replaces it (the old row stays as history).
 
 Refusals (error envelope as in section 2): `INVITATION_PENDING` (409, one open invitation per e-mail, tenant and application; use
 resend; `details.invitation_id`), `ALREADY_MEMBER` (409, active member with access to this application), `ROLE_NOT_ASSIGNABLE` (422),

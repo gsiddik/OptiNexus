@@ -1,9 +1,18 @@
 # Rendered by the nginx image at start (envsubst): LISTEN_PORT, BACKEND_HOST, CLIENT_MAX_BODY_SIZE.
 # The container listens on the same port the host publishes, so one URL (alias:port) reaches it from the browser and from other containers.
+# An invitation link carries a single-use token that is a credential until it is used (it is e-mailed to the invitee). Keep it out of the
+# access log: the request line is logged with the token replaced.
+map $request $nexus_logged_request {
+    default $request;
+    "~^(?<verb>[A-Z]+) /invitations/[0-9a-f]{64}(?<tail>[?\s].*)$" "$verb /invitations/[redacted]$tail";
+}
+log_format nexus_redacted '$remote_addr - $remote_user [$time_local] "$nexus_logged_request" $status $body_bytes_sent "$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
+
 server {
     listen ${LISTEN_PORT};
     server_name _;
     client_max_body_size ${CLIENT_MAX_BODY_SIZE};
+    access_log /dev/stdout nexus_redacted;
 
     location = /nginx-health {
         access_log off;

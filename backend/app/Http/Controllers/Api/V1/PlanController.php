@@ -41,7 +41,7 @@ class PlanController extends Controller
 
     public function store(StorePlanRequest $request): JsonResponse
     {
-        $plan = Plan::create([...$request->validated(), 'status' => Plan::STATUS_DRAFT]);
+        $plan = Plan::create([...$request->validated(), 'plan_code' => 'PLN-'.Str::ulid(), 'status' => Plan::STATUS_DRAFT]);
 
         $this->audit->record('plan.created', $request, resourceType: 'Plan', resourceId: $plan->id, newValue: $plan->toArray());
 
@@ -67,13 +67,13 @@ class PlanController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'plan_code' => ['required', 'string', 'max:64', 'unique:plans,plan_code'],
+            'plan_code' => ['exclude'],
         ]);
 
         $clone = Plan::create([
             'product_id' => $plan->product_id,
             'name' => $validated['name'],
-            'plan_code' => $validated['plan_code'],
+            'plan_code' => 'PLN-'.Str::ulid(),
             'description' => $plan->description,
             'billing_interval' => $plan->billing_interval,
             'trial_days' => $plan->trial_days,

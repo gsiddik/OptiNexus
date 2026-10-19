@@ -12,6 +12,7 @@ use App\Models\Customer;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class CustomerController extends Controller
 {
@@ -49,7 +50,7 @@ class CustomerController extends Controller
 
     public function store(StoreCustomerRequest $request): JsonResponse
     {
-        $customer = Customer::create([...$request->validated(), 'status' => Customer::STATUS_ACTIVE]);
+        $customer = Customer::create([...$request->validated(), 'customer_code' => 'CUS-'.Str::ulid(), 'status' => Customer::STATUS_ACTIVE]);
 
         $this->audit->record('customer.created', $request, resourceType: 'Customer', resourceId: $customer->id, newValue: $customer->toArray(), customerId: $customer->id);
 

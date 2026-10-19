@@ -14,9 +14,12 @@ use App\Models\Application;
 use App\Models\Capability;
 use App\Models\Product;
 use App\Services\AuditService;
+use App\Services\AuthorizationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
@@ -42,9 +45,24 @@ class ProductController extends Controller
         return $this->paginated($paginator, ProductResource::class);
     }
 
+    public function applicationOptions(): JsonResponse
+    {
+        return $this->ok(Application::query()->orderBy('name')->get(['id', 'name', 'application_code']));
+    }
+
+    public function capabilityOptions(Product $product): JsonResponse
+    {
+        $applications = $product->applications()->with(['capabilities' => fn ($query) => $query->orderBy('sort_order')->orderBy('name')])->orderBy('name')->get();
+
+        return $this->ok($applications->map(fn (Application $application) => [
+            'application' => $application->only(['id', 'name', 'application_code']),
+            'capabilities' => CapabilityResource::collection($application->capabilities),
+        ]));
+    }
+
     public function store(StoreProductRequest $request): JsonResponse
     {
-        $product = Product::create([...$request->validated(), 'status' => Product::STATUS_DRAFT]);
+        $product = Product::create([...$request->validated(), 'product_code' => 'PRD-'.Str::ulid(), 'status' => Product::STATUS_DRAFT]);
 
         $this->audit->record('product.created', $request, resourceType: 'Product', resourceId: $product->id, newValue: $product->toArray());
 
@@ -88,22 +106,30 @@ class ProductController extends Controller
 
     public function attachApplication(Request $request, Product $product, Application $application): JsonResponse
     {
-        if ($product->applications()->where('applications.id', $application->id)->exists()) {
-            return $this->fail('DUPLICATE_RESOURCE', 'This application is already assigned to the product.', 409);
-        }
+        return DB::transaction(function () use ($request, $product, $application) {
+            Product::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
+            if ($product->applications()->where('applications.id', $application->id)->exists()) {
+                return $this->fail('DUPLICATE_RESOURCE', 'This application is already assigned to the product.', 409);
+            }
 
-        $product->applications()->attach($application->id, ['id' => (string) Str::uuid()]);
+            $product->applications()->attach($application->id, ['id' => (string) Str::uuid()]);
 
-        $this->audit->record('product.application_assigned', $request, resourceType: 'Product', resourceId: $product->id, newValue: ['application_id' => $application->id], applicationId: $application->id);
+            $this->audit->record('product.application_assigned', $request, resourceType: 'Product', resourceId: $product->id, newValue: ['application_id' => $application->id], applicationId: $application->id);
 
-        return $this->created(ApplicationResource::collection($product->applications()->get()));
+            return $this->created(ApplicationResource::collection($product->applications()->get()));
+        });
     }
 
     public function detachApplication(Request $request, Product $product, Application $application): JsonResponse
     {
-        $product->applications()->detach($application->id);
+        DB::transaction(function () use ($request, $product, $application) {
+            Product::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
+            $capabilityIds = Capability::withTrashed()->where('application_id', $application->id)->pluck('id');
+            $product->capabilities()->detach($capabilityIds);
+            $product->applications()->detach($application->id);
 
-        $this->audit->record('product.application_revoked', $request, resourceType: 'Product', resourceId: $product->id, oldValue: ['application_id' => $application->id], applicationId: $application->id);
+            $this->audit->record('product.application_revoked', $request, resourceType: 'Product', resourceId: $product->id, oldValue: ['application_id' => $application->id], applicationId: $application->id);
+        });
 
         return $this->ok(null);
     }
@@ -113,26 +139,65 @@ class ProductController extends Controller
         return $this->ok(CapabilityResource::collection($product->capabilities));
     }
 
+    public function syncCapabilities(Request $request, Product $product, AuthorizationService $authorization): JsonResponse
+    {
+        return DB::transaction(function () use ($request, $product, $authorization) {
+            Product::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
+            $applicationIds = $product->applications()->pluck('applications.id')->all();
+            $data = $request->validate([
+                'capability_ids' => ['present', 'array'],
+                'capability_ids.*' => ['required', 'uuid', 'distinct', Rule::exists('capabilities', 'id')->whereIn('application_id', $applicationIds)->whereNull('deleted_at')],
+            ]);
+            $previous = $product->capabilities()->pluck('capabilities.id')->all();
+            $selected = $data['capability_ids'];
+            foreach ([
+                'cgo.product.capability.assign' => array_diff($selected, $previous),
+                'cgo.product.capability.revoke' => array_diff($previous, $selected),
+            ] as $permission => $changes) {
+                abort_if($changes && ! $authorization->userHasPermission($request->user(), $permission), 403, "You do not have the [{$permission}] permission required for this action.");
+            }
+
+            $pivotData = [];
+            foreach ($selected as $id) {
+                $pivotData[$id] = in_array($id, $previous, true) ? [] : ['id' => (string) Str::uuid()];
+            }
+            $product->capabilities()->sync($pivotData);
+            $this->audit->record('product.capabilities_updated', $request, resourceType: 'Product', resourceId: $product->id, oldValue: ['capability_ids' => $previous], newValue: ['capability_ids' => $selected]);
+
+            return $this->ok(CapabilityResource::collection($product->capabilities()->get()));
+        });
+    }
+
     public function attachCapability(Request $request, Product $product, Capability $capability): JsonResponse
     {
-        if ($product->capabilities()->where('capabilities.id', $capability->id)->exists()) {
-            return $this->fail('DUPLICATE_RESOURCE', 'This capability is already assigned to the product.', 409);
-        }
+        return DB::transaction(function () use ($request, $product, $capability) {
+            Product::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
+            if (! $product->applications()->where('applications.id', $capability->application_id)->exists()) {
+                return $this->fail('VALIDATION_ERROR', 'Attach the capability application to this product first.', 422);
+            }
 
-        $product->capabilities()->attach($capability->id, ['id' => (string) Str::uuid()]);
+            if ($product->capabilities()->where('capabilities.id', $capability->id)->exists()) {
+                return $this->fail('DUPLICATE_RESOURCE', 'This capability is already assigned to the product.', 409);
+            }
 
-        $this->audit->record('product.capability_assigned', $request, resourceType: 'Product', resourceId: $product->id, newValue: ['capability_id' => $capability->id]);
+            $product->capabilities()->attach($capability->id, ['id' => (string) Str::uuid()]);
 
-        return $this->created(CapabilityResource::collection($product->capabilities()->get()));
+            $this->audit->record('product.capability_assigned', $request, resourceType: 'Product', resourceId: $product->id, newValue: ['capability_id' => $capability->id]);
+
+            return $this->created(CapabilityResource::collection($product->capabilities()->get()));
+        });
     }
 
     public function detachCapability(Request $request, Product $product, Capability $capability): JsonResponse
     {
-        $product->capabilities()->detach($capability->id);
+        return DB::transaction(function () use ($request, $product, $capability) {
+            Product::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
+            $product->capabilities()->detach($capability->id);
 
-        $this->audit->record('product.capability_revoked', $request, resourceType: 'Product', resourceId: $product->id, oldValue: ['capability_id' => $capability->id]);
+            $this->audit->record('product.capability_revoked', $request, resourceType: 'Product', resourceId: $product->id, oldValue: ['capability_id' => $capability->id]);
 
-        return $this->ok(null);
+            return $this->ok(null);
+        });
     }
 
     private function transitionTo(Request $request, Product $product, string $to, array $allowedFrom): JsonResponse

@@ -14,7 +14,7 @@ class StoreTenantRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tenant_code' => ['required', 'string', 'max:64', 'unique:tenants,tenant_code'],
+            'tenant_code' => ['exclude'],
             'customer_id' => ['required', 'uuid', 'exists:customers,id'],
             'name' => ['required', 'string', 'max:255'],
             'region' => ['nullable', 'string', 'max:100'],

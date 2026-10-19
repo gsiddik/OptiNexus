@@ -16,7 +16,7 @@ class StorePlanRequest extends FormRequest
     {
         return [
             'product_id' => ['required', 'uuid', 'exists:products,id'],
-            'plan_code' => ['required', 'string', 'max:64', 'unique:plans,plan_code'],
+            'plan_code' => ['exclude'],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'billing_interval' => ['required', 'string', 'in:'.implode(',', Plan::INTERVALS)],

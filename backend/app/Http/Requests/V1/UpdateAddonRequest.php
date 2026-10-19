@@ -3,7 +3,6 @@
 namespace App\Http\Requests\V1;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateAddonRequest extends FormRequest
 {
@@ -14,10 +13,8 @@ class UpdateAddonRequest extends FormRequest
 
     public function rules(): array
     {
-        $addon = $this->route('addon');
-
         return [
-            'addon_code' => ['sometimes', 'string', 'max:64', Rule::unique('addons', 'addon_code')->ignore($addon?->id)],
+            'addon_code' => ['missing'],
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],

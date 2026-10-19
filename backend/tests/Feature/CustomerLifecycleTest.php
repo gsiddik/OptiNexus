@@ -22,7 +22,6 @@ class CustomerLifecycleTest extends TestCase
         $this->actingAsSuperAdmin();
 
         $response = $this->postJson('/api/v1/customers', [
-            'customer_code' => 'ACME2',
             'legal_name' => 'Acme Two Pte Ltd',
             'email' => 'ops@acme2.example',
         ]);
@@ -35,17 +34,18 @@ class CustomerLifecycleTest extends TestCase
 
         $this->getJson("/api/v1/customers/{$id}")
             ->assertStatus(200)
-            ->assertJsonPath('data.customer_code', 'ACME2');
+            ->assertJsonPath('data.customer_code', $response->json('data.customer_code'));
     }
 
-    public function test_duplicate_customer_code_is_rejected(): void
+    public function test_supplied_customer_code_cannot_override_the_system_code(): void
     {
         $this->actingAsSuperAdmin();
         $this->makeCustomer(['customer_code' => 'DUPCODE']);
 
         $this->postJson('/api/v1/customers', ['customer_code' => 'DUPCODE', 'legal_name' => 'X'])
-            ->assertStatus(422)
-            ->assertJsonPath('error.code', 'VALIDATION_ERROR');
+            ->assertStatus(201);
+
+        $this->assertSame(1, Customer::where('customer_code', 'DUPCODE')->count());
     }
 
     public function test_lifecycle_transitions_follow_allowed_paths(): void

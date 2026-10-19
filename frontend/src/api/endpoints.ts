@@ -72,6 +72,20 @@ export interface ListParams {
   [key: string]: string | number | undefined;
 }
 
+/** Load every visible record for relation selectors, following server pagination. */
+export async function listAll<T>(fetchPage: (params: ListParams) => Promise<ApiEnvelope<T[]>>): Promise<T[]> {
+  const rows: T[] = [];
+  let page = 1;
+  let lastPage = 1;
+  do {
+    const response = await fetchPage({ page, per_page: 100 });
+    rows.push(...response.data);
+    lastPage = response.meta?.pagination?.last_page ?? 1;
+    page += 1;
+  } while (page <= lastPage);
+  return rows;
+}
+
 // ---------------------------------------------------------------- Auth
 export const authApi = {
   login: (email: string, password: string) =>
@@ -220,6 +234,8 @@ export const serviceAccountsApi = {
 
 // ---------------------------------------------------------------- Products
 export const productsApi = {
+  applicationOptions: () => unwrap<Pick<Application, 'id' | 'name' | 'application_code'>[]>(apiClient.get('/products/options/applications')),
+  capabilityOptions: (id: string) => unwrap<{ application: Pick<Application, 'id' | 'name' | 'application_code'>; capabilities: Capability[] }[]>(apiClient.get(`/products/${id}/capability-options`)),
   list: (params?: ListParams) => unwrapFull<Product[]>(apiClient.get('/products', { params })),
   get: (id: string) => unwrap<Product>(apiClient.get(`/products/${id}`)),
   create: (payload: Partial<Product>) => unwrap<Product>(apiClient.post('/products', payload)),
@@ -231,6 +247,7 @@ export const productsApi = {
   attachApplication: (id: string, applicationId: string) => apiClient.post(`/products/${id}/applications/${applicationId}`),
   detachApplication: (id: string, applicationId: string) => apiClient.delete(`/products/${id}/applications/${applicationId}`),
   capabilities: (id: string) => unwrap<Capability[]>(apiClient.get(`/products/${id}/capabilities`)),
+  saveCapabilities: (id: string, capabilityIds: string[]) => unwrap<Capability[]>(apiClient.put(`/products/${id}/capabilities`, { capability_ids: capabilityIds })),
   attachCapability: (id: string, capabilityId: string) => apiClient.post(`/products/${id}/capabilities/${capabilityId}`),
   detachCapability: (id: string, capabilityId: string) => apiClient.delete(`/products/${id}/capabilities/${capabilityId}`),
 };
@@ -241,7 +258,7 @@ export const plansApi = {
   get: (id: string) => unwrap<Plan>(apiClient.get(`/plans/${id}`)),
   create: (payload: Partial<Plan>) => unwrap<Plan>(apiClient.post('/plans', payload)),
   update: (id: string, payload: Partial<Plan>) => unwrap<Plan>(apiClient.put(`/plans/${id}`, payload)),
-  clone: (id: string, name: string, planCode: string) => unwrap<Plan>(apiClient.post(`/plans/${id}/clone`, { name, plan_code: planCode })),
+  clone: (id: string, name: string) => unwrap<Plan>(apiClient.post(`/plans/${id}/clone`, { name })),
   activate: (id: string) => unwrap<Plan>(apiClient.post(`/plans/${id}/activate`)),
   deactivate: (id: string) => unwrap<Plan>(apiClient.post(`/plans/${id}/deactivate`)),
   retire: (id: string) => unwrap<Plan>(apiClient.post(`/plans/${id}/retire`)),
@@ -307,6 +324,8 @@ export const pricingApi = {
 
 // ------------------------------------------------------------ Subscriptions
 export const subscriptionsApi = {
+  customerOptions: () => unwrap<Pick<Customer, 'id' | 'legal_name' | 'customer_code'>[]>(apiClient.get('/subscriptions/options/customers')),
+  tenantOptions: (customerId: string) => unwrap<Pick<Tenant, 'id' | 'customer_id' | 'name' | 'tenant_code'>[]>(apiClient.get('/subscriptions/options/tenants', { params: { customer_id: customerId } })),
   list: (params?: ListParams) => unwrapFull<Subscription[]>(apiClient.get('/subscriptions', { params })),
   get: (id: string) => unwrap<Subscription>(apiClient.get(`/subscriptions/${id}`)),
   create: (payload: Partial<Subscription> & { customer_id: string; tenant_id: string; plan_id: string; idempotency_key?: string }) =>

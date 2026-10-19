@@ -1,3 +1,4 @@
+import { HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { billingApi, type BillingRunResultRow } from '../../../api/endpoints';
@@ -116,10 +117,10 @@ function RunBillingForm({ onRan }: { onRan: (results: Array<Billing | BillingRun
     <div className="form">
       <ErrorAlert message={error} />
       <p className="muted">Provide a subscription ID for a single run, or a tenant ID to bill every active subscription for that tenant.</p>
-      <label>Subscription ID<input value={form.subscription_id} onChange={(e) => setForm({ ...form, subscription_id: e.target.value })} /></label>
-      <label>Tenant ID<input value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: e.target.value })} /></label>
-      <label>Period Start (optional)<input type="date" value={form.period_start} onChange={(e) => setForm({ ...form, period_start: e.target.value })} /></label>
-      <label>Period End (optional)<input type="date" value={form.period_end} onChange={(e) => setForm({ ...form, period_end: e.target.value })} /></label>
+      <label>Subscription ID<HelpInput help="Enter the ID of the subscription to be billed." value={form.subscription_id} onChange={(e) => setForm({ ...form, subscription_id: e.target.value })} /></label>
+      <label>Tenant ID<HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: e.target.value })} /></label>
+      <label>Period Start (optional)<HelpInput help="Optional billing period start date. Leave empty to use the subscription's current period." type="date" value={form.period_start} onChange={(e) => setForm({ ...form, period_start: e.target.value })} /></label>
+      <label>Period End (optional)<HelpInput help="Optional billing period end date. It must follow the start date." type="date" value={form.period_end} onChange={(e) => setForm({ ...form, period_end: e.target.value })} /></label>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={submit} disabled={submitting || (!form.subscription_id && !form.tenant_id)}>Run</button>
       </div>

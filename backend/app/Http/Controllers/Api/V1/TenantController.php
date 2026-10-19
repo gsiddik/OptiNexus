@@ -56,7 +56,7 @@ class TenantController extends Controller
 
     public function store(StoreTenantRequest $request): JsonResponse
     {
-        $tenant = Tenant::create([...$request->validated(), 'status' => Tenant::STATUS_DRAFT]);
+        $tenant = Tenant::create([...$request->validated(), 'tenant_code' => 'TEN-'.Str::ulid(), 'status' => Tenant::STATUS_DRAFT]);
 
         $this->audit->record('tenant.created', $request, resourceType: 'Tenant', resourceId: $tenant->id, newValue: $tenant->toArray(), tenantId: $tenant->id, customerId: $tenant->customer_id);
 

@@ -1,3 +1,4 @@
+import { HelpInput, HelpTextarea } from '../../components/FieldControls';
 import { useMemo, useState, type FormEvent } from 'react';
 import { adminAccountsApi, rolesApi, tenantsApi } from '../../api/endpoints';
 import { useApiResource } from '../../api/useApi';
@@ -297,11 +298,11 @@ function CreateForm({ tenant, applications, onCancel, onCreated }: {
       <ErrorAlert message={error} />
       <div role="radiogroup">
         <label className="radio-row">
-          <input type="radio" name="mode" checked={mode === 'new'} onChange={() => setMode('new')} />
+          <HelpInput help="Create a new user account as this tenant's administrator." type="radio" name="mode" checked={mode === 'new'} onChange={() => setMode('new')} />
           {t('adminAcct.form.modeNew')}
         </label>
         <label className="radio-row">
-          <input type="radio" name="mode" checked={mode === 'existing'} onChange={() => setMode('existing')} />
+          <HelpInput help="Assign an existing registered user as this tenant's administrator." type="radio" name="mode" checked={mode === 'existing'} onChange={() => setMode('existing')} />
           {t('adminAcct.form.modeExisting')}
         </label>
       </div>
@@ -310,11 +311,11 @@ function CreateForm({ tenant, applications, onCancel, onCreated }: {
         <>
           <label>
             {t('adminAcct.form.name')}
-            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={255} required autoComplete="off" />
+            <HelpInput help="Enter a readable name used to identify this record in lists and selections." value={name} onChange={(e) => setName(e.target.value)} maxLength={255} required autoComplete="off" />
           </label>
           <label>
             {t('adminAcct.form.email')}
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} required autoComplete="off" />
+            <HelpInput help="Enter a valid email address for this account or customer." type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} required autoComplete="off" />
             <span className="field-hint">{t('adminAcct.form.emailHint')}</span>
           </label>
         </>
@@ -322,12 +323,12 @@ function CreateForm({ tenant, applications, onCancel, onCreated }: {
         <>
           <label>
             {t('adminAcct.form.userId')}
-            <input value={userId} onChange={(e) => setUserId(e.target.value)} required autoComplete="off" spellCheck={false} />
+            <HelpInput help="Enter the registered user ID to which this action applies." value={userId} onChange={(e) => setUserId(e.target.value)} required autoComplete="off" spellCheck={false} />
             <span className="field-hint">{t('adminAcct.form.userIdHint')}</span>
           </label>
           <label>
             {t('adminAcct.form.confirmEmail')}
-            <input type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} maxLength={255} required autoComplete="off" />
+            <HelpInput help="Re-enter the existing user's email exactly to confirm the selected identity." type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} maxLength={255} required autoComplete="off" />
             <span className="field-hint">{t('adminAcct.form.confirmEmailHint')}</span>
           </label>
         </>
@@ -337,7 +338,7 @@ function CreateForm({ tenant, applications, onCancel, onCreated }: {
         <legend>{t('adminAcct.form.applications')}</legend>
         {applications.map((app) => (
           <label key={app.id} className="check-inline">
-            <input type="checkbox" checked={selectedApps.includes(app.id)} onChange={() => setSelectedApps((list) => toggle(list, app.id))} />
+            <HelpInput help="Select the applications this tenant administrator may access." type="checkbox" checked={selectedApps.includes(app.id)} onChange={() => setSelectedApps((list) => toggle(list, app.id))} />
             {app.name}
           </label>
         ))}
@@ -350,7 +351,7 @@ function CreateForm({ tenant, applications, onCancel, onCreated }: {
         {roleChoices.length === 0 && <span className="field-hint">{t('adminAcct.form.rolesNone')}</span>}
         {roleChoices.map((role) => (
           <label key={role.id} className="check-inline">
-            <input type="checkbox" checked={selectedRoles.includes(role.id)} onChange={() => setSelectedRoles((list) => toggle(list, role.id))} />
+            <HelpInput help="Select the roles assigned to this tenant administrator." type="checkbox" checked={selectedRoles.includes(role.id)} onChange={() => setSelectedRoles((list) => toggle(list, role.id))} />
             {role.name}
           </label>
         ))}
@@ -402,13 +403,13 @@ function VerifyForm({ tenantId, account, onCancel, onVerified }: {
       <ErrorAlert message={error} />
       <label>
         {t('adminAcct.verify.email')}
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} required autoComplete="off" className={submitted && mismatch ? 'invalid' : undefined} />
+        <HelpInput help="Enter a valid email address for this account or customer." type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} required autoComplete="off" className={submitted && mismatch ? 'invalid' : undefined} />
         <span className="field-hint">{t('adminAcct.verify.emailHint')}</span>
         {submitted && mismatch && <span className="field-error" role="alert">{t('adminAcct.verify.mismatch')}</span>}
       </label>
       <label>
         {t('adminAcct.verify.reason')}
-        <textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={REASON_MAX} required className={submitted && short ? 'invalid' : undefined} />
+        <HelpTextarea help="Explain why this change is needed. The reason is retained for review and audit." value={reason} onChange={(e) => setReason(e.target.value)} maxLength={REASON_MAX} required className={submitted && short ? 'invalid' : undefined} />
         <span className="field-hint">{t('adminAcct.verify.reasonHint', { min: REASON_MIN })}</span>
         {submitted && short && <span className="field-error" role="alert">{t('adminAcct.verify.reasonShort', { min: REASON_MIN })}</span>}
       </label>

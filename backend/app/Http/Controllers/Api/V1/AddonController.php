@@ -41,7 +41,7 @@ class AddonController extends Controller
 
     public function store(StoreAddonRequest $request): JsonResponse
     {
-        $addon = Addon::create([...$request->validated(), 'status' => Addon::STATUS_DRAFT]);
+        $addon = Addon::create([...$request->validated(), 'addon_code' => 'ADD-'.Str::ulid(), 'status' => Addon::STATUS_DRAFT]);
 
         $this->audit->record('addon.created', $request, resourceType: 'Addon', resourceId: $addon->id, newValue: $addon->toArray());
 

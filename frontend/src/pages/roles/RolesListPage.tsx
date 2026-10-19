@@ -1,3 +1,4 @@
+import { HelpInput, HelpSelect } from '../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { rolesApi } from '../../api/endpoints';
@@ -76,21 +77,21 @@ function CreateRoleForm({ onCreated }: { onCreated: () => void }) {
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>Name<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-      <label>Code<input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></label>
+      <label>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
+      <label>Code<HelpInput help="Enter a unique, stable code identifying this configuration." value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></label>
       <label>
         Type
-        <select value={form.role_type} onChange={(e) => setForm({ ...form, role_type: e.target.value })}>
+        <HelpSelect help="Choose the role scope. Tenant and application roles require the corresponding IDs." value={form.role_type} onChange={(e) => setForm({ ...form, role_type: e.target.value })}>
           <option value="TENANT">TENANT</option>
           <option value="APPLICATION">APPLICATION</option>
           <option value="SYSTEM">SYSTEM</option>
-        </select>
+        </HelpSelect>
       </label>
       {form.role_type === 'TENANT' && (
-        <label>Tenant ID<input value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: e.target.value })} /></label>
+        <label>Tenant ID<HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: e.target.value })} /></label>
       )}
       {form.role_type === 'APPLICATION' && (
-        <label>Application ID<input value={form.application_id} onChange={(e) => setForm({ ...form, application_id: e.target.value })} /></label>
+        <label>Application ID<HelpInput help="Select the registered application to which this configuration applies." value={form.application_id} onChange={(e) => setForm({ ...form, application_id: e.target.value })} /></label>
       )}
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={submit}>Create</button>

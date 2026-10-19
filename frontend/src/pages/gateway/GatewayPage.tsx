@@ -1,3 +1,4 @@
+import { HelpSelect, HelpInput } from '../../components/FieldControls';
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { describeError, type ApiRequestError } from '../../api/client';
@@ -202,15 +203,15 @@ function LinksPanel({ tenantId, rows, vehicles, loading, error, canManage, onRet
     <>
       <ErrorAlert message={actionError} />
       <div className="toolbar">
-        <select aria-label={t('gw.filter.class')} value={filters.cls} onChange={(e) => setFilters({ ...filters, cls: e.target.value as LinkClass | '' })}>
+        <HelpSelect help="Filter vehicle links by mapping classification. Leave empty to show all classes." aria-label={t('gw.filter.class')} value={filters.cls} onChange={(e) => setFilters({ ...filters, cls: e.target.value as LinkClass | '' })}>
           <option value="">{t('common.all')}</option>
           {(['matched', 'unmatched', 'ambiguous', 'unlinked'] as LinkClass[]).map((cls) => <option key={cls} value={cls}>{t(`gw.class.${cls}` as MessageKey)}</option>)}
-        </select>
-        <select aria-label={t('gw.filter.source')} value={filters.source} onChange={(e) => setFilters({ ...filters, source: e.target.value })}>
+        </HelpSelect>
+        <HelpSelect help="Filter vehicle links by their source application." aria-label={t('gw.filter.source')} value={filters.source} onChange={(e) => setFilters({ ...filters, source: e.target.value })}>
           <option value="">{t('gw.filter.allSources')}</option>
           {sources.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <input type="search" aria-label={t('gw.filter.search')} placeholder={t('gw.filter.search')} value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} />
+        </HelpSelect>
+        <HelpInput help="Type a name, code, or identifying text to narrow the list. Clear to show all records." type="search" aria-label={t('gw.filter.search')} placeholder={t('gw.filter.search')} value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} />
       </div>
       <DataTable
         rows={visible}
@@ -305,15 +306,15 @@ function LinkForm({ row, vehicles, busy, onSubmit, onCancel }: { row: Classified
       <ErrorAlert message={error} />
       <label>
         {t('gw.link.search')}
-        <input type="search" value={needle} onChange={(e) => setNeedle(e.target.value)} autoComplete="off" />
+        <HelpInput help="Type a name, code, or identifying text to narrow the list. Clear to show all records." type="search" value={needle} onChange={(e) => setNeedle(e.target.value)} autoComplete="off" />
       </label>
       <label>
         {t('gw.link.vehicle')}
-        <select value={vehicleId} onChange={(e) => { setVehicleId(e.target.value); setMissing(false); }} aria-invalid={missing || undefined}>
+        <HelpSelect help="Select the Fleet vehicle corresponding to this source vehicle." value={vehicleId} onChange={(e) => { setVehicleId(e.target.value); setMissing(false); }} aria-invalid={missing || undefined}>
           <option value="">{t('gw.link.pick')}</option>
           {candidates.length > 0 && <optgroup label={t('gw.link.candidatesFirst')}>{candidates.map(option)}</optgroup>}
           <optgroup label={t('gw.link.others')}>{others.map(option)}</optgroup>
-        </select>
+        </HelpSelect>
       </label>
       {missing && <span className="field-error" role="alert">{t('gw.link.needVehicle')}</span>}
       <div className="modal-actions">
@@ -346,7 +347,7 @@ function LogsPanel({ tenantId, health }: { tenantId: string; health: ReturnType<
       <p className="muted">{t('gw.health.basis', { n: health.total })}</p>
       <div className="toolbar">
         <label className="check-inline">
-          <input type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />
+          <HelpInput help="Enable to show only failed gateway requests." type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />
           <span>{t('gw.logs.filterErrors')}</span>
         </label>
       </div>

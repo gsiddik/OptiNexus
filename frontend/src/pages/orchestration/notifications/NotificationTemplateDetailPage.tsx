@@ -1,3 +1,4 @@
+import { HelpInput, HelpTextarea } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { notificationTemplatesApi } from '../../../api/endpoints';
@@ -78,8 +79,8 @@ export function NotificationTemplateDetailPage() {
           <h3>Template Content</h3>
           {editing ? (
             <div className="form">
-              <label>Subject Template<input value={subject} onChange={(e) => setSubject(e.target.value)} /></label>
-              <label>Body Template<textarea rows={8} value={body} onChange={(e) => setBody(e.target.value)} /></label>
+              <label>Subject Template<HelpInput help="Enter the notification subject. Supported variables are resolved from context." value={subject} onChange={(e) => setSubject(e.target.value)} /></label>
+              <label>Body Template<HelpTextarea help="Enter the notification body. Use supported context variables to personalize it." rows={8} value={body} onChange={(e) => setBody(e.target.value)} /></label>
               <div className="modal-actions">
                 <button className="btn btn-ghost" onClick={() => setEditing(false)}>Cancel</button>
                 <button className="btn btn-primary" onClick={save}>Save (bumps version)</button>

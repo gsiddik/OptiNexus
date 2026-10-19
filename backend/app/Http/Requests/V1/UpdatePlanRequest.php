@@ -4,7 +4,6 @@ namespace App\Http\Requests\V1;
 
 use App\Models\Plan;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdatePlanRequest extends FormRequest
 {
@@ -15,10 +14,8 @@ class UpdatePlanRequest extends FormRequest
 
     public function rules(): array
     {
-        $plan = $this->route('plan');
-
         return [
-            'plan_code' => ['sometimes', 'string', 'max:64', Rule::unique('plans', 'plan_code')->ignore($plan?->id)],
+            'plan_code' => ['missing'],
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'billing_interval' => ['sometimes', 'string', 'in:'.implode(',', Plan::INTERVALS)],

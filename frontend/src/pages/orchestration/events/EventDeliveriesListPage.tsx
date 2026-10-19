@@ -1,3 +1,4 @@
+import { HelpSelect } from '../../../components/FieldControls';
 import { useSearchParams } from 'react-router-dom';
 import { eventDeliveriesApi } from '../../../api/endpoints';
 import { useApiList } from '../../../api/useApi';
@@ -47,14 +48,14 @@ export function EventDeliveriesListPage() {
       <div className="page-header"><h1>Event Deliveries</h1></div>
 
       <div className="toolbar">
-        <select value={status} onChange={(e) => setParams((p) => { p.set('status', e.target.value); return p; })}>
+        <HelpSelect help="Filter by lifecycle status. Leave empty to show all statuses." value={status} onChange={(e) => setParams((p) => { p.set('status', e.target.value); return p; })}>
           <option value="">Any status</option>
           {['PENDING', 'DELIVERED', 'FAILED', 'DISCARDED'].map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <select value={consumerType} onChange={(e) => setParams((p) => { p.set('consumer_type', e.target.value); return p; })}>
+        </HelpSelect>
+        <HelpSelect help="Filter event deliveries by consumer type." value={consumerType} onChange={(e) => setParams((p) => { p.set('consumer_type', e.target.value); return p; })}>
           <option value="">Any consumer</option>
           {['WORKFLOW', 'NOTIFICATION', 'WEBHOOK', 'INTEGRATION'].map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
+        </HelpSelect>
       </div>
 
       <ErrorAlert message={error ?? actionError} />

@@ -1,3 +1,4 @@
+import { HelpInput } from '../../components/FieldControls';
 import { useState } from 'react';
 import { auditApi } from '../../api/endpoints';
 import { useApiList } from '../../api/useApi';
@@ -24,8 +25,8 @@ export function AuditLogsPage() {
       </div>
       <p className="muted">Immutable history of governance-critical events. No update or delete path exists for this data.</p>
       <div className="toolbar">
-        <input placeholder="Filter by action (e.g. tenant.status_changed)" value={action} onChange={(e) => setAction(e.target.value)} />
-        <input placeholder="Filter by resource type (e.g. Tenant)" value={resourceType} onChange={(e) => setResourceType(e.target.value)} />
+        <HelpInput help="Filter audit entries by action, for example tenant.status_changed." placeholder="Filter by action (e.g. tenant.status_changed)" value={action} onChange={(e) => setAction(e.target.value)} />
+        <HelpInput help="Filter audit entries by resource type, for example Tenant or Customer." placeholder="Filter by resource type (e.g. Tenant)" value={resourceType} onChange={(e) => setResourceType(e.target.value)} />
       </div>
       <ErrorAlert message={error} />
       {loading ? (

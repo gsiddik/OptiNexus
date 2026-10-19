@@ -1,3 +1,4 @@
+import { HelpSelect, HelpInput } from '../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { applicationsApi, capabilitiesApi } from '../../api/endpoints';
@@ -124,15 +125,15 @@ function CreateCapabilityForm({ application, parentOptions, onCreated }: { appli
   return (
     <div className="form form-inline">
       <ErrorAlert message={error} />
-      <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as CapabilityType })}>
+      <HelpSelect help="Choose the hierarchy level: module, menu, submenu, feature, function, or action." value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as CapabilityType })}>
         {CAPABILITY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-      </select>
-      <input placeholder="code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
-      <input placeholder="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-      <select value={form.parent_id} onChange={(e) => setForm({ ...form, parent_id: e.target.value })}>
+      </HelpSelect>
+      <HelpInput help="Enter a unique, stable code identifying this configuration." placeholder="code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+      <HelpInput help="Enter a readable name used to identify this record in lists and selections." placeholder="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+      <HelpSelect help="Choose a parent capability, or leave empty to create a root capability." value={form.parent_id} onChange={(e) => setForm({ ...form, parent_id: e.target.value })}>
         <option value="">No parent (top-level)</option>
         {parentOptions.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.type})</option>)}
-      </select>
+      </HelpSelect>
       <button className="btn btn-primary" onClick={submit}>Add</button>
     </div>
   );

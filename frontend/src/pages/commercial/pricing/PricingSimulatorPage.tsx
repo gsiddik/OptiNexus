@@ -1,3 +1,4 @@
+import { HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { pricingApi, type PricingSimulationResult } from '../../../api/endpoints';
 import { ErrorAlert } from '../../../components/ErrorAlert';
@@ -76,15 +77,15 @@ export function PricingSimulatorPage() {
       <div className="card">
         <div className="form">
           <ErrorAlert message={error} />
-          <label>Plan ID<input value={planId} onChange={(e) => setPlanId(e.target.value)} /></label>
-          <label>Tenant ID (optional, applies tenant-specific overrides)<input value={tenantId} onChange={(e) => setTenantId(e.target.value)} /></label>
-          <label>Addon IDs (comma-separated, optional)<input value={addonIds} onChange={(e) => setAddonIds(e.target.value)} /></label>
+          <label>Plan ID<HelpInput help="Enter the registered plan ID for this subscription or pricing simulation." value={planId} onChange={(e) => setPlanId(e.target.value)} /></label>
+          <label>Tenant ID (optional, applies tenant-specific overrides)<HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." value={tenantId} onChange={(e) => setTenantId(e.target.value)} /></label>
+          <label>Addon IDs (comma-separated, optional)<HelpInput help="Enter add-on IDs separated by commas; leave empty if none apply." value={addonIds} onChange={(e) => setAddonIds(e.target.value)} /></label>
 
           <label>Usage quantities (meter_key -&gt; quantity)</label>
           {meterRows.map((row, i) => (
             <div className="toolbar" key={i}>
-              <input placeholder="meter_key, e.g. vehicles" value={row.key} onChange={(e) => updateRow(i, 'key', e.target.value)} />
-              <input placeholder="quantity" value={row.value} onChange={(e) => updateRow(i, 'value', e.target.value)} />
+              <HelpInput help="Enter the usage meter key supplying billable quantities, for example vehicles." placeholder="meter_key, e.g. vehicles" value={row.key} onChange={(e) => updateRow(i, 'key', e.target.value)} />
+              <HelpInput help="Enter the usage quantity for the price simulation." placeholder="quantity" value={row.value} onChange={(e) => updateRow(i, 'value', e.target.value)} />
               <button className="btn btn-ghost" onClick={() => removeRow(i)} disabled={meterRows.length === 1} aria-label="Remove meter row">×</button>
             </div>
           ))}

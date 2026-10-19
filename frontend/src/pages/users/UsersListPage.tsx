@@ -1,3 +1,4 @@
+import { HelpInput } from '../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usersApi } from '../../api/endpoints';
@@ -30,7 +31,7 @@ export function UsersListPage() {
         </PermissionGuard>
       </div>
       <div className="toolbar">
-        <input placeholder="Search by name or email..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        <HelpInput help="Type a name, code, or identifying text to narrow the list. Clear to show all records." placeholder="Search by name or email..." value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
       <ErrorAlert message={error} />
       {loading ? (
@@ -75,8 +76,8 @@ function CreateUserForm({ onCreated }: { onCreated: () => void }) {
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>Name<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-      <label>Email<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
+      <label>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
+      <label>Email<HelpInput help="Enter a valid email address for this account or customer." type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={submit}>Invite</button>
       </div>

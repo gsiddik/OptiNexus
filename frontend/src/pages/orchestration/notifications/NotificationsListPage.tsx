@@ -1,3 +1,4 @@
+import { HelpSelect, HelpInput, HelpTextarea } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { notificationTemplatesApi, notificationsApi } from '../../../api/endpoints';
@@ -29,10 +30,10 @@ export function NotificationsListPage() {
       </div>
 
       <div className="toolbar">
-        <select value={status} onChange={(e) => setParams((p) => { p.set('status', e.target.value); return p; })}>
+        <HelpSelect help="Filter by lifecycle status. Leave empty to show all statuses." value={status} onChange={(e) => setParams((p) => { p.set('status', e.target.value); return p; })}>
           <option value="">Any status</option>
           {['QUEUED', 'PROCESSING', 'SENT', 'FAILED', 'CANCELLED'].map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        </HelpSelect>
       </div>
 
       <ErrorAlert message={error} />
@@ -89,14 +90,14 @@ function SendForm({ onSent }: { onSent: () => void }) {
       <ErrorAlert message={error} />
       <label>
         Template
-        <select value={form.template_code} onChange={(e) => setForm({ ...form, template_code: e.target.value })}>
+        <HelpSelect help="Enter or select the unique notification template code." value={form.template_code} onChange={(e) => setForm({ ...form, template_code: e.target.value })}>
           <option value="">Select template...</option>
           {((templates as NotificationTemplate[] | null) ?? []).map((t) => <option key={t.id} value={t.template_code}>{t.name}</option>)}
-        </select>
+        </HelpSelect>
       </label>
-      <label>Recipient User IDs (comma-separated)<input value={form.recipient_user_ids} onChange={(e) => setForm({ ...form, recipient_user_ids: e.target.value })} /></label>
-      <label>Tenant ID (optional, enforces tenant membership)<input value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: e.target.value })} /></label>
-      <label>Context (JSON, available as {'{{'} data.* {'}}'})<textarea rows={5} value={form.context} onChange={(e) => setForm({ ...form, context: e.target.value })} /></label>
+      <label>Recipient User IDs (comma-separated)<HelpInput help="Enter recipient user IDs separated by commas." value={form.recipient_user_ids} onChange={(e) => setForm({ ...form, recipient_user_ids: e.target.value })} /></label>
+      <label>Tenant ID (optional, enforces tenant membership)<HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: e.target.value })} /></label>
+      <label>Context (JSON, available as {'{{'} data.* {'}}'})<HelpTextarea help="Enter a valid JSON object providing the context for this operation." rows={5} value={form.context} onChange={(e) => setForm({ ...form, context: e.target.value })} /></label>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting || !form.template_code}>Send</button>
       </div>

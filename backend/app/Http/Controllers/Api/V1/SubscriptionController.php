@@ -47,6 +47,18 @@ class SubscriptionController extends Controller
         return $this->paginated($paginator, SubscriptionResource::class);
     }
 
+    public function customerOptions(): JsonResponse
+    {
+        return $this->ok(Customer::query()->orderBy('legal_name')->get(['id', 'legal_name', 'customer_code']));
+    }
+
+    public function tenantOptions(Request $request): JsonResponse
+    {
+        $data = $request->validate(['customer_id' => ['required', 'uuid', 'exists:customers,id']]);
+
+        return $this->ok(Tenant::query()->where('customer_id', $data['customer_id'])->orderBy('name')->get(['id', 'customer_id', 'name', 'tenant_code']));
+    }
+
     public function store(StoreSubscriptionRequest $request): JsonResponse
     {
         $data = $request->validated();

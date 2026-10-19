@@ -1,21 +1,22 @@
+import { HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { applicationsApi, productsApi } from '../../../api/endpoints';
+import { productsApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import { ErrorAlert } from '../../../components/ErrorAlert';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { LifecycleActions } from '../../../components/LifecycleActions';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
-import { CapabilityPicker } from '../../../components/CapabilityPicker';
 import { PermissionGuard } from '../../../auth/PermissionGuard';
 import { useAuth } from '../../../auth/useAuth';
 import { unwrapError } from '../../../api/client';
-import type { Application, Capability, Product } from '../../../api/types';
+import type { Application, Product } from '../../../api/types';
 
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
+  const [applicationVersion, setApplicationVersion] = useState(0);
   const { data: product, loading, error, reload } = useApiResource<Product>(() => productsApi.get(id!), [id]);
 
   if (loading) return <LoadingSpinner />;
@@ -51,22 +52,23 @@ export function ProductDetailPage() {
           </dl>
         </div>
 
-        <ProductApplications productId={product.id} />
-        <ProductCapabilities productId={product.id} />
+        <ProductApplications productId={product.id} onChanged={() => setApplicationVersion((version) => version + 1)} />
+        <ProductCapabilities key={`${product.id}:${applicationVersion}`} productId={product.id} />
       </div>
     </div>
   );
 }
 
-function ProductApplications({ productId }: { productId: string }) {
+function ProductApplications({ productId, onChanged }: { productId: string; onChanged: () => void }) {
+  const { hasPermission } = useAuth();
   const { data: attached, loading, error, reload } = useApiResource<Application[]>(() => productsApi.applications(productId), [productId]);
-  const { data: allApplications } = useApiResource(() => applicationsApi.list({ per_page: 100 }).then((e) => e.data), []);
+  const { data: allApplications, loading: optionsLoading, error: optionsError } = useApiResource(() => hasPermission('cgo.product.application.assign') ? productsApi.applicationOptions() : Promise.resolve([]), []);
   const [selected, setSelected] = useState('');
   const [pendingDetach, setPendingDetach] = useState<Application | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const attachedIds = new Set((attached ?? []).map((a) => a.id));
-  const assignable = ((allApplications as Application[] | null) ?? []).filter((a) => !attachedIds.has(a.id));
+  const assignable = (allApplications ?? []).filter((a) => !attachedIds.has(a.id));
 
   async function attach() {
     if (!selected) return;
@@ -75,6 +77,7 @@ function ProductApplications({ productId }: { productId: string }) {
       await productsApi.attachApplication(productId, selected);
       setSelected('');
       reload();
+      onChanged();
     } catch (err) {
       setActionError(unwrapError(err).message);
     }
@@ -86,6 +89,7 @@ function ProductApplications({ productId }: { productId: string }) {
     try {
       await productsApi.detachApplication(productId, pendingDetach.id);
       reload();
+      onChanged();
     } catch (err) {
       setActionError(unwrapError(err).message);
     } finally {
@@ -96,7 +100,7 @@ function ProductApplications({ productId }: { productId: string }) {
   return (
     <div className="card">
       <h3>Attached Applications</h3>
-      <ErrorAlert message={error ?? actionError} />
+      <ErrorAlert message={error ?? actionError ?? optionsError} />
       {loading ? (
         <LoadingSpinner />
       ) : (
@@ -115,13 +119,13 @@ function ProductApplications({ productId }: { productId: string }) {
 
       <PermissionGuard permission="cgo.product.application.assign">
         <div className="toolbar">
-          <select value={selected} onChange={(e) => setSelected(e.target.value)}>
+          <HelpSelect aria-label="Application to attach" disabled={optionsLoading || !!optionsError} help="Select the registered application to which this configuration applies." value={selected} onChange={(e) => setSelected(e.target.value)}>
             <option value="">Select application...</option>
             {assignable.map((a) => (
               <option key={a.id} value={a.id}>{a.name}</option>
             ))}
-          </select>
-          <button className="btn btn-secondary" onClick={attach} disabled={!selected}>Attach Application</button>
+          </HelpSelect>
+          <button className="btn btn-secondary" onClick={attach} disabled={!selected || optionsLoading || !!optionsError}>Attach Application</button>
         </div>
       </PermissionGuard>
 
@@ -139,67 +143,68 @@ function ProductApplications({ productId }: { productId: string }) {
 }
 
 function ProductCapabilities({ productId }: { productId: string }) {
-  const { data: capabilities, loading, error, reload } = useApiResource<Capability[]>(() => productsApi.capabilities(productId), [productId]);
-  const { data: applications } = useApiResource<Application[]>(() => productsApi.applications(productId), [productId]);
-  const [pendingDetach, setPendingDetach] = useState<Capability | null>(null);
+  const { hasPermission } = useAuth();
+  const resource = useApiResource(async () => {
+    const [selected, options] = await Promise.all([
+      productsApi.capabilities(productId), productsApi.capabilityOptions(productId),
+    ]);
+    return { selected, groups: options };
+  }, [productId]);
+  const [draft, setDraft] = useState<string[] | null>(null);
+  const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const selectedIds = draft ?? resource.data?.selected.map((capability) => capability.id) ?? [];
 
-  async function attach(capabilityId: string) {
+  async function save() {
+    setSaving(true);
     setActionError(null);
+    setSaved(false);
     try {
-      await productsApi.attachCapability(productId, capabilityId);
-      reload();
-    } catch (err) {
-      setActionError(unwrapError(err).message);
-    }
-  }
-
-  async function confirmDetach() {
-    if (!pendingDetach) return;
-    setActionError(null);
-    try {
-      await productsApi.detachCapability(productId, pendingDetach.id);
-      reload();
+      const selected = await productsApi.saveCapabilities(productId, selectedIds);
+      resource.setData((current) => current ? { ...current, selected } : current);
+      setDraft(null);
+      setSaved(true);
     } catch (err) {
       setActionError(unwrapError(err).message);
     } finally {
-      setPendingDetach(null);
+      setSaving(false);
     }
   }
 
+  if (resource.loading) return <div className="card"><LoadingSpinner /></div>;
   return (
     <div className="card">
       <h3>Capabilities</h3>
-      <ErrorAlert message={error ?? actionError} />
-      {loading ? (
-        <LoadingSpinner />
-      ) : (
-        <ul className="chip-list">
-          {(capabilities ?? []).map((c) => (
-            <li key={c.id} className="chip removable">
-              {c.name} <code>{c.code}</code>
-              <PermissionGuard permission="cgo.product.capability.revoke">
-                <button onClick={() => setPendingDetach(c)} aria-label={`Detach ${c.name}`}>×</button>
-              </PermissionGuard>
-            </li>
-          ))}
-          {!capabilities?.length && <span className="muted">No capabilities attached.</span>}
-        </ul>
+      <p className="muted">Select capabilities for each attached application, then save your selection.</p>
+      <ErrorAlert message={resource.error ?? actionError} />
+      {saved && <p role="status">Capabilities saved.</p>}
+      {!resource.error && !resource.data?.groups.length && <p className="muted">Attach an application to choose its capabilities.</p>}
+      {resource.data?.groups.map(({ application, capabilities }) => (
+        <fieldset key={application.id} className="capability-group" disabled={saving}>
+          <legend>{application.name}</legend>
+          {!capabilities.length && <p className="muted">No capabilities registered for this application.</p>}
+          {capabilities.map((capability) => {
+            const checked = selectedIds.includes(capability.id);
+            return (
+              <label key={capability.id} className="checkbox-label">
+                <HelpInput help="Check to include this capability in the product; uncheck to remove it. Save Capabilities applies all choices." type="checkbox" checked={checked}
+                  disabled={!hasPermission(resource.data?.selected.some((selected) => selected.id === capability.id) ? 'cgo.product.capability.revoke' : 'cgo.product.capability.assign')}
+                  onChange={(event) => {
+                    setDraft(event.target.checked ? [...selectedIds, capability.id] : selectedIds.filter((id) => id !== capability.id));
+                    setSaved(false);
+                  }} />
+                {capability.name} <code>{capability.code}</code>
+              </label>
+            );
+          })}
+        </fieldset>
+      ))}
+      {(hasPermission('cgo.product.capability.assign') || hasPermission('cgo.product.capability.revoke')) && (
+        <button className="btn btn-primary" onClick={save} disabled={saving || draft === null || !!resource.error}>
+          {saving ? 'Saving...' : 'Save Capabilities'}
+        </button>
       )}
-
-      <PermissionGuard permission="cgo.product.capability.assign">
-        <CapabilityPicker applications={applications ?? []} onAttach={attach} />
-      </PermissionGuard>
-
-      <ConfirmDialog
-        open={!!pendingDetach}
-        title="Detach Capability"
-        message={`Detach "${pendingDetach?.name}" from this product?`}
-        confirmLabel="Detach"
-        danger
-        onConfirm={confirmDetach}
-        onCancel={() => setPendingDetach(null)}
-      />
     </div>
   );
 }

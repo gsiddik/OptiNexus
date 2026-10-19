@@ -1,3 +1,4 @@
+import { HelpInput } from '../../components/FieldControls';
 import { useId } from 'react';
 import { useI18n, type MessageKey } from '../../i18n';
 import { isInsecureUrl } from './oidcForm';
@@ -35,7 +36,7 @@ export function UrlListEditor({ label, hint, values, onChange, problems, serverR
           return (
             <div className="url-row" key={index}>
               <div className="url-row-body">
-                <input
+                <HelpInput help="Enter an exact allowed URL including scheme, host, and path. Wildcards and fragments are not allowed."
                   id={inputId}
                   type="url"
                   inputMode="url"

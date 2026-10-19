@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('products')->name('products.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/', [ProductController::class, 'index'])->middleware('permission:cgo.product.view')->name('index');
     Route::post('/', [ProductController::class, 'store'])->middleware('permission:cgo.product.create')->name('store');
+    Route::get('/options/applications', [ProductController::class, 'applicationOptions'])->middleware('permission:cgo.product.application.assign')->name('options.applications');
     Route::get('/{product}', [ProductController::class, 'show'])->middleware('permission:cgo.product.view')->name('show');
     Route::put('/{product}', [ProductController::class, 'update'])->middleware('permission:cgo.product.update')->name('update');
 
@@ -17,7 +18,9 @@ Route::prefix('products')->name('products.')->middleware(['auth:sanctum', 'ecosy
     Route::post('/{product}/applications/{application}', [ProductController::class, 'attachApplication'])->middleware('permission:cgo.product.application.assign')->name('applications.attach');
     Route::delete('/{product}/applications/{application}', [ProductController::class, 'detachApplication'])->middleware('permission:cgo.product.application.revoke')->name('applications.detach');
 
+    Route::get('/{product}/capability-options', [ProductController::class, 'capabilityOptions'])->middleware('permission:cgo.product.view')->name('options.capabilities');
     Route::get('/{product}/capabilities', [ProductController::class, 'capabilities'])->middleware('permission:cgo.product.view')->name('capabilities.index');
+    Route::put('/{product}/capabilities', [ProductController::class, 'syncCapabilities'])->middleware('permission:cgo.product.view')->name('capabilities.sync');
     Route::post('/{product}/capabilities/{capability}', [ProductController::class, 'attachCapability'])->middleware('permission:cgo.product.capability.assign')->name('capabilities.attach');
     Route::delete('/{product}/capabilities/{capability}', [ProductController::class, 'detachCapability'])->middleware('permission:cgo.product.capability.revoke')->name('capabilities.detach');
 });

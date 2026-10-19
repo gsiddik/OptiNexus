@@ -1,3 +1,4 @@
+import { HelpInput, HelpSelect } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { integrationsApi, applicationsApi } from '../../../api/endpoints';
@@ -76,26 +77,26 @@ function CreateForm({ onCreated }: { onCreated: (id: string) => void }) {
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>Integration Code<input value={form.integration_code} onChange={(e) => setForm({ ...form, integration_code: e.target.value })} /></label>
-      <label>Name<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
+      <label>Integration Code<HelpInput help="Enter a unique stable code identifying this integration." value={form.integration_code} onChange={(e) => setForm({ ...form, integration_code: e.target.value })} /></label>
+      <label>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
       <label>
         Source Application
-        <select value={form.source_application_id} onChange={(e) => setForm({ ...form, source_application_id: e.target.value })}>
+        <HelpSelect help="Select the registered application to which this configuration applies." value={form.source_application_id} onChange={(e) => setForm({ ...form, source_application_id: e.target.value })}>
           <option value="">Select application...</option>
           {((applications as Application[] | null) ?? []).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-        </select>
+        </HelpSelect>
       </label>
       <label>
         Type
-        <select value={form.integration_type} onChange={(e) => setForm({ ...form, integration_type: e.target.value })}>
+        <HelpSelect help="Choose the integration mechanism used to communicate with the application." value={form.integration_type} onChange={(e) => setForm({ ...form, integration_type: e.target.value })}>
           <option value="REST">REST</option>
           <option value="WEBHOOK">WEBHOOK</option>
           <option value="EVENT">EVENT</option>
           <option value="INTERNAL">INTERNAL</option>
-        </select>
+        </HelpSelect>
       </label>
-      <label>Base URL<input value={form.base_url} onChange={(e) => setForm({ ...form, base_url: e.target.value })} placeholder="https://..." /></label>
-      <label>Timeout (seconds)<input type="number" value={form.timeout_seconds} onChange={(e) => setForm({ ...form, timeout_seconds: Number(e.target.value) })} /></label>
+      <label>Base URL<HelpInput help="Enter the integration endpoint base URL, including https://." value={form.base_url} onChange={(e) => setForm({ ...form, base_url: e.target.value })} placeholder="https://..." /></label>
+      <label>Timeout (seconds)<HelpInput help="Enter the maximum number of seconds to wait for an integration response." type="number" value={form.timeout_seconds} onChange={(e) => setForm({ ...form, timeout_seconds: Number(e.target.value) })} /></label>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting || !form.source_application_id}>Create</button>
       </div>

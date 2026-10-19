@@ -3,7 +3,6 @@
 namespace App\Http\Requests\V1;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateTenantRequest extends FormRequest
 {
@@ -14,10 +13,8 @@ class UpdateTenantRequest extends FormRequest
 
     public function rules(): array
     {
-        $tenant = $this->route('tenant');
-
         return [
-            'tenant_code' => ['sometimes', 'string', 'max:64', Rule::unique('tenants', 'tenant_code')->ignore($tenant?->id)],
+            'tenant_code' => ['missing'],
             'name' => ['sometimes', 'string', 'max:255'],
             'region' => ['nullable', 'string', 'max:100'],
             'timezone' => ['nullable', 'string', 'max:64'],

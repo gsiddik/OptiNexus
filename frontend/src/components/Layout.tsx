@@ -1,3 +1,4 @@
+import { HelpSelect } from './FieldControls';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
@@ -75,7 +76,7 @@ export function Layout() {
           </button>
           <div className="tenant-switcher">
             <label htmlFor="tenant-select">{t('shell.scope')}</label>
-            <select
+            <HelpSelect help="Select the tenant context for tenant-scoped pages and operations."
               id="tenant-select"
               value={activeTenantId ?? ''}
               onChange={(e) => setActiveTenantId(e.target.value || null)}
@@ -86,7 +87,7 @@ export function Layout() {
                   {t.name} ({t.tenant_code})
                 </option>
               ))}
-            </select>
+            </HelpSelect>
           </div>
           <div className="user-menu">
             <LanguageSwitcher />

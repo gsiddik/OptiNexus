@@ -15,7 +15,7 @@ class StoreAddonRequest extends FormRequest
     {
         return [
             'product_id' => ['nullable', 'uuid', 'exists:products,id'],
-            'addon_code' => ['required', 'string', 'max:64', 'unique:addons,addon_code'],
+            'addon_code' => ['exclude'],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],

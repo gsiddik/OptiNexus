@@ -1,3 +1,4 @@
+import { HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { usageApi } from '../../../api/endpoints';
 import { useApiList } from '../../../api/useApi';
@@ -26,8 +27,8 @@ export function UsageEventsPage() {
       </p>
 
       <div className="toolbar">
-        <input placeholder="Filter by tenant ID..." value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
-        <input placeholder="Filter by meter key..." value={meterKey} onChange={(e) => setMeterKey(e.target.value)} />
+        <HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." placeholder="Filter by tenant ID..." value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
+        <HelpInput help="Enter the usage meter key supplying billable quantities, for example vehicles." placeholder="Filter by meter key..." value={meterKey} onChange={(e) => setMeterKey(e.target.value)} />
       </div>
 
       <ErrorAlert message={error} />

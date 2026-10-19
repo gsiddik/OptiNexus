@@ -1,3 +1,4 @@
+import { HelpTextarea } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { policiesApi } from '../../../api/endpoints';
@@ -97,7 +98,7 @@ function PolicySimulator({ policy }: { policy: { policy_type: string; tenant_id:
       <ErrorAlert message={error} />
       <label>
         Context (JSON)
-        <textarea rows={6} value={context} onChange={(e) => setContext(e.target.value)} />
+        <HelpTextarea help="Enter a valid JSON object providing the context for this operation." rows={6} value={context} onChange={(e) => setContext(e.target.value)} />
       </label>
       <div className="modal-actions">
         <button className="btn btn-secondary" onClick={run} disabled={running}>Run Simulation</button>

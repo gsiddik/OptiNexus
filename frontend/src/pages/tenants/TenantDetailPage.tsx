@@ -1,3 +1,4 @@
+import { HelpSelect, HelpInput } from '../../components/FieldControls';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { applicationsApi, tenantsApi } from '../../api/endpoints';
@@ -114,12 +115,12 @@ function TenantApplications({ tenant }: { tenant: Tenant }) {
     <div className="card">
       <ErrorAlert message={error ?? actionError} />
       <div className="toolbar">
-        <select value={selected} onChange={(e) => setSelected(e.target.value)}>
+        <HelpSelect help="Select the registered application to which this configuration applies." value={selected} onChange={(e) => setSelected(e.target.value)}>
           <option value="">Assign an application...</option>
           {(allApps as Application[] | null)?.map((a) => (
             <option key={a.id} value={a.id}>{a.name}</option>
           ))}
-        </select>
+        </HelpSelect>
         <button className="btn btn-secondary" onClick={attach} disabled={!selected}>Assign</button>
       </div>
       <ul className="chip-list">
@@ -170,7 +171,7 @@ function TenantAdmins({ tenant }: { tenant: Tenant }) {
     <div className="card">
       <ErrorAlert message={error ?? actionError} />
       <div className="toolbar">
-        <input placeholder="User ID to grant tenant-admin" value={userId} onChange={(e) => setUserId(e.target.value)} />
+        <HelpInput help="Enter the registered user ID to which this action applies." placeholder="User ID to grant tenant-admin" value={userId} onChange={(e) => setUserId(e.target.value)} />
         <button className="btn btn-secondary" onClick={add} disabled={!userId}>Add Admin</button>
       </div>
       <ul className="chip-list">

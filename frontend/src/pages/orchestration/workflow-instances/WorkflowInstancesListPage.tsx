@@ -1,3 +1,4 @@
+import { HelpInput, HelpSelect } from '../../../components/FieldControls';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { workflowInstancesApi } from '../../../api/endpoints';
 import { useApiList } from '../../../api/useApi';
@@ -25,11 +26,11 @@ export function WorkflowInstancesListPage() {
       <div className="page-header"><h1>Workflow Instances</h1></div>
 
       <div className="toolbar">
-        <input placeholder="Filter by correlation_id" value={correlationId} onChange={(e) => setParams((p) => { p.set('correlation_id', e.target.value); return p; })} />
-        <select value={status} onChange={(e) => setParams((p) => { p.set('status', e.target.value); return p; })}>
+        <HelpInput help="Filter workflow instances by the correlation ID shared by related operations." placeholder="Filter by correlation_id" value={correlationId} onChange={(e) => setParams((p) => { p.set('correlation_id', e.target.value); return p; })} />
+        <HelpSelect help="Filter by lifecycle status. Leave empty to show all statuses." value={status} onChange={(e) => setParams((p) => { p.set('status', e.target.value); return p; })}>
           <option value="">Any status</option>
           {['PENDING', 'RUNNING', 'WAITING', 'WAITING_APPROVAL', 'COMPLETED', 'FAILED', 'CANCELLED'].map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        </HelpSelect>
       </div>
 
       <ErrorAlert message={error} />

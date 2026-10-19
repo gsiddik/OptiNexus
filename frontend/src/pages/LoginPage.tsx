@@ -1,3 +1,4 @@
+import { HelpInput } from '../components/FieldControls';
 import { useState, type FormEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
@@ -49,11 +50,11 @@ export function LoginPage() {
         <ErrorAlert message={error} />
         <label>
           {t('login.email')}
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus autoComplete="username" />
+          <HelpInput help="Enter a valid email address for this account or customer." type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus autoComplete="username" />
         </label>
         <label>
           {t('login.password')}
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+          <HelpInput help="Enter the password for your OptiNexus account." type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
         </label>
         <button className="btn btn-primary" type="submit" disabled={submitting}>
           {submitting ? t('login.submitting') : t('login.submit')}

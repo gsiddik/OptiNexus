@@ -1,3 +1,4 @@
+import { HelpSelect } from '../../../components/FieldControls';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { approvalRequestsApi } from '../../../api/endpoints';
 import { useApiList } from '../../../api/useApi';
@@ -23,10 +24,10 @@ export function ApprovalRequestsListPage() {
       <div className="page-header"><h1>Approval Requests</h1></div>
 
       <div className="toolbar">
-        <select value={status} onChange={(e) => setParams((p) => { p.set('status', e.target.value); return p; })}>
+        <HelpSelect help="Filter by lifecycle status. Leave empty to show all statuses." value={status} onChange={(e) => setParams((p) => { p.set('status', e.target.value); return p; })}>
           <option value="">Any status</option>
           {['PENDING', 'IN_PROGRESS', 'APPROVED', 'REJECTED', 'RETURNED', 'CANCELLED', 'EXPIRED'].map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        </HelpSelect>
       </div>
 
       <ErrorAlert message={error} />

@@ -1,3 +1,4 @@
+import { HelpInput, HelpSelect } from '../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { auditApi, rolesApi, usersApi } from '../../api/endpoints';
@@ -86,7 +87,7 @@ function TenantMembershipPanel({ user }: { user: User }) {
     <div className="card">
       <ErrorAlert message={error ?? actionError} />
       <div className="toolbar">
-        <input placeholder="Tenant ID" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
+        <HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." placeholder="Tenant ID" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
         <button className="btn btn-secondary" onClick={attach} disabled={!tenantId}>Add Membership</button>
       </div>
       <ul className="chip-list">
@@ -137,11 +138,11 @@ function RolesPanel({ user }: { user: User }) {
     <div className="card">
       <ErrorAlert message={error ?? actionError} />
       <div className="toolbar">
-        <select value={roleId} onChange={(e) => setRoleId(e.target.value)}>
+        <HelpSelect help="Select the role to assign to this user." value={roleId} onChange={(e) => setRoleId(e.target.value)}>
           <option value="">Select a role...</option>
           {(allRoles as Role[] | null)?.map((r) => <option key={r.id} value={r.id}>{r.name} ({r.role_type})</option>)}
-        </select>
-        <input placeholder="Tenant ID (if TENANT/APPLICATION role)" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
+        </HelpSelect>
+        <HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." placeholder="Tenant ID (if TENANT/APPLICATION role)" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
         <button className="btn btn-secondary" onClick={attach} disabled={!roleId}>Assign Role</button>
       </div>
       <ul className="chip-list">
@@ -168,7 +169,7 @@ function EffectivePermissionsPanel({ user }: { user: User }) {
   return (
     <div className="card">
       <div className="toolbar">
-        <input placeholder="Filter by tenant ID (blank = global)" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
+        <HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." placeholder="Filter by tenant ID (blank = global)" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
       </div>
       <ErrorAlert message={error} />
       {loading ? (

@@ -1,3 +1,4 @@
+import { HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { billingApi, invoicesApi } from '../../../api/endpoints';
@@ -167,12 +168,12 @@ function AddAdjustmentForm({ billingId, onAdded }: { billingId: string; onAdded:
       <ErrorAlert message={error} />
       <label>
         Type
-        <select value={form.adjustment_type} onChange={(e) => setForm({ ...form, adjustment_type: e.target.value })}>
+        <HelpSelect help="Choose the billing adjustment type before entering its amount and reason." value={form.adjustment_type} onChange={(e) => setForm({ ...form, adjustment_type: e.target.value })}>
           {ADJUSTMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
+        </HelpSelect>
       </label>
-      <label>Reason<input value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></label>
-      <label>Amount<input value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></label>
+      <label>Reason<HelpInput help="Explain why this change is needed. The reason is retained for review and audit." value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></label>
+      <label>Amount<HelpInput help="Enter the monetary amount using the currency and amount convention shown for this record." value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></label>
       <button className="btn btn-secondary" onClick={submit} disabled={submitting || !form.reason || !form.amount}>Add Adjustment</button>
     </div>
   );

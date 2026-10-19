@@ -1,3 +1,4 @@
+import { HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { approvalRequestsApi } from '../../../api/endpoints';
@@ -53,7 +54,7 @@ export function ApprovalRequestDetailPage() {
       {isOpen && (
         <div className="card">
           <h3>Decide</h3>
-          <label>Comment (optional)<input value={comment} onChange={(e) => setComment(e.target.value)} /></label>
+          <label>Comment (optional)<HelpInput help="Optional comment explaining your approval decision." value={comment} onChange={(e) => setComment(e.target.value)} /></label>
           <div className="toolbar">
             <PermissionGuard permission="cgo.approval.approve">
               <button className="btn btn-primary" disabled={busy} onClick={() => setPendingAction('approve')}>Approve</button>

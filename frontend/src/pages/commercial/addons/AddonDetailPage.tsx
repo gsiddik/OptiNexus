@@ -1,3 +1,4 @@
+import { HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { addonsApi, applicationsApi, productsApi } from '../../../api/endpoints';
@@ -186,9 +187,9 @@ function AddLimitForm({ addonId, onAdded }: { addonId: string; onAdded: () => vo
   return (
     <div className="form form-inline" style={{ marginTop: '1rem' }}>
       <ErrorAlert message={error} />
-      <label>Key<input value={form.limit_key} onChange={(e) => setForm({ ...form, limit_key: e.target.value })} /></label>
-      <label>Delta<input value={form.limit_delta} onChange={(e) => setForm({ ...form, limit_delta: e.target.value })} /></label>
-      <label>Unit<input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></label>
+      <label>Key<HelpInput help="Enter the limit key used by the consuming application, for example seats or vehicle_limit." value={form.limit_key} onChange={(e) => setForm({ ...form, limit_key: e.target.value })} /></label>
+      <label>Delta<HelpInput help="Enter the quantity added by this add-on; a negative number reduces the limit." value={form.limit_delta} onChange={(e) => setForm({ ...form, limit_delta: e.target.value })} /></label>
+      <label>Unit<HelpInput help="Enter a measurement unit, for example seat, vehicle, or device." value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></label>
       <button className="btn btn-secondary" onClick={submit} disabled={submitting || !form.limit_key}>Add Limit</button>
     </div>
   );

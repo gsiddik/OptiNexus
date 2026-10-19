@@ -1,3 +1,4 @@
+import { HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { integrationsApi } from '../../../api/endpoints';
@@ -171,15 +172,15 @@ function CredentialForm({ isRotate, onSubmit, onSaved }: { isRotate: boolean; on
       {isRotate && <p className="muted">The current active credential will be marked ROTATED; this becomes the new active one.</p>}
       <label>
         Credential Type
-        <select value={form.credential_type} onChange={(e) => setForm({ ...form, credential_type: e.target.value })}>
+        <HelpSelect help="Select the authentication credential format expected by this integration." value={form.credential_type} onChange={(e) => setForm({ ...form, credential_type: e.target.value })}>
           <option value="API_KEY">API_KEY</option>
           <option value="BEARER">BEARER</option>
           <option value="BASIC">BASIC</option>
           <option value="OAUTH2">OAUTH2</option>
-        </select>
+        </HelpSelect>
       </label>
-      <label>Secret<input type="password" value={form.secret} onChange={(e) => setForm({ ...form, secret: e.target.value })} /></label>
-      <label>Reference Label<input value={form.reference_label} onChange={(e) => setForm({ ...form, reference_label: e.target.value })} /></label>
+      <label>Secret<HelpInput help="Enter the confidential integration credential. Do not put secrets in labels or notes." type="password" value={form.secret} onChange={(e) => setForm({ ...form, secret: e.target.value })} /></label>
+      <label>Reference Label<HelpInput help="Optional non-secret label that identifies this credential later." value={form.reference_label} onChange={(e) => setForm({ ...form, reference_label: e.target.value })} /></label>
       <p className="muted">The secret is encrypted at rest and never returned by the API again after this submission.</p>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={save} disabled={submitting}>Save</button>

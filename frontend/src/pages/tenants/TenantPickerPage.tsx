@@ -1,3 +1,4 @@
+import { HelpInput } from '../../components/FieldControls';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { tenantsApi } from '../../api/endpoints';
@@ -26,7 +27,7 @@ function TenantPicker({ target }: { target: 'onboarding' | 'gateway' }) {
       <div className="page-header"><h1>{t(TEXT[target].title)}</h1></div>
       <p className="muted">{t(TEXT[target].intro)}</p>
       <div className="toolbar">
-        <input type="search" aria-label={t('gw.pickerSearch')} placeholder={t('gw.pickerSearch')} value={search} onChange={(e) => setSearch(e.target.value)} />
+        <HelpInput help="Type a name, code, or identifying text to narrow the list. Clear to show all records." type="search" aria-label={t('gw.pickerSearch')} placeholder={t('gw.pickerSearch')} value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
       {loading ? (
         <LoadingSpinner />

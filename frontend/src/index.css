@@ -283,3 +283,14 @@ input.invalid { border-color: var(--danger); }
   .check-body { flex: 1 1 12rem; } /* the action drops under the message instead of squeezing it into a narrow column */
   .check-row .btn { margin-left: 2.25rem; }
 }
+
+/* Contextual help is excluded from the label's accessible name, and linked as a description. */
+.field-control { position: relative; display: inline-flex; flex-direction: column; min-width: 0; flex: 1; }
+.form .field-control { width: 100%; }
+.field-control > input, .field-control > select, .field-control > textarea { width: 100%; box-sizing: border-box; }
+.field-control.field-control-compact { display: inline-flex; width: auto; flex: none; vertical-align: middle; }
+.field-tooltip { display: none; position: fixed; z-index: 1100; width: max-content; max-width: min(280px, 75vw); padding: 8px 10px; border-radius: 6px; background: #17233b; color: white; font-size: 12px; font-weight: 400; line-height: 1.5; white-space: normal; box-shadow: 0 3px 12px #0003; }
+.field-control > input[readonly] { background: var(--bg); color: var(--text-muted); cursor: default; }
+.capability-group { margin-block: 12px; border: 1px solid var(--border); border-radius: 6px; padding: 12px; }
+.capability-group .checkbox-label { display: flex; align-items: center; gap: 8px; margin-block: 6px; }
+.field-tooltip.field-tooltip-open { display: block; }

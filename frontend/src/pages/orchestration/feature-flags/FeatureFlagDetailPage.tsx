@@ -1,3 +1,4 @@
+import { HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { featureFlagsApi } from '../../../api/endpoints';
@@ -132,13 +133,13 @@ function AddOverrideForm({ flagId, flagType, onAdded }: { flagId: string; flagTy
     <div className="form">
       <ErrorAlert message={error} />
       <div className="toolbar">
-        <select value={form.scope_type} onChange={(e) => setForm({ ...form, scope_type: e.target.value })}>
+        <HelpSelect help="Choose whether this override targets a tenant, application, or user." value={form.scope_type} onChange={(e) => setForm({ ...form, scope_type: e.target.value })}>
           {['GLOBAL', 'APPLICATION', 'TENANT', 'USER'].map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        </HelpSelect>
         {form.scope_type !== 'GLOBAL' && (
-          <input placeholder="Scope ID (tenant/application/user id)" value={form.scope_id} onChange={(e) => setForm({ ...form, scope_id: e.target.value })} />
+          <HelpInput help="Enter the registered ID matching the selected scope type." placeholder="Scope ID (tenant/application/user id)" value={form.scope_id} onChange={(e) => setForm({ ...form, scope_id: e.target.value })} />
         )}
-        <input placeholder="Value (JSON)" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} />
+        <HelpInput help="Enter the override value. Use valid JSON where required, for example true, 10, or a quoted string." placeholder="Value (JSON)" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} />
         <button className="btn btn-secondary" onClick={submit} disabled={submitting}>Add Override</button>
       </div>
     </div>
@@ -165,8 +166,8 @@ function EvaluatePreview({ flagKey }: { flagKey: string }) {
     <div className="card">
       <h3>Evaluate</h3>
       <ErrorAlert message={error} />
-      <label>Tenant ID (optional)<input value={tenantId} onChange={(e) => setTenantId(e.target.value)} /></label>
-      <label>User ID (optional)<input value={userId} onChange={(e) => setUserId(e.target.value)} /></label>
+      <label>Tenant ID (optional)<HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." value={tenantId} onChange={(e) => setTenantId(e.target.value)} /></label>
+      <label>User ID (optional)<HelpInput help="Enter the registered user ID to which this action applies." value={userId} onChange={(e) => setUserId(e.target.value)} /></label>
       <div className="modal-actions"><button className="btn btn-secondary" onClick={evaluate}>Evaluate</button></div>
       {result && (
         <p>

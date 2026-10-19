@@ -1,3 +1,4 @@
+import { HelpTextarea, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { workflowsApi } from '../../../api/endpoints';
@@ -152,8 +153,8 @@ function EditDraftForm({ workflow, onSaved }: { workflow: { id: string; draft_ve
     <div className="form">
       <ErrorAlert message={error} />
       <p className="muted">Note: submit steps keyed by step_key/step_type/config (not the persisted UUIDs shown above).</p>
-      <label>Steps (JSON)<textarea rows={10} value={steps} onChange={(e) => setSteps(e.target.value)} /></label>
-      <label>Transitions (JSON, from_step_key/to_step_key/condition)<textarea rows={10} value={transitions} onChange={(e) => setTransitions(e.target.value)} /></label>
+      <label>Steps (JSON)<HelpTextarea help="Enter a JSON array of workflow steps with unique step keys." rows={10} value={steps} onChange={(e) => setSteps(e.target.value)} /></label>
+      <label>Transitions (JSON, from_step_key/to_step_key/condition)<HelpTextarea help="Enter a JSON array of transitions using from_step_key, to_step_key, and an optional condition." rows={10} value={transitions} onChange={(e) => setTransitions(e.target.value)} /></label>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={save} disabled={submitting}>Save Draft</button>
       </div>
@@ -184,8 +185,8 @@ function ExecuteForm({ onExecute, onExecuted }: { onExecute: (payload: Record<st
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>Trigger Payload (JSON)<textarea rows={6} value={payload} onChange={(e) => setPayload(e.target.value)} /></label>
-      <label>Idempotency Key (optional)<input value={idempotencyKey} onChange={(e) => setIdempotencyKey(e.target.value)} /></label>
+      <label>Trigger Payload (JSON)<HelpTextarea help="Enter a valid JSON object to pass to the workflow trigger." rows={6} value={payload} onChange={(e) => setPayload(e.target.value)} /></label>
+      <label>Idempotency Key (optional)<HelpInput help="Optional: reuse the same key when retrying the same operation to prevent duplicate processing." value={idempotencyKey} onChange={(e) => setIdempotencyKey(e.target.value)} /></label>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={run} disabled={submitting}>Execute</button>
       </div>

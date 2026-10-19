@@ -1,3 +1,4 @@
+import { HelpSelect, HelpInput } from '../../components/FieldControls';
 import { useMemo, useState, type FormEvent } from 'react';
 import { describeError, unwrapError } from '../../api/client';
 import type { Application, OidcClient } from '../../api/types';
@@ -61,12 +62,12 @@ export function OidcClientForm({ mode, client, applications, applicationsFailed,
       <label>
         {t('oidc.form.application')}
         {mode === 'create' ? (
-          <select value={form.application_id} onChange={(e) => set('application_id', e.target.value)} aria-label={t('oidc.form.application')} aria-invalid={show && problems.application ? true : undefined}>
+          <HelpSelect help="Select the registered application to which this configuration applies." value={form.application_id} onChange={(e) => set('application_id', e.target.value)} aria-label={t('oidc.form.application')} aria-invalid={show && problems.application ? true : undefined}>
             <option value="">{t('oidc.form.applicationPick')}</option>
             {applications.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.application_code})</option>)}
-          </select>
+          </HelpSelect>
         ) : (
-          <input value={applications.find((a) => a.id === form.application_id)?.name ?? form.application_id} readOnly disabled />
+          <HelpInput help="Select the registered application to which this configuration applies." value={applications.find((a) => a.id === form.application_id)?.name ?? form.application_id} readOnly disabled />
         )}
         {show && problems.application && <span className="field-error">{t(problems.application)}</span>}
         {serverFields.fields.application_id && <span className="field-error">{serverFields.fields.application_id.join(' ')}</span>}
@@ -74,7 +75,7 @@ export function OidcClientForm({ mode, client, applications, applicationsFailed,
 
       <label>
         {t('oidc.form.name')}
-        <input value={form.name} maxLength={255} onChange={(e) => set('name', e.target.value)} aria-invalid={show && problems.name ? true : undefined} className={show && problems.name ? 'invalid' : undefined} />
+        <HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} maxLength={255} onChange={(e) => set('name', e.target.value)} aria-invalid={show && problems.name ? true : undefined} className={show && problems.name ? 'invalid' : undefined} />
         {show && problems.name && <span className="field-error">{t(problems.name)}</span>}
         {serverFields.fields.name && <span className="field-error">{serverFields.fields.name.join(' ')}</span>}
       </label>
@@ -84,11 +85,11 @@ export function OidcClientForm({ mode, client, applications, applicationsFailed,
         {mode === 'create' ? (
           <>
             <label className="radio-row">
-              <input type="radio" name="client-type" checked={form.confidential} onChange={() => set('confidential', true)} />
+              <HelpInput help="Use a confidential client for server applications that can securely store a client secret." type="radio" name="client-type" checked={form.confidential} onChange={() => set('confidential', true)} />
               <span>{t('oidc.form.typeConfidential')}</span>
             </label>
             <label className="radio-row">
-              <input type="radio" name="client-type" checked={!form.confidential} onChange={() => setForm((c) => ({ ...c, confidential: false, require_pkce: true, pkce_ack: false }))} />
+              <HelpInput help="Use a public client for browser or mobile applications. PKCE is required." type="radio" name="client-type" checked={!form.confidential} onChange={() => setForm((c) => ({ ...c, confidential: false, require_pkce: true, pkce_ack: false }))} />
               <span>{t('oidc.form.typePublic')}</span>
             </label>
           </>
@@ -102,7 +103,7 @@ export function OidcClientForm({ mode, client, applications, applicationsFailed,
 
       <div className={`pkce-box${form.require_pkce ? '' : ' off'}`} data-testid="pkce-box">
         <label>
-          <input
+          <HelpInput help="Enable PKCE to bind authorization codes to the requesting client. Public clients must keep it enabled."
             type="checkbox"
             checked={form.require_pkce}
             disabled={publicClient}
@@ -119,7 +120,7 @@ export function OidcClientForm({ mode, client, applications, applicationsFailed,
             {pkceAlreadyOff && !ackNeeded && <p>{t('oidc.pkce.offExisting')}</p>}
             {ackNeeded && (
               <label>
-                <input type="checkbox" checked={form.pkce_ack} onChange={(e) => set('pkce_ack', e.target.checked)} />
+                <HelpInput help="Confirm that you understand the security impact before disabling PKCE." type="checkbox" checked={form.pkce_ack} onChange={(e) => set('pkce_ack', e.target.checked)} />
                 <span>{t('oidc.pkce.ack')}</span>
               </label>
             )}
@@ -156,7 +157,7 @@ export function OidcClientForm({ mode, client, applications, applicationsFailed,
       <label>
         {t('oidc.form.backchannel')}
         <span className="field-hint">{t('oidc.form.backchannelHint')}</span>
-        <input type="url" inputMode="url" autoComplete="off" value={form.backchannel_logout_uri} onChange={(e) => set('backchannel_logout_uri', e.target.value)} className={show && problems.backchannel ? 'invalid' : undefined} placeholder="https://app.example.com/oidc/backchannel-logout" />
+        <HelpInput help="Optional server endpoint receiving signed logout notifications. Enter its exact URL." type="url" inputMode="url" autoComplete="off" value={form.backchannel_logout_uri} onChange={(e) => set('backchannel_logout_uri', e.target.value)} className={show && problems.backchannel ? 'invalid' : undefined} placeholder="https://app.example.com/oidc/backchannel-logout" />
         {show && problems.backchannel && <span className="field-error">{t(problems.backchannel)}</span>}
         {serverFields.fields.backchannel_logout_uri && <span className="field-error">{serverFields.fields.backchannel_logout_uri.join(' ')}</span>}
       </label>
@@ -164,7 +165,7 @@ export function OidcClientForm({ mode, client, applications, applicationsFailed,
       <label>
         {t('oidc.form.launch')}
         <span className="field-hint">{t('oidc.form.launchHint')}</span>
-        <input type="url" inputMode="url" autoComplete="off" value={form.launch_url} onChange={(e) => set('launch_url', e.target.value)} className={show && problems.launch ? 'invalid' : undefined} placeholder="https://app.example.com/" />
+        <HelpInput help="Enter the URL users open to launch this application." type="url" inputMode="url" autoComplete="off" value={form.launch_url} onChange={(e) => set('launch_url', e.target.value)} className={show && problems.launch ? 'invalid' : undefined} placeholder="https://app.example.com/" />
         {show && problems.launch && <span className="field-error">{t(problems.launch)}</span>}
         {serverFields.fields.launch_url && <span className="field-error">{serverFields.fields.launch_url.join(' ')}</span>}
       </label>

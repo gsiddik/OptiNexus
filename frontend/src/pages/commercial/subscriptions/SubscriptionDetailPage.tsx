@@ -1,3 +1,4 @@
+import { HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { subscriptionsApi } from '../../../api/endpoints';
@@ -125,7 +126,7 @@ function PlanChangeForm({ subscriptionId, onDone, hasPermission }: { subscriptio
   return (
     <div className="form form-inline">
       <ErrorAlert message={error} />
-      <label>New Plan ID<input value={planId} onChange={(e) => setPlanId(e.target.value)} /></label>
+      <label>New Plan ID<HelpInput help="Enter the registered plan ID for this subscription or pricing simulation." value={planId} onChange={(e) => setPlanId(e.target.value)} /></label>
       <PermissionGuard permission="cgo.subscription.upgrade">
         <button className="btn btn-secondary" disabled={submitting || !planId} onClick={() => change('upgrade')}>Upgrade</button>
       </PermissionGuard>

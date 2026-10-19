@@ -1,3 +1,4 @@
+import { HelpSelect, HelpInput } from '../../components/FieldControls';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { describeError } from '../../api/client';
@@ -131,16 +132,16 @@ function OidcClientsView({ canManage }: { canManage: boolean }) {
     body = (
       <>
         <div className="toolbar">
-          <select aria-label={t('oidc.filter.application')} value={filters.application} onChange={(e) => setFilters({ ...filters, application: e.target.value })}>
+          <HelpSelect help="Select the registered application to which this configuration applies." aria-label={t('oidc.filter.application')} value={filters.application} onChange={(e) => setFilters({ ...filters, application: e.target.value })}>
             <option value="">{t('oidc.filter.allApplications')}</option>
             {applications.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </select>
-          <select aria-label={t('oidc.filter.status')} value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
+          </HelpSelect>
+          <HelpSelect help="Filter by lifecycle status. Leave empty to show all statuses." aria-label={t('oidc.filter.status')} value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
             <option value="">{t('common.all')}</option>
             <option value="ACTIVE">{t('status.ACTIVE')}</option>
             <option value="REVOKED">{t('status.REVOKED')}</option>
-          </select>
-          <input type="search" aria-label={t('oidc.filter.search')} placeholder={t('oidc.filter.search')} value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} />
+          </HelpSelect>
+          <HelpInput help="Type a name, code, or identifying text to narrow the list. Clear to show all records." type="search" aria-label={t('oidc.filter.search')} placeholder={t('oidc.filter.search')} value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} />
         </div>
         <DataTable
           rows={rows}

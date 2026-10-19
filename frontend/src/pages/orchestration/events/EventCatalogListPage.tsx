@@ -1,3 +1,4 @@
+import { HelpInput, HelpTextarea } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { eventCatalogApi } from '../../../api/endpoints';
@@ -78,10 +79,10 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>Event Key<input value={form.event_key} onChange={(e) => setForm({ ...form, event_key: e.target.value })} placeholder="e.g. subscription.expiring" /></label>
-      <label>Name<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-      <label>Schema Version<input value={form.schema_version} onChange={(e) => setForm({ ...form, schema_version: e.target.value })} /></label>
-      <label>Payload Schema (JSON)<textarea rows={8} value={form.payload_schema} onChange={(e) => setForm({ ...form, payload_schema: e.target.value })} /></label>
+      <label>Event Key<HelpInput help="Enter the event key used by producers and consumers, for example subscription.expiring." value={form.event_key} onChange={(e) => setForm({ ...form, event_key: e.target.value })} placeholder="e.g. subscription.expiring" /></label>
+      <label>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
+      <label>Schema Version<HelpInput help="Enter the version of the event payload contract." value={form.schema_version} onChange={(e) => setForm({ ...form, schema_version: e.target.value })} /></label>
+      <label>Payload Schema (JSON)<HelpTextarea help="Enter a valid JSON schema describing the event payload." rows={8} value={form.payload_schema} onChange={(e) => setForm({ ...form, payload_schema: e.target.value })} /></label>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>Register</button>
       </div>

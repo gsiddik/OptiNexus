@@ -1,3 +1,4 @@
+import { HelpSelect, HelpInput } from '../../components/FieldControls';
 import { useState } from 'react';
 import { applicationsApi, permissionsApi } from '../../api/endpoints';
 import { useApiList, useApiResource } from '../../api/useApi';
@@ -31,10 +32,10 @@ export function PermissionsListPage() {
         </PermissionGuard>
       </div>
       <div className="toolbar">
-        <select value={applicationId} onChange={(e) => setApplicationId(e.target.value)}>
+        <HelpSelect help="Select the registered application to which this configuration applies." value={applicationId} onChange={(e) => setApplicationId(e.target.value)}>
           <option value="">All applications</option>
           {(apps as Application[] | null)?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-        </select>
+        </HelpSelect>
       </div>
       <ErrorAlert message={error} />
       {loading ? (
@@ -86,18 +87,18 @@ function CreatePermissionForm({ apps, onCreated }: { apps: Application[]; onCrea
       <ErrorAlert message={error} />
       <label>
         Application
-        <select value={form.application_id} onChange={(e) => setForm({ ...form, application_id: e.target.value })}>
+        <HelpSelect help="Select the registered application to which this configuration applies." value={form.application_id} onChange={(e) => setForm({ ...form, application_id: e.target.value })}>
           <option value="">Select...</option>
           {apps.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-        </select>
+        </HelpSelect>
       </label>
       <label>
         Permission Key
-        <input placeholder="e.g. optifleet.vehicle.update" value={form.permission_key} onChange={(e) => setForm({ ...form, permission_key: e.target.value })} />
+        <HelpInput help="Enter a unique permission key, for example optifleet.vehicle.update." placeholder="e.g. optifleet.vehicle.update" value={form.permission_key} onChange={(e) => setForm({ ...form, permission_key: e.target.value })} />
       </label>
       <label>
         Name
-        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
       </label>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={submit}>Register</button>

@@ -1,3 +1,4 @@
+import { HelpSelect } from './FieldControls';
 import { useState } from 'react';
 import { applicationsApi } from '../api/endpoints';
 import { useApiResource } from '../api/useApi';
@@ -45,7 +46,7 @@ export function CapabilityPicker({
 
   return (
     <div className="toolbar">
-      <select
+      <HelpSelect help="Select the registered application to which this configuration applies."
         value={applicationId}
         onChange={(e) => {
           setApplicationId(e.target.value);
@@ -56,13 +57,13 @@ export function CapabilityPicker({
         {applications.map((a) => (
           <option key={a.id} value={a.id}>{a.name}</option>
         ))}
-      </select>
-      <select value={capabilityId} onChange={(e) => setCapabilityId(e.target.value)} disabled={!applicationId}>
+      </HelpSelect>
+      <HelpSelect help="Select a capability belonging to the chosen application." value={capabilityId} onChange={(e) => setCapabilityId(e.target.value)} disabled={!applicationId}>
         <option value="">Select capability...</option>
         {options.map((c) => (
           <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
         ))}
-      </select>
+      </HelpSelect>
       <button className="btn btn-secondary" disabled={disabled || submitting || !capabilityId} onClick={attach}>
         Attach Capability
       </button>

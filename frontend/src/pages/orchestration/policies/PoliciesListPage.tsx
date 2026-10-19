@@ -1,3 +1,4 @@
+import { HelpInput, HelpSelect, HelpTextarea } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { policiesApi } from '../../../api/endpoints';
@@ -82,26 +83,26 @@ function CreatePolicyForm({ onCreated }: { onCreated: () => void }) {
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>Policy Code<input value={form.policy_code} onChange={(e) => setForm({ ...form, policy_code: e.target.value })} /></label>
-      <label>Name<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
+      <label>Policy Code<HelpInput help="Enter a unique stable code identifying this policy." value={form.policy_code} onChange={(e) => setForm({ ...form, policy_code: e.target.value })} /></label>
+      <label>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
       <label>
         Policy Type
-        <select value={form.policy_type} onChange={(e) => setForm({ ...form, policy_type: e.target.value })}>
+        <HelpSelect help="Choose the category of policy to evaluate." value={form.policy_type} onChange={(e) => setForm({ ...form, policy_type: e.target.value })}>
           {POLICY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
+        </HelpSelect>
       </label>
       <label>
         Effect
-        <select value={form.effect} onChange={(e) => setForm({ ...form, effect: e.target.value })}>
+        <HelpSelect help="Choose whether a matching policy allows or denies the operation." value={form.effect} onChange={(e) => setForm({ ...form, effect: e.target.value })}>
           <option value="ALLOW">ALLOW</option>
           <option value="DENY">DENY</option>
           <option value="MATCH">MATCH</option>
-        </select>
+        </HelpSelect>
       </label>
-      <label>Priority<input type="number" value={form.priority} onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })} /></label>
+      <label>Priority<HelpInput help="Enter the policy evaluation priority according to your policy ordering configuration." type="number" value={form.priority} onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })} /></label>
       <label>
         Condition Definition (JSON)
-        <textarea rows={8} value={form.condition_definition} onChange={(e) => setForm({ ...form, condition_definition: e.target.value })} />
+        <HelpTextarea help="Enter a valid JSON condition definition for evaluating this policy." rows={8} value={form.condition_definition} onChange={(e) => setForm({ ...form, condition_definition: e.target.value })} />
       </label>
       <p className="muted">Declarative only: {'{'}"all"|"any"|"not"|"field"/"operator"/"value"{'}'}. No expressions or code are ever executed.</p>
       <div className="modal-actions">

@@ -1,3 +1,4 @@
+import { HelpInput } from '../../components/FieldControls';
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { permissionsApi, rolesApi } from '../../api/endpoints';
@@ -79,7 +80,7 @@ export function RoleDetailPage() {
           <div className="permission-grid">
             {perms.map((p) => (
               <label key={p.id} className="permission-toggle">
-                <input
+                <HelpInput help="Check to grant this permission to the role; uncheck to revoke it."
                   type="checkbox"
                   checked={grantedIds.has(p.id)}
                   disabled={!hasPermission('cgo.role.permission.grant')}

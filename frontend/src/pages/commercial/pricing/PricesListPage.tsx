@@ -1,7 +1,8 @@
+import { HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { pricesApi } from '../../../api/endpoints';
-import { useApiList } from '../../../api/useApi';
+import { pricesApi, plansApi, addonsApi, listAll } from '../../../api/endpoints';
+import { useApiList, useApiResource } from '../../../api/useApi';
 import { DataTable } from '../../../components/DataTable';
 import { Pagination } from '../../../components/Pagination';
 import { StatusBadge } from '../../../components/StatusBadge';
@@ -59,9 +60,12 @@ export function PricesListPage() {
 }
 
 function CreatePriceForm({ onCreated }: { onCreated: () => void }) {
+  const targets = useApiResource(async () => {
+    const [plans, addons] = await Promise.all([listAll(plansApi.list), listAll(addonsApi.list)]);
+    return { plans, addons };
+  });
   const [form, setForm] = useState({
-    plan_id: '',
-    addon_id: '',
+    target: '',
     price_type: 'FLAT' as PriceType,
     currency: 'IDR',
     unit_amount: '',
@@ -79,8 +83,7 @@ function CreatePriceForm({ onCreated }: { onCreated: () => void }) {
     setError(null);
     try {
       await pricesApi.create({
-        plan_id: form.plan_id || null,
-        addon_id: form.addon_id || null,
+        ...(form.target.startsWith('plan:') ? { plan_id: form.target.slice(5) } : { addon_id: form.target.slice(6) }),
         price_type: form.price_type,
         currency: form.currency,
         unit_amount: form.unit_amount || null,
@@ -100,24 +103,27 @@ function CreatePriceForm({ onCreated }: { onCreated: () => void }) {
 
   return (
     <div className="form">
-      <ErrorAlert message={error} />
-      <label>Plan ID (either plan or addon)<input value={form.plan_id} onChange={(e) => setForm({ ...form, plan_id: e.target.value })} /></label>
-      <label>Addon ID<input value={form.addon_id} onChange={(e) => setForm({ ...form, addon_id: e.target.value })} /></label>
+      <ErrorAlert message={error ?? targets.error} />
+      <label>Plan ID / Addon ID<HelpSelect help="Select exactly one registered plan or add-on to price. The option group identifies its type." value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })} disabled={targets.loading}>
+        <option value="">Select a plan or add-on...</option>
+        <optgroup label="Plans">{targets.data?.plans.map((plan) => <option key={plan.id} value={`plan:${plan.id}`}>{plan.name} ({plan.plan_code})</option>)}</optgroup>
+        <optgroup label="Add-ons">{targets.data?.addons.map((addon) => <option key={addon.id} value={`addon:${addon.id}`}>{addon.name} ({addon.addon_code})</option>)}</optgroup>
+      </HelpSelect></label>
       <label>
         Price Type
-        <select value={form.price_type} onChange={(e) => setForm({ ...form, price_type: e.target.value as PriceType })}>
+        <HelpSelect help="Choose how charges are calculated: flat, per unit, usage, or tiered. Tiered pricing requires configured tiers." value={form.price_type} onChange={(e) => setForm({ ...form, price_type: e.target.value as PriceType })}>
           {PRICE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
+        </HelpSelect>
       </label>
-      <label>Currency<input value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} /></label>
-      <label>Unit Amount<input value={form.unit_amount} onChange={(e) => setForm({ ...form, unit_amount: e.target.value })} /></label>
-      <label>Billing Interval<input value={form.billing_interval} onChange={(e) => setForm({ ...form, billing_interval: e.target.value })} /></label>
-      <label>Unit Name<input value={form.unit_name} onChange={(e) => setForm({ ...form, unit_name: e.target.value })} /></label>
-      <label>Meter Key<input value={form.meter_key} onChange={(e) => setForm({ ...form, meter_key: e.target.value })} /></label>
-      <label>Included Quantity<input value={form.included_quantity} onChange={(e) => setForm({ ...form, included_quantity: e.target.value })} /></label>
-      <label>Effective From<input type="date" value={form.effective_from} onChange={(e) => setForm({ ...form, effective_from: e.target.value })} /></label>
+      <label>Currency<HelpInput help="Enter a three-letter currency code, for example IDR or USD." value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} /></label>
+      <label>Unit Amount<HelpInput help="Enter the price per unit in the selected currency, using a non-negative number." value={form.unit_amount} onChange={(e) => setForm({ ...form, unit_amount: e.target.value })} /></label>
+      <label>Billing Interval<HelpInput help="Choose the recurring billing period, for example MONTHLY or ANNUAL." value={form.billing_interval} onChange={(e) => setForm({ ...form, billing_interval: e.target.value })} /></label>
+      <label>Unit Name<HelpInput help="Optional billable unit name, for example user or vehicle." value={form.unit_name} onChange={(e) => setForm({ ...form, unit_name: e.target.value })} /></label>
+      <label>Meter Key<HelpInput help="Enter the usage meter key supplying billable quantities, for example vehicles." value={form.meter_key} onChange={(e) => setForm({ ...form, meter_key: e.target.value })} /></label>
+      <label>Included Quantity<HelpInput help="Optional quantity included in the base price before additional usage is charged." value={form.included_quantity} onChange={(e) => setForm({ ...form, included_quantity: e.target.value })} /></label>
+      <label>Effective From<HelpInput help="Select the date from which this price applies." type="date" value={form.effective_from} onChange={(e) => setForm({ ...form, effective_from: e.target.value })} /></label>
       <div className="modal-actions">
-        <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>Create</button>
+        <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting || targets.loading || !!targets.error || !form.target}>Create</button>
       </div>
     </div>
   );

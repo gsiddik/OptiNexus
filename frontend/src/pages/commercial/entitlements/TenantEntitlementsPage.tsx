@@ -1,4 +1,4 @@
-import { HelpSelect, HelpInput } from '../../../components/FieldControls';
+import { HelpLabel, HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { entitlementsApi } from '../../../api/endpoints';
@@ -154,17 +154,17 @@ function OverrideForm({ tenantId, onCreated }: { tenantId: string; onCreated: ()
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>
+      <HelpLabel>
         Type
         <HelpSelect help="Choose which kind of entitlement this override changes." value={form.entitlement_type} onChange={(e) => setForm({ ...form, entitlement_type: e.target.value })}>
           <option value="APPLICATION">APPLICATION</option>
           <option value="CAPABILITY">CAPABILITY</option>
           <option value="LIMIT">LIMIT</option>
         </HelpSelect>
-      </label>
-      <label>Key<HelpInput help="Enter the exact entitlement key used by the application." value={form.entitlement_key} onChange={(e) => setForm({ ...form, entitlement_key: e.target.value })} /></label>
-      <label>Value (JSON or plain text)<HelpInput help="Enter the override value. Use valid JSON where required, for example true, 10, or a quoted string." value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} /></label>
-      <label>Reason (required)<HelpInput help="Explain why this change is needed. The reason is retained for review and audit." value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></label>
+      </HelpLabel>
+      <HelpLabel>Key<HelpInput help="Enter the exact entitlement key used by the application." value={form.entitlement_key} onChange={(e) => setForm({ ...form, entitlement_key: e.target.value })} /></HelpLabel>
+      <HelpLabel>Value (JSON or plain text)<HelpInput help="Enter the override value. Use valid JSON where required, for example true, 10, or a quoted string." value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} /></HelpLabel>
+      <HelpLabel>Reason (required)<HelpInput help="Explain why this change is needed. The reason is retained for review and audit." value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></HelpLabel>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={submit} disabled={submitting || !form.entitlement_key || !form.reason}>Create Override</button>
       </div>

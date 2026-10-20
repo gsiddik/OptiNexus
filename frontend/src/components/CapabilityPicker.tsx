@@ -1,72 +1,38 @@
-import { HelpSelect } from './FieldControls';
+import { HelpInput, HelpLabel } from './FieldControls';
 import { useState } from 'react';
-import { applicationsApi } from '../api/endpoints';
-import { useApiResource } from '../api/useApi';
-import type { Application, Capability } from '../api/types';
+import type { Capability } from '../api/types';
 
-function flatten(nodes: Capability[]): Capability[] {
-  return nodes.flatMap((n) => [n, ...flatten(n.children ?? [])]);
-}
-
-/**
- * Attach-capability picker shared by Product/Plan/Add-on detail pages.
- * Capabilities are scoped per-application (see ApplicationDetailPage's
- * CapabilityTree), so attaching one to a commercial catalog entity is a
- * two-step pick: which of the entity's candidate applications, then which
- * of that application's capabilities.
- */
-export function CapabilityPicker({
-  applications,
-  onAttach,
-  disabled,
-}: {
-  applications: Application[];
-  onAttach: (capabilityId: string) => Promise<void>;
+export interface CapabilityGroup { application: { id: string; name: string }; capabilities: Capability[] }
+/** Only the capabilities already included in the parent product can be selected. */
+export function CapabilityPicker({ groups, attachedIds, onAttach, disabled }: {
+  groups: CapabilityGroup[];
+  attachedIds: string[];
+  onAttach: (id: string) => Promise<void>;
   disabled?: boolean;
 }) {
-  const [applicationId, setApplicationId] = useState('');
-  const [capabilityId, setCapabilityId] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const { data: tree } = useApiResource<Capability[]>(
-    () => (applicationId ? applicationsApi.capabilityTree(applicationId) : Promise.resolve([])),
-    [applicationId],
-  );
-  const options = flatten(tree ?? []);
-
+  const [selected, setSelected] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const pending = selected.filter((id) => !attachedIds.includes(id) && groups.some((group) => group.capabilities.some((c) => c.id === id)));
   async function attach() {
-    if (!capabilityId) return;
-    setSubmitting(true);
+    if (!pending.length || busy) return;
+    setBusy(true);
     try {
-      await onAttach(capabilityId);
-      setCapabilityId('');
-    } finally {
-      setSubmitting(false);
-    }
+      for (const id of pending) {
+        await onAttach(id);
+        setSelected((ids) => ids.filter((value) => value !== id));
+      }
+    } catch { /* The parent displays the API error; retain pending choices for retry. */ } finally { setBusy(false); }
   }
-
-  return (
-    <div className="toolbar">
-      <HelpSelect help="Select the registered application to which this configuration applies."
-        value={applicationId}
-        onChange={(e) => {
-          setApplicationId(e.target.value);
-          setCapabilityId('');
-        }}
-      >
-        <option value="">Select application...</option>
-        {applications.map((a) => (
-          <option key={a.id} value={a.id}>{a.name}</option>
-        ))}
-      </HelpSelect>
-      <HelpSelect help="Select a capability belonging to the chosen application." value={capabilityId} onChange={(e) => setCapabilityId(e.target.value)} disabled={!applicationId}>
-        <option value="">Select capability...</option>
-        {options.map((c) => (
-          <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
-        ))}
-      </HelpSelect>
-      <button className="btn btn-secondary" disabled={disabled || submitting || !capabilityId} onClick={attach}>
-        Attach Capability
-      </button>
-    </div>
-  );
+  return <div>
+    {groups.map(({ application, capabilities }) => <fieldset key={application.id} disabled={disabled || busy} className="capability-group">
+      <legend>{application.name}</legend>
+      {capabilities.map((capability) => <HelpLabel key={capability.id} className="checkbox-label">
+        <HelpInput type="checkbox" help="Select a product capability to include. Already attached capabilities are checked." checked={attachedIds.includes(capability.id) || pending.includes(capability.id)} disabled={attachedIds.includes(capability.id)}
+          onChange={(event) => setSelected((ids) => event.target.checked ? [...ids, capability.id] : ids.filter((id) => id !== capability.id))} />
+        {capability.name}
+      </HelpLabel>)}
+    </fieldset>)}
+    {!groups.length && <p className="muted">No capabilities selected in the parent product.</p>}
+    <button className="btn btn-secondary" disabled={disabled || busy || !pending.length} onClick={attach}>Attach Capability</button>
+  </div>;
 }

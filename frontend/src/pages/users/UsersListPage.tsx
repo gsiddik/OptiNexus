@@ -1,4 +1,4 @@
-import { HelpInput } from '../../components/FieldControls';
+import { HelpLabel, HelpInput } from '../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usersApi } from '../../api/endpoints';
@@ -76,8 +76,8 @@ function CreateUserForm({ onCreated }: { onCreated: () => void }) {
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-      <label>Email<HelpInput help="Enter a valid email address for this account or customer." type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
+      <HelpLabel>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></HelpLabel>
+      <HelpLabel>Email<HelpInput help="Enter a valid email address for this account or customer." type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></HelpLabel>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={submit}>Invite</button>
       </div>

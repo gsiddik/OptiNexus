@@ -14,6 +14,7 @@ Route::prefix('plans')->name('plans.')->middleware(['auth:sanctum', 'ecosystem']
     Route::post('/{plan}/deactivate', [PlanController::class, 'deactivate'])->middleware('permission:cgo.plan.deactivate')->name('deactivate');
     Route::post('/{plan}/retire', [PlanController::class, 'retire'])->middleware('permission:cgo.plan.retire')->name('retire');
 
+    Route::get('/{plan}/capability-options', [PlanController::class, 'capabilityOptions'])->middleware('permission:cgo.plan.view')->name('capability-options');
     Route::get('/{plan}/capabilities', [PlanController::class, 'capabilities'])->middleware('permission:cgo.plan.view')->name('capabilities.index');
     Route::post('/{plan}/capabilities/{capability}', [PlanController::class, 'attachCapability'])->middleware('permission:cgo.plan.capability.assign')->name('capabilities.attach');
     Route::delete('/{plan}/capabilities/{capability}', [PlanController::class, 'detachCapability'])->middleware('permission:cgo.plan.capability.revoke')->name('capabilities.detach');

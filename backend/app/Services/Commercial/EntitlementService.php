@@ -129,7 +129,16 @@ class EntitlementService
             $query->where(fn ($q) => $q->where('application_id', $applicationId)->orWhereNull('application_id'));
         }
 
-        return $query->get();
+        $rows = $query->get();
+        if ($applicationId) {
+            $scopedKeys = $rows->where('application_id', $applicationId)->where('source_type', Entitlement::SOURCE_MANUAL_OVERRIDE)
+                ->map(fn (Entitlement $row): string => $row->entitlement_type.':'.$row->entitlement_key);
+            $rows = $rows->reject(fn (Entitlement $row): bool => $row->application_id === null
+                && $row->source_type === Entitlement::SOURCE_MANUAL_OVERRIDE
+                && $scopedKeys->contains($row->entitlement_type.':'.$row->entitlement_key));
+        }
+
+        return $rows->values();
     }
 
     /**

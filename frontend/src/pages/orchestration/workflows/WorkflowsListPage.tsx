@@ -1,4 +1,4 @@
-import { HelpInput, HelpSelect, HelpTextarea } from '../../../components/FieldControls';
+import { HelpLabel, HelpInput, HelpSelect, HelpTextarea } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { workflowsApi } from '../../../api/endpoints';
@@ -96,9 +96,9 @@ function CreateWorkflowForm({ onCreated }: { onCreated: (id: string) => void }) 
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>Workflow Code<HelpInput help="Enter a unique stable code identifying this workflow." value={form.workflow_code} onChange={(e) => setForm({ ...form, workflow_code: e.target.value })} /></label>
-      <label>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-      <label>
+      <HelpLabel>Workflow Code<HelpInput help="Enter a unique stable code identifying this workflow." value={form.workflow_code} onChange={(e) => setForm({ ...form, workflow_code: e.target.value })} /></HelpLabel>
+      <HelpLabel>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></HelpLabel>
+      <HelpLabel>
         Trigger Type
         <HelpSelect help="Choose how the workflow starts, for example an event or manual trigger." value={form.trigger_type} onChange={(e) => setForm({ ...form, trigger_type: e.target.value })}>
           <option value="MANUAL">MANUAL</option>
@@ -106,18 +106,18 @@ function CreateWorkflowForm({ onCreated }: { onCreated: (id: string) => void }) 
           <option value="EVENT">EVENT</option>
           <option value="SCHEDULED">SCHEDULED</option>
         </HelpSelect>
-      </label>
+      </HelpLabel>
       {form.trigger_type === 'EVENT' && (
-        <label>Trigger Event Key<HelpInput help="Enter the event key used by producers and consumers, for example subscription.expiring." value={form.trigger_event_key} onChange={(e) => setForm({ ...form, trigger_event_key: e.target.value })} placeholder="e.g. subscription.expiring" /></label>
+        <HelpLabel>Trigger Event Key<HelpInput help="Enter the event key used by producers and consumers, for example subscription.expiring." value={form.trigger_event_key} onChange={(e) => setForm({ ...form, trigger_event_key: e.target.value })} placeholder="e.g. subscription.expiring" /></HelpLabel>
       )}
-      <label>
+      <HelpLabel>
         Steps (JSON array of step_key/step_type/config)
         <HelpTextarea help="Enter a JSON array of workflow steps with unique step keys." rows={8} value={form.steps} onChange={(e) => setForm({ ...form, steps: e.target.value })} />
-      </label>
-      <label>
+      </HelpLabel>
+      <HelpLabel>
         Transitions (JSON array of from_step_key/to_step_key/condition)
         <HelpTextarea help="Enter a JSON array of transitions using from_step_key, to_step_key, and an optional condition." rows={8} value={form.transitions} onChange={(e) => setForm({ ...form, transitions: e.target.value })} />
-      </label>
+      </HelpLabel>
       <p className="muted">Step types: START, CONDITION, TASK, APPROVAL, INTEGRATION, INTERNAL_ACTION, WAIT, END. No arbitrary code execution steps exist.</p>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>Create Draft</button>

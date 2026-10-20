@@ -2,16 +2,21 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Models\Price;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Price */
+/** @mixin Price */
 class PriceResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $this->resource->loadMissing(['plan', 'addon']);
+
         return [
             'id' => $this->id,
+            'plan_name' => $this->plan?->name,
+            'addon_name' => $this->addon?->name,
             'plan_id' => $this->plan_id,
             'addon_id' => $this->addon_id,
             'tenant_id' => $this->tenant_id,

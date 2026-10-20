@@ -487,14 +487,20 @@ class OidcProviderController extends Controller
         $hint = $request->query('id_token_hint');
         $hintClaims = is_string($hint) && $hint !== '' ? $this->keys->verify($hint) : null;
 
-        $user = Auth::guard('web')->user()
-            ?? (isset($hintClaims['sub']) ? User::query()->find($hintClaims['sub']) : null);
+        $webUser = Auth::guard('web')->user();
+        $hintClient = isset($hintClaims['aud']) && is_string($hintClaims['aud'])
+            ? OidcClient::query()->where('client_id', $hintClaims['aud'])->first() : null;
+        $hintValid = $hintClient && ($hintClaims['iss'] ?? null) === config('oidc.issuer')
+            && (! $request->query('client_id') || $request->query('client_id') === $hintClient->client_id);
+        $user = $hintValid && isset($hintClaims['sub']) ? User::query()->find($hintClaims['sub']) : $webUser;
 
         if ($user instanceof User) {
             $this->revocation->logoutEverywhere($user, 'logout', $request);
         }
 
-        $this->endWebSession($request);
+        if (! $webUser || ! $user || $webUser->id === $user->id) {
+            $this->endWebSession($request);
+        }
 
         $target = (string) $request->query('post_logout_redirect_uri');
         $clientId = (string) $request->query('client_id');

@@ -76,6 +76,8 @@ export interface Permission {
   application_id: string;
   capability_id: string | null;
   permission_key: string;
+  application_name?: string;
+  module_name?: string;
   name: string;
   description: string | null;
   status: 'ACTIVE' | 'DEPRECATED' | 'DISABLED';
@@ -90,6 +92,7 @@ export interface Role {
   description: string | null;
   role_type: 'SYSTEM' | 'APPLICATION' | 'TENANT';
   is_system: boolean;
+  auto_capability_permissions?: boolean;
   status: 'ACTIVE' | 'DISABLED';
   permissions_count?: number | null;
 }
@@ -100,6 +103,7 @@ export interface User {
   email: string;
   status: 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'DISABLED';
   mfa_enabled: boolean;
+  generated_password?: string;
   email_verified_at: string | null;
   last_login_at: string | null;
   metadata: Record<string, unknown> | null;
@@ -163,6 +167,8 @@ export interface AdminAccountCreate {
 }
 
 export interface EffectivePermission {
+  application_name?: string;
+  module_name?: string;
   permission_key: string;
   scope: 'GLOBAL' | 'CUSTOMER' | 'TENANT' | 'APPLICATION' | 'OWN';
 }
@@ -221,6 +227,8 @@ export interface PlanLimit {
 }
 
 export interface Plan {
+  product_name?: string | null;
+
   id: string; product_id: string; plan_code: string; name: string; description: string | null;
   billing_interval: 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL' | 'CUSTOM';
   status: 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'RETIRED';
@@ -234,6 +242,8 @@ export interface AddonLimit {
 }
 
 export interface Addon {
+  product_name?: string | null;
+
   id: string; product_id: string | null; addon_code: string; name: string; description: string | null;
   status: 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'RETIRED';
   metadata: Record<string, unknown> | null; created_at: string; updated_at: string;
@@ -252,6 +262,9 @@ export interface PricingTier {
 }
 
 export interface Price {
+  plan_name?: string | null;
+  addon_name?: string | null;
+
   id: string; plan_id: string | null; addon_id: string | null; tenant_id: string | null;
   price_type: PriceType; currency: string; unit_amount: string | null; billing_interval: string;
   unit_name: string | null; meter_key: string | null; minimum_quantity: string | null; included_quantity: string | null;
@@ -262,12 +275,20 @@ export interface Price {
 }
 
 export interface SubscriptionItem {
+  plan_name?: string | null;
+  addon_name?: string | null;
+
   id: string; subscription_id: string; item_type: 'PLAN' | 'ADDON'; plan_id: string | null; addon_id: string | null;
   price_id: string | null; quantity: string; unit_price: string | null; currency: string;
   start_at: string; end_at: string | null;
 }
 
 export interface Subscription {
+  customer_name?: string | null;
+  tenant_name?: string | null;
+  product_name?: string | null;
+  plan_name?: string | null;
+
   id: string; subscription_number: string; customer_id: string; tenant_id: string; product_id: string; plan_id: string;
   status: 'DRAFT' | 'PENDING' | 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'GRACE_PERIOD' | 'SUSPENDED' | 'EXPIRED' | 'CANCELLED' | 'TERMINATED';
   start_at: string | null; current_period_start: string | null; current_period_end: string | null;
@@ -306,6 +327,9 @@ export interface BillingAdjustment {
 }
 
 export interface Billing {
+  tenant_name?: string | null;
+  subscription_number?: string | null;
+
   id: string; billing_number: string; customer_id: string; tenant_id: string; subscription_id: string;
   period_start: string; period_end: string; currency: string;
   subtotal: string; discount_total: string; tax_total: string; adjustment_total: string; total: string;
@@ -324,6 +348,8 @@ export interface InvoicePayment {
 }
 
 export interface Invoice {
+  tenant_name?: string | null;
+
   id: string; invoice_number: string; billing_id: string; customer_id: string; tenant_id: string; subscription_id: string;
   issue_date: string | null; due_date: string; currency: string;
   subtotal: string; discount_total: string; tax_total: string; adjustment_total: string; total: string; balance_due: string;

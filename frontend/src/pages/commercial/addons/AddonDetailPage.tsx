@@ -1,7 +1,7 @@
-import { HelpInput } from '../../../components/FieldControls';
+import { HelpLabel, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { addonsApi, applicationsApi, productsApi } from '../../../api/endpoints';
+import { addonsApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import { ErrorAlert } from '../../../components/ErrorAlert';
@@ -12,7 +12,7 @@ import { CapabilityPicker } from '../../../components/CapabilityPicker';
 import { PermissionGuard } from '../../../auth/PermissionGuard';
 import { useAuth } from '../../../auth/useAuth';
 import { unwrapError } from '../../../api/client';
-import type { Addon, AddonLimit, Application, Capability } from '../../../api/types';
+import type { Addon, AddonLimit, Capability } from '../../../api/types';
 
 export function AddonDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -92,18 +92,10 @@ export function AddonDetailPage() {
  */
 function AddonCapabilities({ addonId, productId }: { addonId: string; productId: string | null }) {
   const { data: capabilities, loading, error, reload } = useApiResource<Capability[]>(() => addonsApi.capabilities(addonId), [addonId]);
-  const { data: productApplications } = useApiResource<Application[]>(
-    () => (productId ? productsApi.applications(productId) : Promise.resolve([])),
-    [productId],
-  );
-  const { data: allApplications } = useApiResource(
-    () => (productId ? Promise.resolve([]) : applicationsApi.list({ per_page: 100 }).then((e) => e.data)),
-    [productId],
-  );
+  const { data: groups, error: optionsError } = useApiResource(() => addonsApi.capabilityOptions(addonId), [addonId, productId]);
   const [pendingDetach, setPendingDetach] = useState<Capability | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const applications = productId ? (productApplications ?? []) : ((allApplications as Application[] | null) ?? []);
 
   async function attach(capabilityId: string) {
     setActionError(null);
@@ -112,6 +104,7 @@ function AddonCapabilities({ addonId, productId }: { addonId: string; productId:
       reload();
     } catch (err) {
       setActionError(unwrapError(err).message);
+      throw err;
     }
   }
 
@@ -131,7 +124,7 @@ function AddonCapabilities({ addonId, productId }: { addonId: string; productId:
   return (
     <div className="card">
       <h3>Capabilities</h3>
-      <ErrorAlert message={error ?? actionError} />
+      <ErrorAlert message={error ?? optionsError ?? actionError} />
       {loading ? (
         <LoadingSpinner />
       ) : (
@@ -149,7 +142,7 @@ function AddonCapabilities({ addonId, productId }: { addonId: string; productId:
       )}
 
       <PermissionGuard permission="cgo.addon.capability.assign">
-        <CapabilityPicker applications={applications} onAttach={attach} />
+        <CapabilityPicker groups={groups ?? []} attachedIds={(capabilities ?? []).map((c) => c.id)} onAttach={attach} />
       </PermissionGuard>
 
       <ConfirmDialog
@@ -187,9 +180,9 @@ function AddLimitForm({ addonId, onAdded }: { addonId: string; onAdded: () => vo
   return (
     <div className="form form-inline" style={{ marginTop: '1rem' }}>
       <ErrorAlert message={error} />
-      <label>Key<HelpInput help="Enter the limit key used by the consuming application, for example seats or vehicle_limit." value={form.limit_key} onChange={(e) => setForm({ ...form, limit_key: e.target.value })} /></label>
-      <label>Delta<HelpInput help="Enter the quantity added by this add-on; a negative number reduces the limit." value={form.limit_delta} onChange={(e) => setForm({ ...form, limit_delta: e.target.value })} /></label>
-      <label>Unit<HelpInput help="Enter a measurement unit, for example seat, vehicle, or device." value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></label>
+      <HelpLabel>Key<HelpInput help="Enter the limit key used by the consuming application, for example seats or vehicle_limit." value={form.limit_key} onChange={(e) => setForm({ ...form, limit_key: e.target.value })} /></HelpLabel>
+      <HelpLabel>Delta<HelpInput help="Enter the quantity added by this add-on; a negative number reduces the limit." value={form.limit_delta} onChange={(e) => setForm({ ...form, limit_delta: e.target.value })} /></HelpLabel>
+      <HelpLabel>Unit<HelpInput help="Enter a measurement unit, for example seat, vehicle, or device." value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></HelpLabel>
       <button className="btn btn-secondary" onClick={submit} disabled={submitting || !form.limit_key}>Add Limit</button>
     </div>
   );

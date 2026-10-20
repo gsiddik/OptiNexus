@@ -34,7 +34,7 @@ class SubscriptionController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Subscription::query()->with('items');
+        $query = Subscription::query()->with(['customer', 'tenant', 'product', 'plan', 'items.plan', 'items.addon'])->with('items');
 
         foreach (['tenant_id', 'customer_id', 'plan_id', 'status'] as $filter) {
             if ($value = $request->query($filter)) {

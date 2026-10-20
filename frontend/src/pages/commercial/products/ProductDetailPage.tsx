@@ -1,4 +1,4 @@
-import { HelpSelect, HelpInput } from '../../../components/FieldControls';
+import { HelpLabel, HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { productsApi } from '../../../api/endpoints';
@@ -182,12 +182,15 @@ function ProductCapabilities({ productId }: { productId: string }) {
       {!resource.error && !resource.data?.groups.length && <p className="muted">Attach an application to choose its capabilities.</p>}
       {resource.data?.groups.map(({ application, capabilities }) => (
         <fieldset key={application.id} className="capability-group" disabled={saving}>
-          <legend>{application.name}</legend>
+          <legend>{application.name} <HelpLabel className="check-inline"><HelpInput type="checkbox" help="Select or clear all capabilities for this application. Save Capabilities applies the selection."
+            checked={capabilities.length > 0 && capabilities.every((c) => selectedIds.includes(c.id))}
+            disabled={!hasPermission('cgo.product.capability.assign') || !hasPermission('cgo.product.capability.revoke') || !capabilities.length}
+            onChange={(event) => setDraft(event.target.checked ? [...new Set([...selectedIds, ...capabilities.map((c) => c.id)])] : selectedIds.filter((id) => !capabilities.some((c) => c.id === id)))} />Select All</HelpLabel></legend>
           {!capabilities.length && <p className="muted">No capabilities registered for this application.</p>}
           {capabilities.map((capability) => {
             const checked = selectedIds.includes(capability.id);
             return (
-              <label key={capability.id} className="checkbox-label">
+              <HelpLabel key={capability.id} className="checkbox-label">
                 <HelpInput help="Check to include this capability in the product; uncheck to remove it. Save Capabilities applies all choices." type="checkbox" checked={checked}
                   disabled={!hasPermission(resource.data?.selected.some((selected) => selected.id === capability.id) ? 'cgo.product.capability.revoke' : 'cgo.product.capability.assign')}
                   onChange={(event) => {
@@ -195,7 +198,7 @@ function ProductCapabilities({ productId }: { productId: string }) {
                     setSaved(false);
                   }} />
                 {capability.name} <code>{capability.code}</code>
-              </label>
+              </HelpLabel>
             );
           })}
         </fieldset>

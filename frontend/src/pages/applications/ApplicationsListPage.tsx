@@ -1,4 +1,4 @@
-import { HelpInput, HelpTextarea } from '../../components/FieldControls';
+import { HelpLabel, HelpInput, HelpTextarea } from '../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { applicationsApi } from '../../api/endpoints';
@@ -80,10 +80,10 @@ function CreateApplicationForm({ onCreated }: { onCreated: () => void }) {
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>Application Code<HelpInput help="Enter the stable application code used by integrations, for example optifleet." value={form.application_code} onChange={(e) => setForm({ ...form, application_code: e.target.value })} /></label>
-      <label>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-      <label>Owner<HelpInput help="Enter the person or team responsible for this application." value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })} /></label>
-      <label>Description<HelpTextarea help="Describe the purpose and scope of this record." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
+      <HelpLabel>Application Code<HelpInput help="Enter the stable application code used by integrations, for example optifleet." value={form.application_code} onChange={(e) => setForm({ ...form, application_code: e.target.value })} /></HelpLabel>
+      <HelpLabel>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></HelpLabel>
+      <HelpLabel>Owner<HelpInput help="Enter the person or team responsible for this application." value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })} /></HelpLabel>
+      <HelpLabel>Description<HelpTextarea help="Describe the purpose and scope of this record." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></HelpLabel>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>Register</button>
       </div>

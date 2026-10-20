@@ -1,4 +1,4 @@
-import { HelpSelect } from './FieldControls';
+import { HelpLabel, HelpSelect } from './FieldControls';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
@@ -75,7 +75,7 @@ export function Layout() {
             </svg>
           </button>
           <div className="tenant-switcher">
-            <label htmlFor="tenant-select">{t('shell.scope')}</label>
+            <HelpLabel htmlFor="tenant-select">{t('shell.scope')}</HelpLabel>
             <HelpSelect help="Select the tenant context for tenant-scoped pages and operations."
               id="tenant-select"
               value={activeTenantId ?? ''}

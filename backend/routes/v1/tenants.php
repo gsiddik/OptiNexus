@@ -20,6 +20,7 @@ Route::prefix('tenants')->name('tenants.')->middleware(['auth:sanctum', 'ecosyst
     Route::post('/{tenant}/applications/{application}', [TenantController::class, 'attachApplication'])->middleware('permission:cgo.tenant.application.assign,tenant')->name('applications.attach');
     Route::delete('/{tenant}/applications/{application}', [TenantController::class, 'detachApplication'])->middleware('permission:cgo.tenant.application.assign,tenant')->name('applications.detach');
 
+    Route::put('/{tenant}/seats/{application}', [TenantController::class, 'updateSeats'])->middleware('permission:cgo.entitlement.override,tenant')->name('seats.update');
     Route::get('/{tenant}/seats', [TenantController::class, 'seats'])->middleware('permission:cgo.tenant.view,tenant')->name('seats');
 
     Route::get('/{tenant}/admins', [TenantController::class, 'admins'])->middleware('permission:cgo.tenant.view,tenant')->name('admins.index');

@@ -75,7 +75,8 @@ class UserMembershipTest extends TestCase
 
         $this->getJson("/api/v1/users/{$user->id}/effective-permissions?tenant_id={$tenant->id}")
             ->assertStatus(200)
-            ->assertJsonFragment(['permission_key' => 'cgo.user.view', 'scope' => 'TENANT']);
+            ->assertJsonFragment(['permission_key' => 'cgo.user.view', 'scope' => 'TENANT'])
+            ->assertJsonStructure(['data' => ['permissions' => [['application_name', 'module_name']]]]);
     }
 
     public function test_privilege_escalation_denied_when_assigning_a_role_beyond_own_permissions(): void

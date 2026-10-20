@@ -25,7 +25,9 @@ class PrivilegeEscalationGuard
     {
         $actorPermissions = $this->authorization->effectivePermissions($actor, $tenantId)->keys();
 
-        $rolePermissionKeys = $role->permissions()->pluck('permission_key');
+        $rolePermissionKeys = ($role->auto_capability_permissions) && $tenantId
+            ? $this->authorization->capabilityPermissions($role, $tenantId)->pluck('permission_key')
+            : $role->permissions()->pluck('permission_key');
 
         return $rolePermissionKeys->diff($actorPermissions)->isEmpty();
     }

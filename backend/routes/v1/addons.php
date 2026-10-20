@@ -13,6 +13,7 @@ Route::prefix('addons')->name('addons.')->middleware(['auth:sanctum', 'ecosystem
     Route::post('/{addon}/deactivate', [AddonController::class, 'deactivate'])->middleware('permission:cgo.addon.deactivate')->name('deactivate');
     Route::post('/{addon}/retire', [AddonController::class, 'retire'])->middleware('permission:cgo.addon.retire')->name('retire');
 
+    Route::get('/{addon}/capability-options', [AddonController::class, 'capabilityOptions'])->middleware('permission:cgo.addon.view')->name('capability-options');
     Route::get('/{addon}/capabilities', [AddonController::class, 'capabilities'])->middleware('permission:cgo.addon.view')->name('capabilities.index');
     Route::post('/{addon}/capabilities/{capability}', [AddonController::class, 'attachCapability'])->middleware('permission:cgo.addon.capability.assign')->name('capabilities.attach');
     Route::delete('/{addon}/capabilities/{capability}', [AddonController::class, 'detachCapability'])->middleware('permission:cgo.addon.capability.revoke')->name('capabilities.detach');

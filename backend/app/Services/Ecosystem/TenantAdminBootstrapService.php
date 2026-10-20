@@ -11,6 +11,7 @@ use App\Models\UserApplicationAccess;
 use App\Models\UserRole;
 use App\Services\AuditService;
 use App\Services\AuthorizationService;
+use App\Services\Oidc\SessionRevocationService;
 use App\Services\PrivilegeEscalationGuard;
 use App\Services\Seats\SeatService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -142,13 +143,16 @@ class TenantAdminBootstrapService
             $user = User::query()->lockForUpdate()->find($target->id);
             $this->assertMember($user, $tenant);
 
-            if ($user->status !== User::STATUS_INVITED || ! $user->isInManagedActivation()) {
-                throw new AdminBootstrapException('ACTIVATION_NOT_PENDING', 'This account is not waiting for activation. Its password is not reset through this flow.', 409);
+            if (! in_array($user->status, [User::STATUS_ACTIVE, User::STATUS_INVITED], true)
+                || ! TenantMembership::query()->where('tenant_id', $tenant->id)->where('user_id', $user->id)->where('is_tenant_admin', true)->exists()
+                || $this->authorization->hasEcosystemAccess($user)) {
+                throw new AdminBootstrapException('IDENTITY_NOT_LINKABLE', 'Only an active or invited tenant administrator can receive a temporary password.', 409);
             }
-
-            if (! $user->password_change_required) {
-                throw new AdminBootstrapException('PASSWORD_ALREADY_CHOSEN', 'The holder already chose a password. A temporary password would replace it, so none is issued.', 409);
+            if ($user->status === User::STATUS_INVITED && ! $user->password_change_required) {
+                throw new AdminBootstrapException('PASSWORD_ALREADY_CHOSEN', 'The holder has chosen a password and is waiting for verification.', 409);
             }
+            $user->forceFill(['activation_started_at' => now(), 'activated_at' => null, 'status' => User::STATUS_INVITED])->save();
+            app(SessionRevocationService::class)->logoutEverywhere($user, 'temporary_password_reset', $request);
 
             $plain = $this->activation->issueTemporaryPassword($user);
 
@@ -233,12 +237,26 @@ class TenantAdminBootstrapService
             throw new AdminBootstrapException('IDENTITY_NOT_FOUND', 'No such account.', 404);
         }
 
-        if (Str::lower(trim($confirmEmail)) !== Str::lower($user->email)) {
-            throw new AdminBootstrapException('EMAIL_CONFIRMATION_MISMATCH', 'The e-mail address you repeated is not the address of that account.', 422);
-        }
-
         if ($user->trashed() || $user->status !== User::STATUS_ACTIVE || $this->authorization->hasEcosystemAccess($user)) {
-            throw new AdminBootstrapException('IDENTITY_NOT_LINKABLE', 'This account cannot become an Admin Tenant here: it is deleted, not active, still waiting for its own activation, or a platform operator.', 409);
+            throw new AdminBootstrapException('IDENTITY_NOT_LINKABLE', 'Only an active tenant account can be linked.', 409);
+        }
+        $belongsToCustomer = $user->tenantMemberships()->whereHas('tenant', fn ($query) => $query->where('customer_id', $tenant->customer_id))->exists()
+            || Str::lower($user->email) === Str::lower((string) $tenant->customer?->email);
+        if (! $belongsToCustomer) {
+            throw new AdminBootstrapException('IDENTITY_NOT_LINKABLE', 'Select an account belonging to this customer.', 422);
+        }
+        $email = Str::lower(trim($confirmEmail));
+        if ($email !== Str::lower($user->email)) {
+            if (! $this->authorization->userHasPermission($actor, 'cgo.user.update')) {
+                throw new AdminBootstrapException('UNAUTHORIZED', 'Changing the account email requires user update permission.', 403);
+            }
+            if (User::withTrashed()->whereKeyNot($user->id)->whereRaw('lower(email) = ?', [$email])->exists()) {
+                throw $this->emailConflict($email);
+            }
+            $oldEmail = $user->email;
+            $user->update(['email' => $email]);
+            $this->audit->record('user.email_updated', request(), actor: $actor, resourceType: 'User', resourceId: $user->id,
+                oldValue: ['email' => $oldEmail], newValue: ['email' => $email], tenantId: $tenant->id);
         }
 
         $membership = TenantMembership::query()->where('user_id', $user->id)->where('tenant_id', $tenant->id)->first();

@@ -163,6 +163,7 @@ class SessionRevocationService
                     'tenant_id' => $type === OidcLogoutDelivery::TYPE_ACCESS_REVOKED ? $tenant?->id : null,
                     'type' => $type,
                     'reason' => $reason,
+                    'session_ids' => $sessions->where('oidc_client_id', $client->id)->pluck('id')->values()->all(),
                     'status' => OidcLogoutDelivery::STATUS_PENDING,
                 ])->id)
                 ->all();

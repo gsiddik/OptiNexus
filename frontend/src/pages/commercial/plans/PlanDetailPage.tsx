@@ -1,7 +1,7 @@
-import { HelpInput } from '../../../components/FieldControls';
+import { HelpLabel, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { plansApi, productsApi } from '../../../api/endpoints';
+import { plansApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import { ErrorAlert } from '../../../components/ErrorAlert';
@@ -13,7 +13,7 @@ import { CapabilityPicker } from '../../../components/CapabilityPicker';
 import { PermissionGuard } from '../../../auth/PermissionGuard';
 import { useAuth } from '../../../auth/useAuth';
 import { unwrapError } from '../../../api/client';
-import type { Application, Capability, Plan, PlanLimit } from '../../../api/types';
+import type { Capability, Plan, PlanLimit } from '../../../api/types';
 
 export function PlanDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -107,7 +107,7 @@ export function PlanDetailPage() {
  */
 function PlanCapabilities({ planId, productId }: { planId: string; productId: string }) {
   const { data: capabilities, loading, error, reload } = useApiResource<Capability[]>(() => plansApi.capabilities(planId), [planId]);
-  const { data: applications } = useApiResource<Application[]>(() => productsApi.applications(productId), [productId]);
+  const { data: groups, error: optionsError } = useApiResource(() => plansApi.capabilityOptions(planId), [planId, productId]);
   const [pendingDetach, setPendingDetach] = useState<Capability | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -118,6 +118,7 @@ function PlanCapabilities({ planId, productId }: { planId: string; productId: st
       reload();
     } catch (err) {
       setActionError(unwrapError(err).message);
+      throw err;
     }
   }
 
@@ -137,7 +138,7 @@ function PlanCapabilities({ planId, productId }: { planId: string; productId: st
   return (
     <div className="card">
       <h3>Capabilities</h3>
-      <ErrorAlert message={error ?? actionError} />
+      <ErrorAlert message={error ?? optionsError ?? actionError} />
       {loading ? (
         <LoadingSpinner />
       ) : (
@@ -155,7 +156,7 @@ function PlanCapabilities({ planId, productId }: { planId: string; productId: st
       )}
 
       <PermissionGuard permission="cgo.plan.capability.assign">
-        <CapabilityPicker applications={applications ?? []} onAttach={attach} />
+        <CapabilityPicker groups={groups ?? []} attachedIds={(capabilities ?? []).map((c) => c.id)} onAttach={attach} />
       </PermissionGuard>
 
       <ConfirmDialog
@@ -198,12 +199,12 @@ function AddLimitForm({ planId, onAdded }: { planId: string; onAdded: () => void
   return (
     <div className="form form-inline" style={{ marginTop: '1rem' }}>
       <ErrorAlert message={error} />
-      <label>Key<HelpInput help="Enter the limit key used by the consuming application, for example seats or vehicle_limit." value={form.limit_key} onChange={(e) => setForm({ ...form, limit_key: e.target.value })} /></label>
-      <label>Value<HelpInput help="Enter a non-negative limit, or enable Unlimited to remove the ceiling." value={form.limit_value} disabled={form.is_unlimited} onChange={(e) => setForm({ ...form, limit_value: e.target.value })} /></label>
-      <label>
+      <HelpLabel>Key<HelpInput help="Enter the limit key used by the consuming application, for example seats or vehicle_limit." value={form.limit_key} onChange={(e) => setForm({ ...form, limit_key: e.target.value })} /></HelpLabel>
+      <HelpLabel>Value<HelpInput help="Enter a non-negative limit, or enable Unlimited to remove the ceiling." value={form.limit_value} disabled={form.is_unlimited} onChange={(e) => setForm({ ...form, limit_value: e.target.value })} /></HelpLabel>
+      <HelpLabel>
         <HelpInput help="Enable unlimited usage instead of a numeric ceiling for this limit." type="checkbox" checked={form.is_unlimited} onChange={(e) => setForm({ ...form, is_unlimited: e.target.checked })} /> Unlimited
-      </label>
-      <label>Unit<HelpInput help="Enter a measurement unit, for example seat, vehicle, or device." value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></label>
+      </HelpLabel>
+      <HelpLabel>Unit<HelpInput help="Enter a measurement unit, for example seat, vehicle, or device." value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></HelpLabel>
       <button className="btn btn-secondary" onClick={submit} disabled={submitting || !form.limit_key}>Add Limit</button>
     </div>
   );
@@ -232,8 +233,8 @@ function ClonePlanForm({ planId, onCloned }: { planId: string; onCloned: () => v
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>New Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-      <label>New Plan Code<HelpInput help="Generated by the system on save. This code cannot be edited." value="Generated automatically on save" readOnly /></label>
+      <HelpLabel>New Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></HelpLabel>
+      <HelpLabel>New Plan Code<HelpInput help="Generated by the system on save. This code cannot be edited." value="Generated automatically on save" readOnly /></HelpLabel>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={submit} disabled={submitting}>Clone</button>
       </div>

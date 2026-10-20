@@ -1,4 +1,4 @@
-import { HelpInput } from '../../../components/FieldControls';
+import { HelpLabel, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { invoicesApi } from '../../../api/endpoints';
@@ -162,9 +162,9 @@ function RecordPaymentForm({ invoice, onRecorded }: { invoice: Invoice; onRecord
     <div className="form" style={{ marginTop: '1rem' }}>
       <h4>Record Payment</h4>
       <ErrorAlert message={error} />
-      <label>Amount (for a partial payment)<HelpInput help="Enter the monetary amount using the currency and amount convention shown for this record." value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></label>
-      <label>Method<HelpInput help="Select the payment method used to settle this invoice." value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })} /></label>
-      <label>Reference<HelpInput help="Enter the bank or payment transaction reference for reconciliation." value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} /></label>
+      <HelpLabel>Amount (for a partial payment)<HelpInput help="Enter the monetary amount using the currency and amount convention shown for this record." value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></HelpLabel>
+      <HelpLabel>Method<HelpInput help="Select the payment method used to settle this invoice." value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })} /></HelpLabel>
+      <HelpLabel>Reference<HelpInput help="Enter the bank or payment transaction reference for reconciliation." value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} /></HelpLabel>
       <div className="modal-actions">
         <button className="btn btn-secondary" onClick={markPartial} disabled={submitting || !form.amount}>Record Partial Payment</button>
         <button className="btn btn-primary" onClick={markFullyPaid} disabled={submitting}>Mark Fully Paid</button>

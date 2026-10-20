@@ -18,9 +18,9 @@ class StoreCustomerRequest extends FormRequest
             'legal_name' => ['required', 'string', 'max:255'],
             'business_name' => ['nullable', 'string', 'max:255'],
             'tax_id' => ['nullable', 'string', 'max:64'],
-            'industry' => ['nullable', 'string', 'max:100'],
+            'industry' => ['nullable', 'in:Transportation,Logistic,Government,Other'],
             'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:32'],
+            'phone' => ['nullable', 'string', 'regex:/^(?:0[0-9]{0,14}|\+[0-9]{1,15})$/'],
             'billing_address' => ['nullable', 'array'],
             'metadata' => ['nullable', 'array'],
         ];

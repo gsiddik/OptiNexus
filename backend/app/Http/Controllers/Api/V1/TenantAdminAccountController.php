@@ -8,6 +8,7 @@ use App\Http\Requests\V1\BootstrapTenantAdminRequest;
 use App\Http\Requests\V1\VerifyAdminEmailRequest;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\AuthorizationService;
 use App\Services\Ecosystem\AdminBootstrapException;
 use App\Services\Ecosystem\TenantAdminBootstrapService;
 use Illuminate\Http\JsonResponse;
@@ -27,6 +28,17 @@ class TenantAdminAccountController extends Controller
     public function index(Tenant $tenant): JsonResponse
     {
         return $this->ok($this->bootstrap->list($tenant));
+    }
+
+    public function accountOptions(Tenant $tenant): JsonResponse
+    {
+        $accounts = User::query()->where('status', User::STATUS_ACTIVE)
+            ->where(function ($query) use ($tenant): void {
+                $query->whereHas('tenantMemberships.tenant', fn ($q) => $q->where('customer_id', $tenant->customer_id))
+                    ->orWhereRaw('lower(email) = ?', [strtolower((string) $tenant->customer?->email)]);
+            })->orderBy('name')->get()->reject(fn (User $user) => app(AuthorizationService::class)->hasEcosystemAccess($user));
+
+        return $this->ok($accounts->map(fn (User $user) => $user->only(['id', 'name', 'email']))->values());
     }
 
     public function store(BootstrapTenantAdminRequest $request, Tenant $tenant): JsonResponse

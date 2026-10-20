@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Application;
 use App\Models\Customer;
+use App\Models\Entitlement;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Tenant;
@@ -11,6 +12,7 @@ use App\Models\TenantMembership;
 use App\Models\User;
 use App\Models\UserApplicationAccess;
 use App\Models\UserRole;
+use App\Services\Commercial\EntitlementService;
 use Illuminate\Support\Collection;
 
 /**
@@ -79,7 +81,9 @@ class AuthorizationService
 
             $scope = $this->scopeForRole($role);
 
-            foreach ($role->permissions as $permission) {
+            $rolePermissions = ($role->auto_capability_permissions) && $assignment->tenant_id
+                ? $this->capabilityPermissions($role, $assignment->tenant_id) : $role->permissions;
+            foreach ($rolePermissions as $permission) {
                 if ($permission->status !== Permission::STATUS_ACTIVE) {
                     continue;
                 }
@@ -99,6 +103,21 @@ class AuthorizationService
         }
 
         return $permissions;
+    }
+
+    /** Permissions belonging to capability entitlements currently purchased by this tenant. */
+    public function capabilityPermissions(Role $role, string $tenantId): Collection
+    {
+        $tenant = Tenant::query()->find($tenantId);
+        if (! $tenant) {
+            return collect();
+        }
+        $capabilities = app(EntitlementService::class)->effectiveRows($tenant)
+            ->where('entitlement_type', Entitlement::TYPE_CAPABILITY)
+            ->filter(fn ($row) => $row->decodedValue() === true)->pluck('capability_id')->filter();
+
+        return Permission::query()->with(['application', 'capability.parent.parent.parent.parent.parent'])->where('status', Permission::STATUS_ACTIVE)->whereIn('capability_id', $capabilities)
+            ->when($role->application_id, fn ($query) => $query->where('application_id', $role->application_id))->get();
     }
 
     public function userHasPermission(User $user, string $permissionKey, ?string $tenantId = null, ?string $applicationId = null): bool

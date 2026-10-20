@@ -1,4 +1,6 @@
-import { HelpSelect, HelpInput } from '../../../components/FieldControls';
+import { ActiveSelect } from '../../../components/ActiveSelect';
+import { useI18n } from '../../../i18n';
+import { HelpLabel, HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { subscriptionsApi } from '../../../api/endpoints';
@@ -15,6 +17,7 @@ import type { Subscription } from '../../../api/types';
 
 export function SubscriptionsListPage() {
   const navigate = useNavigate();
+  const { locale } = useI18n();
   const { rows, meta, setPage, loading, error, reload } = useApiList<Subscription>((p) => subscriptionsApi.list({ page: p }));
   const [showCreate, setShowCreate] = useState(false);
 
@@ -38,10 +41,10 @@ export function SubscriptionsListPage() {
             onRowClick={(r) => navigate(`/subscriptions/${r.id}`)}
             columns={[
               { key: 'number', header: 'Subscription #', render: (r) => r.subscription_number },
-              { key: 'tenant', header: 'Tenant', render: (r) => r.tenant_id },
-              { key: 'plan', header: 'Plan', render: (r) => r.plan_id },
+              { key: 'tenant', header: 'Tenant', render: (r) => r.tenant_name ?? '—' },
+              { key: 'plan', header: 'Plan', render: (r) => r.plan_name ?? '—' },
               { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
-              { key: 'period_end', header: 'Current Period End', render: (r) => r.current_period_end ?? '—' },
+              { key: 'period_end', header: 'Current Period End', render: (r) => r.current_period_end ? new Date(r.current_period_end).toLocaleString(locale === 'id' ? 'id-ID' : 'en-US') : '—' },
             ]}
           />
           <Pagination meta={meta} onPageChange={setPage} />
@@ -87,19 +90,19 @@ function CreateSubscriptionForm({ onCreated }: { onCreated: () => void }) {
   return (
     <div className="form">
       <ErrorAlert message={error ?? customers.error ?? tenants.error} />
-      <label>Customer ID<HelpSelect help="Select a registered customer. Subscription tenant choices are limited to the selected customer." value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value, tenant_id: '' })} disabled={customers.loading}>
+      <HelpLabel>Customer ID<HelpSelect help="Select a registered customer. Subscription tenant choices are limited to the selected customer." value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value, tenant_id: '' })} disabled={customers.loading}>
         <option value="">Select a customer...</option>
         {(customers.data ?? []).map((customer) => <option key={customer.id} value={customer.id}>{customer.legal_name} — {customer.customer_code} ({customer.id})</option>)}
-      </HelpSelect></label>
-      <label>Tenant ID<HelpSelect help="Select a tenant belonging to the selected customer. Changing the customer clears this choice." value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: e.target.value })} disabled={!form.customer_id || tenants.loading || !!tenants.error}>
+      </HelpSelect></HelpLabel>
+      <HelpLabel>Tenant ID<HelpSelect help="Select a tenant belonging to the selected customer. Changing the customer clears this choice." value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: e.target.value })} disabled={!form.customer_id || tenants.loading || !!tenants.error}>
         <option value="">{!form.customer_id ? 'Select a customer first...' : tenants.loading ? 'Loading tenants...' : !tenantOptions.length ? 'No tenants for this customer' : 'Select a tenant...'}</option>
         {tenantOptions.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name} — {tenant.tenant_code} ({tenant.id})</option>)}
-      </HelpSelect></label>
-      <label>Plan ID<HelpInput help="Enter the registered plan ID for this subscription or pricing simulation." value={form.plan_id} onChange={(e) => setForm({ ...form, plan_id: e.target.value })} /></label>
-      <label>Idempotency Key (optional)<HelpInput help="Optional: reuse the same key when retrying the same operation to prevent duplicate processing." value={form.idempotency_key} onChange={(e) => setForm({ ...form, idempotency_key: e.target.value })} /></label>
-      <label>
+      </HelpSelect></HelpLabel>
+      <HelpLabel>Plan ID<ActiveSelect kind="plan" value={form.plan_id} onChange={(e) => setForm({ ...form, plan_id: e.target.value })} /></HelpLabel>
+      <HelpLabel>Idempotency Key (optional)<HelpInput help="Optional: reuse the same key when retrying the same operation to prevent duplicate processing." value={form.idempotency_key} onChange={(e) => setForm({ ...form, idempotency_key: e.target.value })} /></HelpLabel>
+      <HelpLabel>
         <HelpInput help="Enable automatic renewal at the end of each subscription billing period." type="checkbox" checked={form.auto_renew} onChange={(e) => setForm({ ...form, auto_renew: e.target.checked })} /> Auto Renew
-      </label>
+      </HelpLabel>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting || customers.loading || tenants.loading || !!customers.error || !!tenants.error || !tenantOptions.some((tenant) => tenant.id === form.tenant_id)}>Create</button>
       </div>

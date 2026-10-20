@@ -1,4 +1,4 @@
-import { HelpInput, HelpTextarea } from '../../components/FieldControls';
+import { HelpLabel, HelpInput, HelpSelect, HelpTextarea } from '../../components/FieldControls';
 import { useMemo, useState, type FormEvent } from 'react';
 import { adminAccountsApi, rolesApi, tenantsApi } from '../../api/endpoints';
 import { useApiResource } from '../../api/useApi';
@@ -219,7 +219,7 @@ function AccountRow({ account, canVerify, canReissue, onVerify, onReissue }: {
 
   const next = activation.next_steps.length ? activation.next_steps.map((step) => t(`adminAcct.next.${step}` as const)).join(' ') : activation.managed ? t('adminAcct.next.done') : '';
   const needsEmail = activation.managed && !activation.email.verified;
-  const canIssue = activation.managed && activation.state !== 'ACTIVATED' && activation.password.change_required;
+  const canIssue = account.user.status === 'ACTIVE' || (account.user.status === 'INVITED' && activation.password.change_required);
 
   return (
     <tr>
@@ -255,6 +255,7 @@ function CreateForm({ tenant, applications, onCancel, onCreated }: {
   onCreated: (created: { user: { name: string; email: string }; temporary_credential: TemporaryCredential | null }) => void;
 }) {
   const { t } = useI18n();
+  const accounts = useApiResource(() => adminAccountsApi.accountOptions(tenant.id), [tenant.id]);
   const [mode, setMode] = useState<'new' | 'existing'>('new');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -297,50 +298,52 @@ function CreateForm({ tenant, applications, onCancel, onCreated }: {
     <form className="form" onSubmit={submit} noValidate>
       <ErrorAlert message={error} />
       <div role="radiogroup">
-        <label className="radio-row">
+        <HelpLabel className="radio-row">
           <HelpInput help="Create a new user account as this tenant's administrator." type="radio" name="mode" checked={mode === 'new'} onChange={() => setMode('new')} />
           {t('adminAcct.form.modeNew')}
-        </label>
-        <label className="radio-row">
+        </HelpLabel>
+        <HelpLabel className="radio-row">
           <HelpInput help="Assign an existing registered user as this tenant's administrator." type="radio" name="mode" checked={mode === 'existing'} onChange={() => setMode('existing')} />
           {t('adminAcct.form.modeExisting')}
-        </label>
+        </HelpLabel>
       </div>
 
       {mode === 'new' ? (
         <>
-          <label>
+          <HelpLabel>
             {t('adminAcct.form.name')}
             <HelpInput help="Enter a readable name used to identify this record in lists and selections." value={name} onChange={(e) => setName(e.target.value)} maxLength={255} required autoComplete="off" />
-          </label>
-          <label>
+          </HelpLabel>
+          <HelpLabel>
             {t('adminAcct.form.email')}
             <HelpInput help="Enter a valid email address for this account or customer." type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} required autoComplete="off" />
             <span className="field-hint">{t('adminAcct.form.emailHint')}</span>
-          </label>
+          </HelpLabel>
         </>
       ) : (
         <>
-          <label>
+          <HelpLabel>
             {t('adminAcct.form.userId')}
-            <HelpInput help="Enter the registered user ID to which this action applies." value={userId} onChange={(e) => setUserId(e.target.value)} required autoComplete="off" spellCheck={false} />
+            <HelpSelect help="Select an OptiNexus account belonging to this tenant's customer. Email is filled automatically and can be changed with user update permission." value={userId} disabled={accounts.loading || !!accounts.error} onChange={(e) => { setUserId(e.target.value); setConfirmEmail(accounts.data?.find((account) => account.id === e.target.value)?.email ?? ''); }} required>
+              <option value="">Select an account...</option>{(accounts.data ?? []).map((account) => <option key={account.id} value={account.id}>{account.name} — {account.id}</option>)}
+            </HelpSelect><ErrorAlert message={accounts.error} />
             <span className="field-hint">{t('adminAcct.form.userIdHint')}</span>
-          </label>
-          <label>
+          </HelpLabel>
+          <HelpLabel>
             {t('adminAcct.form.confirmEmail')}
-            <HelpInput help="Re-enter the existing user's email exactly to confirm the selected identity." type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} maxLength={255} required autoComplete="off" />
+            <HelpInput help="Filled from the selected account. You may change it with user update permission; a changed address must be verified again." type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} maxLength={255} required autoComplete="off" />
             <span className="field-hint">{t('adminAcct.form.confirmEmailHint')}</span>
-          </label>
+          </HelpLabel>
         </>
       )}
 
       <fieldset className="url-fieldset">
         <legend>{t('adminAcct.form.applications')}</legend>
         {applications.map((app) => (
-          <label key={app.id} className="check-inline">
+          <HelpLabel key={app.id} className="check-inline">
             <HelpInput help="Select the applications this tenant administrator may access." type="checkbox" checked={selectedApps.includes(app.id)} onChange={() => setSelectedApps((list) => toggle(list, app.id))} />
             {app.name}
-          </label>
+          </HelpLabel>
         ))}
         <span className="field-hint">{t('adminAcct.form.applicationsHint')}</span>
         {submitted && appsMissing && <span className="field-error" role="alert">{t('adminAcct.form.needApplication')}</span>}
@@ -350,10 +353,10 @@ function CreateForm({ tenant, applications, onCancel, onCreated }: {
         <legend>{t('adminAcct.form.roles')}</legend>
         {roleChoices.length === 0 && <span className="field-hint">{t('adminAcct.form.rolesNone')}</span>}
         {roleChoices.map((role) => (
-          <label key={role.id} className="check-inline">
+          <HelpLabel key={role.id} className="check-inline">
             <HelpInput help="Select the roles assigned to this tenant administrator." type="checkbox" checked={selectedRoles.includes(role.id)} onChange={() => setSelectedRoles((list) => toggle(list, role.id))} />
             {role.name}
-          </label>
+          </HelpLabel>
         ))}
       </fieldset>
 
@@ -401,18 +404,18 @@ function VerifyForm({ tenantId, account, onCancel, onVerified }: {
     <form className="form" onSubmit={submit} noValidate>
       <p className="muted">{t('adminAcct.verify.intro')}</p>
       <ErrorAlert message={error} />
-      <label>
+      <HelpLabel>
         {t('adminAcct.verify.email')}
         <HelpInput help="Enter a valid email address for this account or customer." type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} required autoComplete="off" className={submitted && mismatch ? 'invalid' : undefined} />
         <span className="field-hint">{t('adminAcct.verify.emailHint')}</span>
         {submitted && mismatch && <span className="field-error" role="alert">{t('adminAcct.verify.mismatch')}</span>}
-      </label>
-      <label>
+      </HelpLabel>
+      <HelpLabel>
         {t('adminAcct.verify.reason')}
         <HelpTextarea help="Explain why this change is needed. The reason is retained for review and audit." value={reason} onChange={(e) => setReason(e.target.value)} maxLength={REASON_MAX} required className={submitted && short ? 'invalid' : undefined} />
         <span className="field-hint">{t('adminAcct.verify.reasonHint', { min: REASON_MIN })}</span>
         {submitted && short && <span className="field-error" role="alert">{t('adminAcct.verify.reasonShort', { min: REASON_MIN })}</span>}
-      </label>
+      </HelpLabel>
       <div className="modal-actions">
         <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={busy}>{t('common.cancel')}</button>
         <button type="submit" className="btn btn-primary" disabled={busy}>{t('adminAcct.verify.submit')}</button>

@@ -11,6 +11,7 @@ use App\Models\BillingAdjustment;
 use App\Models\Subscription;
 use App\Services\AuditService;
 use App\Services\Commercial\BillingCalculationService;
+use App\Support\Money;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -26,7 +27,7 @@ class BillingController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Billing::query();
+        $query = Billing::query()->with(['tenant', 'subscription']);
 
         foreach (['tenant_id', 'customer_id', 'subscription_id', 'status'] as $filter) {
             if ($value = $request->query($filter)) {
@@ -147,8 +148,8 @@ class BillingController extends Controller
             'created_by' => $request->user()?->id,
         ]);
 
-        $adjustmentTotal = \App\Support\Money::sum($billing->adjustments()->pluck('amount')->all());
-        $newTotal = \App\Support\Money::add(\App\Support\Money::add($billing->subtotal, $billing->tax_total), $adjustmentTotal);
+        $adjustmentTotal = Money::sum($billing->adjustments()->pluck('amount')->all());
+        $newTotal = Money::add(Money::add($billing->subtotal, $billing->tax_total), $adjustmentTotal);
         $billing->update(['adjustment_total' => $adjustmentTotal, 'total' => $newTotal]);
 
         $this->audit->record('billing.adjusted', $request, resourceType: 'Billing', resourceId: $billing->id, newValue: $adjustment->toArray(), tenantId: $billing->tenant_id);

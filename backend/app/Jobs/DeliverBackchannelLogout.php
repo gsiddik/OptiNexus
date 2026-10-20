@@ -110,11 +110,13 @@ class DeliverBackchannelLogout implements ShouldQueue, ShouldQueueAfterCommit
             'iss' => config('oidc.issuer'),
             'aud' => $delivery->client->client_id,
             'iat' => $now,
+            'logout_at' => $delivery->created_at->format('Y-m-d\\TH:i:s.uP'),
             'exp' => $now + (int) config('oidc.logout_token_ttl_seconds'),
             'jti' => (string) Str::uuid(),
             'sub' => $delivery->user_id,
             // Applications that match accounts by email (OptiRadar) need it; others use `sub`.
             'email' => $delivery->user->email,
+            'session_ids' => $delivery->session_ids,
             'events' => $events,
         ];
     }

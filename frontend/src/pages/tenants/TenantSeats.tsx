@@ -1,3 +1,8 @@
+import { useState, type FormEvent } from 'react';
+import { HelpInput, HelpLabel, HelpSelect } from '../../components/FieldControls';
+import { useAuth } from '../../auth/useAuth';
+import { Modal } from '../../components/Modal';
+import { unwrapError } from '../../api/client';
 import { tenantsApi } from '../../api/endpoints';
 import { useApiResource } from '../../api/useApi';
 import type { SeatState, SeatStatus } from '../../api/types';
@@ -22,8 +27,11 @@ const TONE: Record<SeatState, 'success' | 'warning' | 'danger' | 'info' | 'neutr
  */
 export function TenantSeats({ tenant }: { tenant: Tenant }) {
   const { t } = useI18n();
-  const { data, loading, error } = useApiResource<SeatStatus[]>(() => tenantsApi.seats(tenant.id), [tenant.id]);
+  const { data, loading, error, reload } = useApiResource<SeatStatus[]>(() => tenantsApi.seats(tenant.id), [tenant.id]);
 
+  const { hasPermission } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const apps = useApiResource(() => tenantsApi.applications(tenant.id), [tenant.id]);
   const number = (value: number | null) => (value === null ? '—' : String(value));
 
   const columns: Column<SeatStatus>[] = [
@@ -52,6 +60,10 @@ export function TenantSeats({ tenant }: { tenant: Tenant }) {
       <h2 id="seats-title">{t('seats.title')}</h2>
       <p className="muted">{t('seats.intro')}</p>
       <ErrorAlert message={error} />
+      {hasPermission('cgo.entitlement.override') && <button className="btn btn-secondary" onClick={() => setEditing(true)}>Add / Edit Seats</button>}
+      <Modal open={editing} title="Configure Seats" onClose={() => setEditing(false)}>
+        <SeatForm tenantId={tenant.id} applications={(apps.data ?? []).filter((app) => (data ?? []).some((seat) => seat.application_code === app.application_code && seat.controlled))} seats={data ?? []} onSaved={() => { setEditing(false); reload(); }} />
+      </Modal>
       <DataTable columns={columns} rows={data ?? []} rowKey={(s) => s.application_code} emptyMessage={t('seats.empty')} />
       {blocked.map((s) => {
         const key = `seats.hint.${s.blocked_reason}`;
@@ -59,4 +71,23 @@ export function TenantSeats({ tenant }: { tenant: Tenant }) {
       })}
     </div>
   );
+}
+
+function SeatForm({ tenantId, applications, seats, onSaved }: { tenantId: string; applications: import('../../api/types').Application[]; seats: SeatStatus[]; onSaved: () => void }) {
+  const [app, setApp] = useState('');
+  const [limit, setLimit] = useState('');
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function submit(event: FormEvent) {
+    event.preventDefault(); setBusy(true); setError(null);
+    try { await tenantsApi.updateSeats(tenantId, app, { limit: Number(limit), reason }); onSaved(); }
+    catch (err) { setError(unwrapError(err).message); } finally { setBusy(false); }
+  }
+  return <form className="form" onSubmit={submit}><ErrorAlert message={error} />
+    <HelpLabel>Application<HelpSelect help="Choose an assigned application with a seat limit." required value={app} onChange={(e) => { setApp(e.target.value); const selected = applications.find((a) => a.id === e.target.value); const seat = seats.find((s) => s.application_code === selected?.application_code); setLimit(seat?.limit == null ? '' : String(seat.limit)); }}><option value="">Select application...</option>{applications.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</HelpSelect></HelpLabel>
+    <HelpLabel>Seat Limit<HelpInput help="Enter the total allowed users. Used and reserved seats are calculated from assignments and invitations. Reducing the limit never removes users." type="number" min={0} max={2000000000} required value={limit} onChange={(e) => setLimit(e.target.value)} /></HelpLabel>
+    <HelpLabel>Reason<HelpInput help="Explain the seat adjustment for the audit trail, at least 10 characters." required minLength={10} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} /></HelpLabel>
+    <button className="btn btn-primary" disabled={busy || !app}>Save Seats</button>
+  </form>;
 }

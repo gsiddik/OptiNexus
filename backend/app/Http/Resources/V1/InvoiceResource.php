@@ -2,16 +2,20 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Models\Invoice;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Invoice */
+/** @mixin Invoice */
 class InvoiceResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $this->resource->loadMissing(['tenant']);
+
         return [
             'id' => $this->id,
+            'tenant_name' => $this->tenant?->name,
             'invoice_number' => $this->invoice_number,
             'billing_id' => $this->billing_id,
             'customer_id' => $this->customer_id,

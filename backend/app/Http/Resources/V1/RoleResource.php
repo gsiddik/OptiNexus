@@ -20,6 +20,7 @@ class RoleResource extends JsonResource
             'description' => $this->description,
             'role_type' => $this->role_type,
             'is_system' => $this->is_system,
+            'auto_capability_permissions' => $this->auto_capability_permissions,
             'status' => $this->status,
             'permissions_count' => $this->whenCounted('permissions'),
             'created_at' => $this->created_at,

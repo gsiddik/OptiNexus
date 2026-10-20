@@ -1,4 +1,4 @@
-import { HelpSelect, HelpInput } from '../../components/FieldControls';
+import { HelpLabel, HelpSelect, HelpInput } from '../../components/FieldControls';
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { describeError, type ApiRequestError } from '../../api/client';
@@ -304,18 +304,18 @@ function LinkForm({ row, vehicles, busy, onSubmit, onCancel }: { row: Classified
     <form className="form" onSubmit={submit} noValidate>
       <p className="muted">{t('gw.link.help')}</p>
       <ErrorAlert message={error} />
-      <label>
+      <HelpLabel>
         {t('gw.link.search')}
         <HelpInput help="Type a name, code, or identifying text to narrow the list. Clear to show all records." type="search" value={needle} onChange={(e) => setNeedle(e.target.value)} autoComplete="off" />
-      </label>
-      <label>
+      </HelpLabel>
+      <HelpLabel>
         {t('gw.link.vehicle')}
         <HelpSelect help="Select the Fleet vehicle corresponding to this source vehicle." value={vehicleId} onChange={(e) => { setVehicleId(e.target.value); setMissing(false); }} aria-invalid={missing || undefined}>
           <option value="">{t('gw.link.pick')}</option>
           {candidates.length > 0 && <optgroup label={t('gw.link.candidatesFirst')}>{candidates.map(option)}</optgroup>}
           <optgroup label={t('gw.link.others')}>{others.map(option)}</optgroup>
         </HelpSelect>
-      </label>
+      </HelpLabel>
       {missing && <span className="field-error" role="alert">{t('gw.link.needVehicle')}</span>}
       <div className="modal-actions">
         <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={busy}>{t('common.cancel')}</button>
@@ -346,10 +346,10 @@ function LogsPanel({ tenantId, health }: { tenantId: string; health: ReturnType<
     <>
       <p className="muted">{t('gw.health.basis', { n: health.total })}</p>
       <div className="toolbar">
-        <label className="check-inline">
+        <HelpLabel className="check-inline">
           <HelpInput help="Enable to show only failed gateway requests." type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />
           <span>{t('gw.logs.filterErrors')}</span>
-        </label>
+        </HelpLabel>
       </div>
       <DataTable
         rows={visible}

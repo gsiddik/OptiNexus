@@ -57,6 +57,7 @@ function serve(permissions: string[] = ALL, extra?: MockHandler) {
     const custom = extra?.(call);
     if (custom) return custom;
     if (call.url === '/auth/context') return ok(operatorContext(permissions));
+    if (call.url === '/ecosystem/tenants/t-1/admin-accounts/account-options') return ok([{ id: '2a0e3a62-2b8c-4a73-9a5e-0c6f3f1c9a11', name: 'Regular Admin', email: 'regular@example.test' }]);
     if (call.url === '/tenants/t-1') return ok(tenant);
     if (call.url === '/tenants/t-1/applications') return ok([fleet]);
     if (call.url === '/tenants/t-1/admins') return ok([]);
@@ -72,6 +73,7 @@ beforeEach(() => {
   window.localStorage.clear();
   window.localStorage.setItem(TOKEN_STORAGE_KEY, 'tok');
   setLocale('en');
+  regular.user.status = 'ACTIVE';
   rows = [created, verified, expired, emailPending, active, regular];
 });
 afterEach(() => {
@@ -81,7 +83,7 @@ afterEach(() => {
   setLocale('en');
 });
 
-const rowOf = async (name: string) => (await screen.findByText(name)).closest('tr')!;
+const rowOf = async (name: string) => (await screen.findByText(name, {}, { timeout: 5000 })).closest('tr')!;
 
 describe('first Admin Tenant panel', () => {
   it('shows the five activation states apart, and the e-mail and password facts behind them', async () => {
@@ -99,7 +101,7 @@ describe('first Admin Tenant panel', () => {
     expect(within(await rowOf('Regular Admin')).getByText(/Verified through an invitation/)).toBeTruthy();
   });
 
-  it('offers verification only where the e-mail is open, and a new password only where one is still pending', async () => {
+  it('offers verification for unverified accounts and password reset for active administrators', async () => {
     serve();
     renderApp('/tenants/t-1/admins');
     const verify = (name: string) => within(screen.getByText(name).closest('tr')!).queryByRole('button', { name: /Record e-mail verification/ });
@@ -114,8 +116,8 @@ describe('first Admin Tenant panel', () => {
     expect(reissue('Created Admin')).toBeTruthy();
     expect(reissue('Expired Admin')).toBeTruthy();
     expect(reissue('Pending Admin')).toBeNull();
-    expect(reissue('Active Admin')).toBeNull();
-    expect(reissue('Regular Admin')).toBeNull();
+    expect(reissue('Active Admin')).toBeTruthy();
+    expect(reissue('Regular Admin')).toBeTruthy();
   });
 
   it('hides what the operator may not do (the server refuses it as well)', async () => {
@@ -249,8 +251,9 @@ describe('first Admin Tenant panel', () => {
     await user.click(screen.getByRole('button', { name: 'Create admin account' }));
     const form = screen.getByRole('dialog', { name: 'Create the first Admin Tenant' });
     await user.click(within(form).getByLabelText('Existing OptiNexus account'));
-    await user.type(within(form).getByLabelText(/^Account ID/), '2a0e3a62-2b8c-4a73-9a5e-0c6f3f1c9a11');
-    await user.type(within(form).getByLabelText(/^E-mail address of that account/), 'regular@example.test');
+    await within(form).findByRole('option', { name: /Regular Admin/ });
+    await user.selectOptions(within(form).getByLabelText(/^Account ID/), '2a0e3a62-2b8c-4a73-9a5e-0c6f3f1c9a11');
+    expect((within(form).getByLabelText(/^E-mail address of that account/) as HTMLInputElement).value).toBe('regular@example.test');
     await user.click(within(form).getByRole('button', { name: 'Create account' }));
 
     expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ user_id: '2a0e3a62-2b8c-4a73-9a5e-0c6f3f1c9a11', confirm_email: 'regular@example.test', application_ids: ['app-fleet'], role_ids: [] });

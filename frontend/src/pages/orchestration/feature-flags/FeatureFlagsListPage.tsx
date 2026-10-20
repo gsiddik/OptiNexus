@@ -1,4 +1,4 @@
-import { HelpInput, HelpSelect } from '../../../components/FieldControls';
+import { HelpLabel, HelpInput, HelpSelect } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { featureFlagsApi } from '../../../api/endpoints';
@@ -77,9 +77,9 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>Flag Key<HelpInput help="Enter the unique feature flag key used by the application." value={form.flag_key} onChange={(e) => setForm({ ...form, flag_key: e.target.value })} /></label>
-      <label>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-      <label>
+      <HelpLabel>Flag Key<HelpInput help="Enter the unique feature flag key used by the application." value={form.flag_key} onChange={(e) => setForm({ ...form, flag_key: e.target.value })} /></HelpLabel>
+      <HelpLabel>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></HelpLabel>
+      <HelpLabel>
         Type
         <HelpSelect help="Choose the value type so the flag default and overrides use the same format." value={form.flag_type} onChange={(e) => setForm({ ...form, flag_type: e.target.value, default_value: e.target.value === 'BOOLEAN' ? 'false' : '""' })}>
           <option value="BOOLEAN">BOOLEAN</option>
@@ -87,8 +87,8 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
           <option value="NUMBER">NUMBER</option>
           <option value="JSON">JSON</option>
         </HelpSelect>
-      </label>
-      <label>Default Value (JSON literal)<HelpInput help="Enter a JSON literal, for example false, 10, or a quoted string." value={form.default_value} onChange={(e) => setForm({ ...form, default_value: e.target.value })} /></label>
+      </HelpLabel>
+      <HelpLabel>Default Value (JSON literal)<HelpInput help="Enter a JSON literal, for example false, 10, or a quoted string." value={form.default_value} onChange={(e) => setForm({ ...form, default_value: e.target.value })} /></HelpLabel>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>Create</button>
       </div>

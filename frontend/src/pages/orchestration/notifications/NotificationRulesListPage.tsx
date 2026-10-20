@@ -1,4 +1,4 @@
-import { HelpInput, HelpSelect } from '../../../components/FieldControls';
+import { HelpLabel, HelpInput, HelpSelect } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notificationRulesApi, notificationTemplatesApi } from '../../../api/endpoints';
@@ -83,38 +83,38 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>Rule Code<HelpInput help="Enter a unique code identifying this notification rule." value={form.rule_code} onChange={(e) => setForm({ ...form, rule_code: e.target.value })} /></label>
-      <label>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-      <label>Trigger Event Key (optional)<HelpInput help="Enter the event key used by producers and consumers, for example subscription.expiring." value={form.trigger_event_key} onChange={(e) => setForm({ ...form, trigger_event_key: e.target.value })} /></label>
-      <label>
+      <HelpLabel>Rule Code<HelpInput help="Enter a unique code identifying this notification rule." value={form.rule_code} onChange={(e) => setForm({ ...form, rule_code: e.target.value })} /></HelpLabel>
+      <HelpLabel>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></HelpLabel>
+      <HelpLabel>Trigger Event Key (optional)<HelpInput help="Enter the event key used by producers and consumers, for example subscription.expiring." value={form.trigger_event_key} onChange={(e) => setForm({ ...form, trigger_event_key: e.target.value })} /></HelpLabel>
+      <HelpLabel>
         Recipient Type
         <HelpSelect help="Choose how notification recipients are resolved." value={form.recipient_type} onChange={(e) => setForm({ ...form, recipient_type: e.target.value })}>
           {RECIPIENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
         </HelpSelect>
-      </label>
-      <label>
+      </HelpLabel>
+      <HelpLabel>
         Recipient Reference
         <HelpInput help="Enter a user ID, role code, or event context path matching the recipient type."
           value={form.recipient_reference}
           onChange={(e) => setForm({ ...form, recipient_reference: e.target.value })}
           placeholder={form.recipient_type === 'EVENT_CONTEXT' ? 'data.recipient_user_id' : 'user id or role code'}
         />
-      </label>
-      <label>
+      </HelpLabel>
+      <HelpLabel>
         Template
         <HelpSelect help="Select the registered template used to render this notification." value={form.notification_template_id} onChange={(e) => setForm({ ...form, notification_template_id: e.target.value })}>
           <option value="">Select template...</option>
           {((templates as NotificationTemplate[] | null) ?? []).map((t) => <option key={t.id} value={t.id}>{t.name} ({t.channel})</option>)}
         </HelpSelect>
-      </label>
-      <label>
+      </HelpLabel>
+      <HelpLabel>
         Channel
         <HelpSelect help="Choose the notification delivery channel." value={form.channel} onChange={(e) => setForm({ ...form, channel: e.target.value })}>
           <option value="IN_APP">IN_APP</option>
           <option value="EMAIL">EMAIL</option>
           <option value="WEBHOOK">WEBHOOK</option>
         </HelpSelect>
-      </label>
+      </HelpLabel>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting || !form.notification_template_id}>Create</button>
       </div>

@@ -26,7 +26,7 @@ class PlanController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Plan::query()->withCount('capabilities');
+        $query = Plan::query()->with(['product'])->withCount('capabilities');
 
         foreach (['product_id', 'status', 'billing_interval'] as $filter) {
             if ($value = $request->query($filter)) {
@@ -113,6 +113,16 @@ class PlanController extends Controller
         return $this->transitionTo($request, $plan, Plan::STATUS_RETIRED, [Plan::STATUS_ACTIVE, Plan::STATUS_INACTIVE]);
     }
 
+    public function capabilityOptions(Plan $plan): JsonResponse
+    {
+        $capabilities = $plan->product?->capabilities()->with('application')->orderBy('sort_order')->get() ?? collect();
+
+        return $this->ok($capabilities->groupBy('application_id')->map(fn ($items) => [
+            'application' => $items->first()->application->only(['id', 'name', 'application_code']),
+            'capabilities' => CapabilityResource::collection($items),
+        ])->values());
+    }
+
     public function capabilities(Plan $plan): JsonResponse
     {
         return $this->ok(CapabilityResource::collection($plan->capabilities));
@@ -120,6 +130,10 @@ class PlanController extends Controller
 
     public function attachCapability(Request $request, Plan $plan, Capability $capability): JsonResponse
     {
+        if (! $plan->product?->capabilities()->where('capabilities.id', $capability->id)->exists()) {
+            return $this->fail('CAPABILITY_NOT_IN_PRODUCT', 'Select a capability included in the parent product.', 422);
+        }
+
         if ($plan->capabilities()->where('capabilities.id', $capability->id)->exists()) {
             return $this->fail('DUPLICATE_RESOURCE', 'This capability is already included in the plan.', 409);
         }

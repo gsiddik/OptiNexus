@@ -1,4 +1,4 @@
-import { HelpSelect, HelpInput } from '../../../components/FieldControls';
+import { HelpLabel, HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { featureFlagsApi } from '../../../api/endpoints';
@@ -166,8 +166,8 @@ function EvaluatePreview({ flagKey }: { flagKey: string }) {
     <div className="card">
       <h3>Evaluate</h3>
       <ErrorAlert message={error} />
-      <label>Tenant ID (optional)<HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." value={tenantId} onChange={(e) => setTenantId(e.target.value)} /></label>
-      <label>User ID (optional)<HelpInput help="Enter the registered user ID to which this action applies." value={userId} onChange={(e) => setUserId(e.target.value)} /></label>
+      <HelpLabel>Tenant ID (optional)<HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." value={tenantId} onChange={(e) => setTenantId(e.target.value)} /></HelpLabel>
+      <HelpLabel>User ID (optional)<HelpInput help="Enter the registered user ID to which this action applies." value={userId} onChange={(e) => setUserId(e.target.value)} /></HelpLabel>
       <div className="modal-actions"><button className="btn btn-secondary" onClick={evaluate}>Evaluate</button></div>
       {result && (
         <p>

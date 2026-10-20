@@ -30,7 +30,7 @@ export function InvoicesListPage() {
             onRowClick={(r) => navigate(`/invoices/${r.id}`)}
             columns={[
               { key: 'number', header: 'Invoice #', render: (r) => r.invoice_number },
-              { key: 'tenant', header: 'Tenant', render: (r) => r.tenant_id },
+              { key: 'tenant', header: 'Tenant', render: (r) => r.tenant_name ?? '—' },
               { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
               { key: 'total', header: 'Total', render: (r) => `${r.total} ${r.currency}` },
               { key: 'balance', header: 'Balance Due', render: (r) => `${r.balance_due} ${r.currency}` },

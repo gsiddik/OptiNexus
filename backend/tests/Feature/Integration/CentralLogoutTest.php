@@ -15,6 +15,7 @@ use App\Services\Oidc\SessionRevocationService;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\PlatformIntegrationPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
@@ -228,6 +229,28 @@ class CentralLogoutTest extends TestCase
         $subjects = array_count_values(array_map(fn ($call) => $call['claims']['sub'], $this->sentLogoutTokens()));
         $this->assertSame([$this->user->id => 2, $colleague->id => 1], $subjects);
         $this->assertSame(0, OidcSession::query()->active()->count());
+    }
+
+    public function test_logout_hint_identifies_the_original_user_when_browser_identity_has_changed(): void
+    {
+        $tokens = $this->signInTo($this->radarClient, $this->radarSecret);
+        $other = User::factory()->create(['status' => User::STATUS_ACTIVE]);
+        $this->actingAs($other, 'web');
+        $this->get('/oidc/logout?'.http_build_query(['client_id' => $this->radarClient->client_id, 'id_token_hint' => $tokens['id_token']]))->assertOk();
+        $sent = $this->sentLogoutTokens();
+        $this->assertCount(1, $sent);
+        $this->assertSame($this->user->id, $sent[0]['claims']['sub']);
+        $this->assertAuthenticatedAs($other, 'web');
+    }
+
+    public function test_delivery_carries_the_original_logout_time_even_when_issued_later(): void
+    {
+        $delivery = OidcLogoutDelivery::create(['oidc_client_id' => $this->radarClient->id, 'user_id' => $this->user->id, 'type' => 'LOGOUT', 'reason' => 'password_changed', 'status' => 'PENDING']);
+        $delivery->forceFill(['created_at' => now()->subMinutes(2)])->save();
+        (new DeliverBackchannelLogout($delivery->id))->handle(app(OidcKeyService::class));
+        $claims = $this->sentLogoutTokens()[0]['claims'];
+        $this->assertTrue(Carbon::parse($claims['logout_at'])->equalTo($delivery->fresh()->created_at));
+        $this->assertLessThan($claims['iat'], Carbon::parse($claims['logout_at'])->timestamp);
     }
 
     public function test_logging_out_of_one_application_signs_the_user_out_of_all_of_them(): void

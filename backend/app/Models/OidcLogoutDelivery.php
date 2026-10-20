@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * Outbox row for one Back-Channel Logout call to one application.
  */
-#[Fillable(['oidc_client_id', 'user_id', 'tenant_id', 'type', 'reason', 'status', 'attempts', 'last_http_status', 'last_error', 'delivered_at'])]
+#[Fillable(['oidc_client_id', 'user_id', 'tenant_id', 'type', 'reason', 'status', 'attempts', 'last_http_status', 'last_error', 'delivered_at', 'session_ids'])]
 class OidcLogoutDelivery extends Model
 {
     use HasUuidPrimaryKey;
@@ -26,7 +26,7 @@ class OidcLogoutDelivery extends Model
 
     protected function casts(): array
     {
-        return ['delivered_at' => 'datetime'];
+        return ['delivered_at' => 'datetime', 'session_ids' => 'array'];
     }
 
     public function client(): BelongsTo

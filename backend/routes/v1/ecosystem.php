@@ -15,6 +15,8 @@ Route::prefix('ecosystem')->name('ecosystem.')->middleware(['auth:sanctum', 'eco
     Route::prefix('tenants/{tenant}/admin-accounts')->name('admin-accounts.')->group(function () {
         Route::get('/', [TenantAdminAccountController::class, 'index'])
             ->middleware('permission:cgo.tenant.view,tenant')->name('index');
+        Route::get('/account-options', [TenantAdminAccountController::class, 'accountOptions'])
+            ->middleware('permission:cgo.tenant.admin.assign,tenant')->name('account-options');
         Route::post('/', [TenantAdminAccountController::class, 'store'])
             ->middleware(['throttle:20,1', 'permission:cgo.tenant.admin.assign,tenant'])->name('store');
         Route::post('/{user}/email-verification', [TenantAdminAccountController::class, 'verifyEmail'])

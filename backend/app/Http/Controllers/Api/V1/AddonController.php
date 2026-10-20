@@ -26,7 +26,7 @@ class AddonController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Addon::query();
+        $query = Addon::query()->with(['product']);
 
         foreach (['product_id', 'status'] as $filter) {
             if ($value = $request->query($filter)) {
@@ -78,6 +78,16 @@ class AddonController extends Controller
         return $this->transitionTo($request, $addon, Addon::STATUS_RETIRED, [Addon::STATUS_ACTIVE, Addon::STATUS_INACTIVE]);
     }
 
+    public function capabilityOptions(Addon $addon): JsonResponse
+    {
+        $capabilities = $addon->product?->capabilities()->with('application')->orderBy('sort_order')->get() ?? collect();
+
+        return $this->ok($capabilities->groupBy('application_id')->map(fn ($items) => [
+            'application' => $items->first()->application->only(['id', 'name', 'application_code']),
+            'capabilities' => CapabilityResource::collection($items),
+        ])->values());
+    }
+
     public function capabilities(Addon $addon): JsonResponse
     {
         return $this->ok(CapabilityResource::collection($addon->capabilities));
@@ -85,6 +95,10 @@ class AddonController extends Controller
 
     public function attachCapability(Request $request, Addon $addon, Capability $capability): JsonResponse
     {
+        if (! $addon->product?->capabilities()->where('capabilities.id', $capability->id)->exists()) {
+            return $this->fail('CAPABILITY_NOT_IN_PRODUCT', 'Select a capability included in the parent product.', 422);
+        }
+
         if ($addon->capabilities()->where('capabilities.id', $capability->id)->exists()) {
             return $this->fail('DUPLICATE_RESOURCE', 'This capability is already included in the add-on.', 409);
         }

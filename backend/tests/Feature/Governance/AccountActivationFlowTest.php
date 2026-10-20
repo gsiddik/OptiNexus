@@ -379,6 +379,7 @@ class AccountActivationFlowTest extends TestCase
     {
         $existing = User::factory()->create(['email' => 'veteran@acme.test', 'status' => User::STATUS_ACTIVE, 'password' => 'Existing!Passw0rd']);
         $hash = $existing->password;
+        $this->tenant->customer->update(['email' => $existing->email]);
         $this->operator = $this->makeOperatorWith(['cgo.tenant.admin.assign', 'cgo.user.tenant.assign', 'cgo.user.application.assign']);
         app(TenantAdminBootstrapService::class)->provision($this->tenant, ['user_id' => $existing->id, 'confirm_email' => $existing->email, 'application_ids' => [$this->fleet->id]], $this->operator, Request::create('/'));
 

@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\V1\Concerns\ApiResponses;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\V1\InvoiceResource;
 use App\Models\Billing;
 use App\Models\Invoice;
-use App\Http\Resources\V1\InvoiceResource;
 use App\Services\AuditService;
 use App\Services\Commercial\InvoiceService;
 use Illuminate\Http\JsonResponse;
@@ -29,7 +29,7 @@ class InvoiceController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Invoice::query();
+        $query = Invoice::query()->with(['tenant']);
 
         foreach (['tenant_id', 'customer_id', 'subscription_id', 'status'] as $filter) {
             if ($value = $request->query($filter)) {

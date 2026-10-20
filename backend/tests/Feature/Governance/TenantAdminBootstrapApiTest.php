@@ -287,7 +287,7 @@ class TenantAdminBootstrapApiTest extends TestCase
     {
         $existing = User::factory()->create(['email' => 'veteran@example.test', 'status' => User::STATUS_ACTIVE, 'password' => 'Existing!Passw0rd', 'last_login_at' => now()->subDay()]);
         $before = $existing->fresh()->only(['id', 'password', 'status', 'email_verified_at', 'last_login_at']);
-        $other = $this->makeTenant();
+        $other = $this->makeTenant($this->tenant->customer);
         $this->attachUserToTenant($existing, $other);
 
         $response = $this->postJson($this->url(), ['user_id' => $existing->id, 'confirm_email' => 'VETERAN@example.test', 'application_ids' => [$this->fleet->id]])->assertCreated();
@@ -308,7 +308,7 @@ class TenantAdminBootstrapApiTest extends TestCase
         $existing = User::factory()->create(['email' => 'veteran@example.test', 'status' => User::STATUS_ACTIVE]);
         $link = fn (User $u, string $email) => $this->postJson($this->url(), ['user_id' => $u->id, 'confirm_email' => $email, 'application_ids' => [$this->fleet->id]]);
 
-        $link($existing, 'someone.else@example.test')->assertStatus(422)->assertJsonPath('error.code', 'EMAIL_CONFIRMATION_MISMATCH');
+        $link($existing, 'someone.else@example.test')->assertStatus(422)->assertJsonPath('error.code', 'IDENTITY_NOT_LINKABLE');
         $this->postJson($this->url(), ['user_id' => $existing->id, 'name' => 'x', 'application_ids' => [$this->fleet->id]])->assertStatus(422);
         $this->postJson($this->url(), ['user_id' => (string) Str::uuid(), 'confirm_email' => 'x@example.test', 'application_ids' => [$this->fleet->id]])->assertNotFound();
 
@@ -450,7 +450,7 @@ class TenantAdminBootstrapApiTest extends TestCase
         $this->assertNotNull(AuditLog::query()->where('action', 'user.temporary_password_reissued')->first());
     }
 
-    public function test_reissue_never_replaces_a_password_the_holder_chose_or_resets_an_active_account(): void
+    public function test_reissue_preserves_pending_verification_but_resets_an_active_tenant_administrator(): void
     {
         [$user] = $this->created();
         $user->forceFill(['password' => 'Chosen!ByTheHolder1', 'password_change_required' => false, 'temporary_password_expires_at' => null, 'password_changed_at' => now()])->save();
@@ -459,12 +459,12 @@ class TenantAdminBootstrapApiTest extends TestCase
         $this->postJson($this->url("/{$user->id}/temporary-credential"))->assertStatus(409)->assertJsonPath('error.code', 'PASSWORD_ALREADY_CHOSEN');
 
         $user->forceFill(['status' => User::STATUS_ACTIVE, 'activated_at' => now()])->save();
-        $this->postJson($this->url("/{$user->id}/temporary-credential"))->assertStatus(409)->assertJsonPath('error.code', 'ACTIVATION_NOT_PENDING');
-        $this->assertSame($hash, $user->fresh()->password);
+        $this->postJson($this->url("/{$user->id}/temporary-credential"))->assertOk()->assertJsonPath('data.activation.password.change_required', true);
+        $this->assertNotSame($hash, $user->fresh()->password);
 
         $plain = User::factory()->create(['status' => User::STATUS_ACTIVE]);
         $this->attachUserToTenant($plain, $this->tenant, isTenantAdmin: true);
-        $this->postJson($this->url("/{$plain->id}/temporary-credential"))->assertStatus(409)->assertJsonPath('error.code', 'ACTIVATION_NOT_PENDING');
+        $this->postJson($this->url("/{$plain->id}/temporary-credential"))->assertOk()->assertJsonPath('data.activation.password.change_required', true);
     }
 
     public function test_an_account_in_activation_cannot_be_activated_by_hand_or_through_another_door(): void

@@ -1,4 +1,4 @@
-import { HelpInput, HelpSelect } from '../../components/FieldControls';
+import { HelpLabel, HelpInput, HelpSelect } from '../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { rolesApi } from '../../api/endpoints';
@@ -55,7 +55,7 @@ export function RolesListPage() {
 }
 
 function CreateRoleForm({ onCreated }: { onCreated: () => void }) {
-  const [form, setForm] = useState({ name: '', code: '', role_type: 'TENANT', tenant_id: '', application_id: '' });
+  const [form, setForm] = useState({ name: '', role_type: 'TENANT', application_id: '' });
   const [error, setError] = useState<string | null>(null);
 
   async function submit() {
@@ -63,9 +63,7 @@ function CreateRoleForm({ onCreated }: { onCreated: () => void }) {
     try {
       await rolesApi.create({
         name: form.name,
-        code: form.code,
         role_type: form.role_type as Role['role_type'],
-        tenant_id: form.role_type === 'TENANT' ? form.tenant_id : null,
         application_id: form.role_type === 'APPLICATION' ? form.application_id : null,
       });
       onCreated();
@@ -77,21 +75,18 @@ function CreateRoleForm({ onCreated }: { onCreated: () => void }) {
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-      <label>Code<HelpInput help="Enter a unique, stable code identifying this configuration." value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></label>
-      <label>
+      <HelpLabel>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></HelpLabel>
+      <HelpLabel>Code<HelpInput help="Generated automatically by the system." value="Generated automatically on save" readOnly /></HelpLabel>
+      <HelpLabel>
         Type
-        <HelpSelect help="Choose the role scope. Tenant and application roles require the corresponding IDs." value={form.role_type} onChange={(e) => setForm({ ...form, role_type: e.target.value })}>
+        <HelpSelect help="Choose the role scope. Tenant scope comes from the user membership when the role is assigned. Application roles also select an application." value={form.role_type} onChange={(e) => setForm({ ...form, role_type: e.target.value })}>
           <option value="TENANT">TENANT</option>
           <option value="APPLICATION">APPLICATION</option>
           <option value="SYSTEM">SYSTEM</option>
         </HelpSelect>
-      </label>
-      {form.role_type === 'TENANT' && (
-        <label>Tenant ID<HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: e.target.value })} /></label>
-      )}
+      </HelpLabel>
       {form.role_type === 'APPLICATION' && (
-        <label>Application ID<HelpInput help="Select the registered application to which this configuration applies." value={form.application_id} onChange={(e) => setForm({ ...form, application_id: e.target.value })} /></label>
+        <HelpLabel>Application ID<HelpInput help="Select the registered application to which this configuration applies." value={form.application_id} onChange={(e) => setForm({ ...form, application_id: e.target.value })} /></HelpLabel>
       )}
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={submit}>Create</button>

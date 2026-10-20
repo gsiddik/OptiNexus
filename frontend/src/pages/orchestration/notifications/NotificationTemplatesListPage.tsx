@@ -1,4 +1,4 @@
-import { HelpInput, HelpSelect, HelpTextarea } from '../../../components/FieldControls';
+import { HelpLabel, HelpInput, HelpSelect, HelpTextarea } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notificationTemplatesApi } from '../../../api/endpoints';
@@ -76,18 +76,18 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>Template Code<HelpInput help="Enter or select the unique notification template code." value={form.template_code} onChange={(e) => setForm({ ...form, template_code: e.target.value })} /></label>
-      <label>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-      <label>
+      <HelpLabel>Template Code<HelpInput help="Enter or select the unique notification template code." value={form.template_code} onChange={(e) => setForm({ ...form, template_code: e.target.value })} /></HelpLabel>
+      <HelpLabel>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></HelpLabel>
+      <HelpLabel>
         Channel
         <HelpSelect help="Choose the notification delivery channel." value={form.channel} onChange={(e) => setForm({ ...form, channel: e.target.value })}>
           <option value="IN_APP">IN_APP</option>
           <option value="EMAIL">EMAIL</option>
           <option value="WEBHOOK">WEBHOOK</option>
         </HelpSelect>
-      </label>
-      <label>Subject Template (optional)<HelpInput help="Enter the notification subject. Supported variables are resolved from context." value={form.subject_template} onChange={(e) => setForm({ ...form, subject_template: e.target.value })} /></label>
-      <label>Body Template<HelpTextarea help="Enter the notification body. Use supported context variables to personalize it." rows={6} value={form.body_template} onChange={(e) => setForm({ ...form, body_template: e.target.value })} /></label>
+      </HelpLabel>
+      <HelpLabel>Subject Template (optional)<HelpInput help="Enter the notification subject. Supported variables are resolved from context." value={form.subject_template} onChange={(e) => setForm({ ...form, subject_template: e.target.value })} /></HelpLabel>
+      <HelpLabel>Body Template<HelpTextarea help="Enter the notification body. Use supported context variables to personalize it." rows={6} value={form.body_template} onChange={(e) => setForm({ ...form, body_template: e.target.value })} /></HelpLabel>
       <p className="muted">Only {'{{'} dot.path {'}}'} placeholders are substituted as plain text - no code execution.</p>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>Create</button>

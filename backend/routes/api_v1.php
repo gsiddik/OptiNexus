@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Controllers\Api\V1\FormOptionController;
 use Illuminate\Support\Facades\Route;
 
 // Phase 1 governance API. All routes are prefixed with /api/v1 and versioned
 // so future breaking changes ship as /api/v2 without disturbing integrators.
 Route::prefix('v1')->name('api.v1.')->group(function () {
     require __DIR__.'/v1/auth.php';
+    Route::get('/form-options/{kind}', FormOptionController::class)
+        ->middleware(['auth:sanctum', 'ecosystem'])->name('form-options');
     require __DIR__.'/v1/customers.php';
     require __DIR__.'/v1/tenants.php';
     require __DIR__.'/v1/applications.php';

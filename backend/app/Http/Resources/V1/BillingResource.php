@@ -2,16 +2,21 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Models\Billing;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Billing */
+/** @mixin Billing */
 class BillingResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $this->resource->loadMissing(['tenant', 'subscription']);
+
         return [
             'id' => $this->id,
+            'tenant_name' => $this->tenant?->name,
+            'subscription_number' => $this->subscription?->subscription_number,
             'billing_number' => $this->billing_number,
             'customer_id' => $this->customer_id,
             'tenant_id' => $this->tenant_id,

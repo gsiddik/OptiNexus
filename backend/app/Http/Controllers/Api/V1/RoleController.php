@@ -11,7 +11,9 @@ use App\Http\Resources\V1\PermissionResource;
 use App\Http\Resources\V1\RoleResource;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\UserRole;
 use App\Services\AuditService;
+use App\Services\AuthorizationService;
 use App\Services\PrivilegeEscalationGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -45,15 +47,11 @@ class RoleController extends Controller
     {
         $data = $request->validated();
 
-        if (($data['role_type'] === Role::TYPE_TENANT) !== (bool) ($data['tenant_id'] ?? null)) {
-            return $this->fail('VALIDATION_ERROR', 'TENANT roles require a tenant_id; other role types must not set one.', 422);
-        }
-
         if ($data['role_type'] === Role::TYPE_APPLICATION && empty($data['application_id'])) {
             return $this->fail('VALIDATION_ERROR', 'APPLICATION roles require an application_id.', 422);
         }
 
-        $role = Role::create([...$data, 'is_system' => false, 'status' => Role::STATUS_ACTIVE]);
+        $role = Role::create([...$data, 'code' => 'ROL-'.Str::ulid(), 'tenant_id' => null, 'is_system' => false, 'status' => Role::STATUS_ACTIVE, 'auto_capability_permissions' => $data['role_type'] !== Role::TYPE_SYSTEM]);
 
         $this->audit->record('role.created', $request, resourceType: 'Role', resourceId: $role->id, newValue: $role->toArray(), tenantId: $role->tenant_id, applicationId: $role->application_id);
 
@@ -119,11 +117,24 @@ class RoleController extends Controller
 
     public function permissions(Role $role): JsonResponse
     {
-        return $this->ok(PermissionResource::collection($role->permissions));
+        $permissions = $role->permissions()->with(['application', 'capability.parent.parent.parent.parent.parent'])->get();
+        if ($role->auto_capability_permissions) {
+            $tenantIds = UserRole::query()->where('role_id', $role->id)->whereNotNull('tenant_id')->distinct()->pluck('tenant_id');
+            $resolver = app(AuthorizationService::class);
+            foreach ($tenantIds as $tenantId) {
+                $permissions = $permissions->merge($resolver->capabilityPermissions($role, $tenantId));
+            }
+        }
+
+        return $this->ok(PermissionResource::collection($permissions->unique('id')->values()));
     }
 
     public function attachPermission(Request $request, Role $role, Permission $permission): JsonResponse
     {
+        if ($role->is_system) {
+            return $this->fail('SYSTEM_ROLE_IMMUTABLE', 'System role permissions are managed by the system.', 403);
+        }
+
         if (! $this->escalationGuard->canGrantPermission($request->user(), $permission, $role->tenant_id)) {
             return $this->fail('PRIVILEGE_ESCALATION_DENIED', 'You cannot grant a permission you do not hold yourself.', 403);
         }
@@ -131,6 +142,8 @@ class RoleController extends Controller
         if ($role->permissions()->where('permissions.id', $permission->id)->exists()) {
             return $this->fail('DUPLICATE_RESOURCE', 'This permission is already assigned to the role.', 409);
         }
+
+        $this->materializePermissions($role);
 
         $role->permissions()->attach($permission->id, [
             'id' => (string) Str::uuid(),
@@ -142,8 +155,26 @@ class RoleController extends Controller
         return $this->created(PermissionResource::collection($role->permissions()->get()));
     }
 
+    private function materializePermissions(Role $role): void
+    {
+        if (! ($role->auto_capability_permissions)) {
+            return;
+        }
+        $resolver = app(AuthorizationService::class);
+        $ids = UserRole::query()->where('role_id', $role->id)->whereNotNull('tenant_id')->pluck('tenant_id')
+            ->flatMap(fn ($tenantId) => $resolver->capabilityPermissions($role, $tenantId)->pluck('id'))->unique();
+        $role->permissions()->syncWithoutDetaching($ids->mapWithKeys(fn ($id) => [$id => ['id' => (string) Str::uuid()]]));
+        $role->update(['auto_capability_permissions' => false]);
+    }
+
     public function detachPermission(Request $request, Role $role, Permission $permission): JsonResponse
     {
+        if ($role->is_system) {
+            return $this->fail('SYSTEM_ROLE_IMMUTABLE', 'System role permissions are managed by the system.', 403);
+        }
+
+        $this->materializePermissions($role);
+
         $role->permissions()->detach($permission->id);
 
         $this->audit->record('role.permission_revoked', $request, resourceType: 'Role', resourceId: $role->id, oldValue: ['permission_id' => $permission->id], tenantId: $role->tenant_id);

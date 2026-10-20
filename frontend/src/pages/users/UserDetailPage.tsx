@@ -1,5 +1,7 @@
-import { HelpInput, HelpSelect } from '../../components/FieldControls';
-import { useState } from 'react';
+import { SecretDialog } from '../../components/SecretDialog';
+import { ActiveSelect } from '../../components/ActiveSelect';
+import { HelpSelect } from '../../components/FieldControls';
+import { Fragment, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { auditApi, rolesApi, usersApi } from '../../api/endpoints';
 import { useApiResource } from '../../api/useApi';
@@ -15,6 +17,7 @@ export function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
   const { data: user, loading, error, reload } = useApiResource<User>(() => usersApi.get(id!), [id]);
+  const [password, setPassword] = useState<string | null>(null);
   const [tab, setTab] = useState<'tenants' | 'roles' | 'permissions' | 'audit'>('tenants');
 
   if (loading) return <LoadingSpinner />;
@@ -34,12 +37,13 @@ export function UserDetailPage() {
         hasPermission={hasPermission}
         onDone={reload}
         actions={[
-          { key: 'activate', label: 'Activate', allowedFrom: ['INVITED', 'SUSPENDED'], permission: 'cgo.user.activate', action: () => usersApi.activate(user.id) },
+          { key: 'activate', label: 'Activate', allowedFrom: ['INVITED', 'SUSPENDED'], permission: 'cgo.user.activate', action: async () => { const result = await usersApi.activate(user.id); if (result.generated_password) setPassword(result.generated_password); } },
           { key: 'suspend', label: 'Suspend', allowedFrom: ['ACTIVE'], permission: 'cgo.user.suspend', action: () => usersApi.suspend(user.id) },
           { key: 'disable', label: 'Disable', allowedFrom: ['ACTIVE', 'SUSPENDED', 'INVITED'], permission: 'cgo.user.disable', danger: true, action: () => usersApi.disable(user.id) },
         ]}
       />
 
+      {password && <SecretDialog title="Generated password" clientId={user.email} secret={password} onClose={() => setPassword(null)} labels={{ identity: 'Account', secret: 'Password', once: 'Shown once. Copy and hand this password to the account holder.' }} />}
       <div className="tabs">
         <button className={tab === 'tenants' ? 'tab active' : 'tab'} onClick={() => setTab('tenants')}>Tenant Membership</button>
         <button className={tab === 'roles' ? 'tab active' : 'tab'} onClick={() => setTab('roles')}>Roles</button>
@@ -87,7 +91,7 @@ function TenantMembershipPanel({ user }: { user: User }) {
     <div className="card">
       <ErrorAlert message={error ?? actionError} />
       <div className="toolbar">
-        <HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." placeholder="Tenant ID" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
+        <ActiveSelect kind="tenant" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
         <button className="btn btn-secondary" onClick={attach} disabled={!tenantId}>Add Membership</button>
       </div>
       <ul className="chip-list">
@@ -107,16 +111,14 @@ function RolesPanel({ user }: { user: User }) {
   const { data: roles, loading, error, reload } = useApiResource<Role[]>(() => usersApi.roles(user.id), [user.id]);
   const { data: allRoles } = useApiResource(() => rolesApi.list({ per_page: 100 }).then((e) => e.data), []);
   const [roleId, setRoleId] = useState('');
-  const [tenantId, setTenantId] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
 
   async function attach() {
     if (!roleId) return;
     setActionError(null);
     try {
-      await usersApi.attachRole(user.id, roleId, tenantId || null);
+      await usersApi.attachRole(user.id, roleId, null);
       setRoleId('');
-      setTenantId('');
       reload();
     } catch (err) {
       setActionError(unwrapError(err).message);
@@ -142,7 +144,6 @@ function RolesPanel({ user }: { user: User }) {
           <option value="">Select a role...</option>
           {(allRoles as Role[] | null)?.map((r) => <option key={r.id} value={r.id}>{r.name} ({r.role_type})</option>)}
         </HelpSelect>
-        <HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." placeholder="Tenant ID (if TENANT/APPLICATION role)" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
         <button className="btn btn-secondary" onClick={attach} disabled={!roleId}>Assign Role</button>
       </div>
       <ul className="chip-list">
@@ -160,6 +161,7 @@ function RolesPanel({ user }: { user: User }) {
 
 function EffectivePermissionsPanel({ user }: { user: User }) {
   const [tenantId, setTenantId] = useState('');
+  const memberships = useApiResource(() => usersApi.tenants(user.id), [user.id]);
   const { data, loading, error } = useApiResource(
     () => usersApi.effectivePermissions(user.id, tenantId || undefined),
     [user.id, tenantId],
@@ -169,7 +171,7 @@ function EffectivePermissionsPanel({ user }: { user: User }) {
   return (
     <div className="card">
       <div className="toolbar">
-        <HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." placeholder="Filter by tenant ID (blank = global)" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
+        <HelpSelect help="Choose a tenant membership, or show effective permissions from all memberships." aria-label="Tenant membership" value={tenantId} onChange={(e) => setTenantId(e.target.value)}><option value="">All memberships</option>{(memberships.data ?? []).map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}</HelpSelect>
       </div>
       <ErrorAlert message={error} />
       {loading ? (
@@ -178,9 +180,9 @@ function EffectivePermissionsPanel({ user }: { user: User }) {
         <table className="data-table">
           <thead><tr><th>Permission</th><th>Scope</th></tr></thead>
           <tbody>
-            {permissions.map((p) => (
-              <tr key={p.permission_key}><td><code>{p.permission_key}</code></td><td><span className="badge badge-info">{p.scope}</span></td></tr>
-            ))}
+            {[...permissions.reduce((groups, p) => { const key = `${p.application_name ?? p.permission_key.split('.')[0]} / ${p.module_name ?? p.permission_key.split('.')[1] ?? 'General'}`; groups.set(key, [...(groups.get(key) ?? []), p]); return groups; }, new Map<string, EffectivePermission[]>())].map(([group, items]) => <Fragment key={group}>
+              <tr><th colSpan={2}>{group}</th></tr>{items.map((p) => <tr key={p.permission_key}><td><code>{p.permission_key}</code></td><td>{p.scope}</td></tr>)}
+            </Fragment>)}
             {!permissions.length && <tr><td colSpan={2} className="empty-cell">No effective permissions in this scope.</td></tr>}
           </tbody>
         </table>

@@ -12,8 +12,8 @@ const otherCustomer = { id: 'c2', legal_name: 'Second Customer', customer_code: 
 const tenant = { id: 't1', customer_id: 'c1', name: 'Acme Tenant', tenant_code: 'TEN-1' };
 const otherTenant = { id: 't2', customer_id: 'c2', name: 'Second Tenant', tenant_code: 'TEN-2' };
 const product = { id: 'p1', name: 'Fleet Suite', product_code: 'PRD-1', status: 'DRAFT', created_at: '2026-10-01T00:00:00Z' };
-const plan = { id: 'plan1', name: 'Fleet Plan', plan_code: 'PLN-1' };
-const addon = { id: 'addon1', name: 'Extra Vehicles', addon_code: 'ADD-1' };
+const plan = { id: 'plan1', name: 'Fleet Plan', plan_code: 'PLN-1', status: 'ACTIVE' };
+const addon = { id: 'addon1', name: 'Extra Vehicles', addon_code: 'ADD-1', status: 'ACTIVE' };
 const app = { id: 'app1', name: 'OptiFleet', application_code: 'optifleet' };
 const cap1 = { id: 'cap1', name: 'Vehicle Management', code: 'vehicles', application_id: 'app1' };
 const cap2 = { id: 'cap2', name: 'Workshop Management', code: 'workshop', application_id: 'app1' };
@@ -34,6 +34,8 @@ function serve(extra?: MockHandler) {
     if (url === '/auth/context') return ok(operatorContext(PERMISSIONS));
     if (url === '/subscriptions/options/customers') return ok([customer, otherCustomer]);
     if (url === '/subscriptions/options/tenants') return ok(call.params?.customer_id === 'c1' ? [tenant] : [otherTenant]);
+    if (url === '/form-options/plans') return ok([plan]);
+    if (url === '/form-options/addons') return ok([addon]);
     if (url === '/products/options/applications') return ok([app]);
     if (url === '/products/p1') return ok(product);
     if (url === '/products/p1/applications') return ok(attached);
@@ -65,7 +67,7 @@ afterEach(() => { cleanup(); restore(); });
 
 async function open(path: string, title: string) {
   renderApp(path);
-  await userEvent.click(await screen.findByRole('button', { name: `+ ${title}` }));
+  await userEvent.click(await screen.findByRole('button', { name: `+ ${title}` }, { timeout: 5000 }));
   return screen.getByRole('dialog', { name: title });
 }
 
@@ -113,7 +115,8 @@ describe('catalog relation forms', () => {
     expect(within(dialog).queryByRole('option', { name: /Acme Tenant/ })).toBeNull();
     await within(dialog).findByRole('option', { name: /Second Tenant/ });
     await userEvent.selectOptions(tenantSelect, 't2');
-    await userEvent.type(within(dialog).getByLabelText('Plan ID', { exact: true }), 'plan1');
+    await within(dialog).findByRole('option', { name: 'Fleet Plan' });
+    await userEvent.selectOptions(within(dialog).getByLabelText('Plan ID', { exact: true }), 'plan1');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
     await waitFor(() => expect(calls.find((call) => call.method === 'POST' && call.url === '/subscriptions')?.body).toMatchObject({ customer_id: 'c2', tenant_id: 't2' }));
   });
@@ -144,6 +147,19 @@ describe('catalog relation forms', () => {
     rendered.unmount();
     renderApp('/products/p1');
     expect((await screen.findByRole('checkbox', { name: /Workshop Management/ }) as HTMLInputElement).checked).toBe(true);
+  });
+
+  it('selects and clears all product capabilities within the application group', async () => {
+    serve(); renderApp('/products/p1');
+    const all = await screen.findByRole('checkbox', { name: 'Select All' });
+    await userEvent.click(all);
+    expect((screen.getByRole('checkbox', { name: /Workshop Management/ }) as HTMLInputElement).checked).toBe(true);
+    await userEvent.click(screen.getByRole('button', { name: 'Save Capabilities' }));
+    await screen.findByRole('status');
+    expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ capability_ids: ['cap1', 'cap2'] });
+    await userEvent.click(all);
+    expect((screen.getByRole('checkbox', { name: /Vehicle Management/ }) as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByRole('checkbox', { name: /Workshop Management/ }) as HTMLInputElement).checked).toBe(false);
   });
 
   it('refreshes capability choices immediately after attaching an application', async () => {

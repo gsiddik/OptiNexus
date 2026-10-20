@@ -1,4 +1,4 @@
-import { HelpSelect, HelpInput } from '../../components/FieldControls';
+import { HelpLabel, HelpSelect, HelpInput } from '../../components/FieldControls';
 import { useState } from 'react';
 import { applicationsApi, permissionsApi } from '../../api/endpoints';
 import { useApiList, useApiResource } from '../../api/useApi';
@@ -85,21 +85,21 @@ function CreatePermissionForm({ apps, onCreated }: { apps: Application[]; onCrea
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>
+      <HelpLabel>
         Application
         <HelpSelect help="Select the registered application to which this configuration applies." value={form.application_id} onChange={(e) => setForm({ ...form, application_id: e.target.value })}>
           <option value="">Select...</option>
           {apps.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </HelpSelect>
-      </label>
-      <label>
+      </HelpLabel>
+      <HelpLabel>
         Permission Key
         <HelpInput help="Enter a unique permission key, for example optifleet.vehicle.update." placeholder="e.g. optifleet.vehicle.update" value={form.permission_key} onChange={(e) => setForm({ ...form, permission_key: e.target.value })} />
-      </label>
-      <label>
+      </HelpLabel>
+      <HelpLabel>
         Name
         <HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-      </label>
+      </HelpLabel>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={submit}>Register</button>
       </div>

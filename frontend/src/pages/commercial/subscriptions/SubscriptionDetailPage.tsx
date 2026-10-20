@@ -1,4 +1,5 @@
-import { HelpInput } from '../../../components/FieldControls';
+import { ActiveSelect } from '../../../components/ActiveSelect';
+import { HelpLabel } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { subscriptionsApi } from '../../../api/endpoints';
@@ -52,10 +53,10 @@ export function SubscriptionDetailPage() {
         <div className="card">
           <h3>Details</h3>
           <dl className="definition-list">
-            <dt>Customer ID</dt><dd>{subscription.customer_id}</dd>
-            <dt>Tenant ID</dt><dd><Link to={`/tenants/${subscription.tenant_id}/entitlements`}>{subscription.tenant_id}</Link></dd>
-            <dt>Product ID</dt><dd>{subscription.product_id}</dd>
-            <dt>Plan ID</dt><dd>{subscription.plan_id}</dd>
+            <dt>Customer</dt><dd>{subscription.customer_name ?? '—'}</dd>
+            <dt>Tenant Name</dt><dd><Link to={`/tenants/${subscription.tenant_id}/entitlements`}>{subscription.tenant_name ?? '—'}</Link></dd>
+            <dt>Product Name</dt><dd>{subscription.product_name ?? '—'}</dd>
+            <dt>Plan Name</dt><dd>{subscription.plan_name ?? '—'}</dd>
             <dt>Currency</dt><dd>{subscription.currency}</dd>
             <dt>Billing Interval</dt><dd>{subscription.billing_interval}</dd>
             <dt>Auto Renew</dt><dd>{subscription.auto_renew ? 'Yes' : 'No'}</dd>
@@ -81,7 +82,7 @@ export function SubscriptionDetailPage() {
                 {subscription.items.map((it) => (
                   <tr key={it.id}>
                     <td>{it.item_type}</td>
-                    <td>{it.plan_id ?? it.addon_id ?? '—'}</td>
+                    <td>{it.plan_name ?? it.addon_name ?? '—'}</td>
                     <td>{it.quantity}</td>
                     <td>{it.unit_price ?? '—'}</td>
                   </tr>
@@ -126,7 +127,7 @@ function PlanChangeForm({ subscriptionId, onDone, hasPermission }: { subscriptio
   return (
     <div className="form form-inline">
       <ErrorAlert message={error} />
-      <label>New Plan ID<HelpInput help="Enter the registered plan ID for this subscription or pricing simulation." value={planId} onChange={(e) => setPlanId(e.target.value)} /></label>
+      <HelpLabel>New Plan ID<ActiveSelect kind="plan" value={planId} onChange={(e) => setPlanId(e.target.value)} /></HelpLabel>
       <PermissionGuard permission="cgo.subscription.upgrade">
         <button className="btn btn-secondary" disabled={submitting || !planId} onClick={() => change('upgrade')}>Upgrade</button>
       </PermissionGuard>

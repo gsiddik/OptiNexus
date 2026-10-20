@@ -1,4 +1,5 @@
-import { HelpInput } from '../../../components/FieldControls';
+import { ActiveSelect } from '../../../components/ActiveSelect';
+import { HelpLabel, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { pricingApi, type PricingSimulationResult } from '../../../api/endpoints';
 import { ErrorAlert } from '../../../components/ErrorAlert';
@@ -13,7 +14,7 @@ interface MeterRow {
 export function PricingSimulatorPage() {
   const [planId, setPlanId] = useState('');
   const [tenantId, setTenantId] = useState('');
-  const [addonIds, setAddonIds] = useState('');
+  const [addonIds, setAddonIds] = useState<string[]>([]);
   const [meterRows, setMeterRows] = useState<MeterRow[]>([{ key: '', value: '' }]);
   const [result, setResult] = useState<PricingSimulationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,9 +52,7 @@ export function PricingSimulatorPage() {
       const res = await pricingApi.simulate({
         plan_id: planId,
         tenant_id: tenantId || undefined,
-        addon_ids: addonIds
-          ? addonIds.split(',').map((s) => s.trim()).filter(Boolean)
-          : undefined,
+        addon_ids: addonIds,
         quantities,
       });
       setResult(res);
@@ -77,11 +76,11 @@ export function PricingSimulatorPage() {
       <div className="card">
         <div className="form">
           <ErrorAlert message={error} />
-          <label>Plan ID<HelpInput help="Enter the registered plan ID for this subscription or pricing simulation." value={planId} onChange={(e) => setPlanId(e.target.value)} /></label>
-          <label>Tenant ID (optional, applies tenant-specific overrides)<HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." value={tenantId} onChange={(e) => setTenantId(e.target.value)} /></label>
-          <label>Addon IDs (comma-separated, optional)<HelpInput help="Enter add-on IDs separated by commas; leave empty if none apply." value={addonIds} onChange={(e) => setAddonIds(e.target.value)} /></label>
+          <HelpLabel>Plan ID<ActiveSelect kind="plan" value={planId} onChange={(e) => setPlanId(e.target.value)} /></HelpLabel>
+          <HelpLabel>Tenant ID (optional, applies tenant-specific overrides)<ActiveSelect kind="tenant" value={tenantId} onChange={(e) => setTenantId(e.target.value)} /></HelpLabel>
+          <HelpLabel>Addon IDs (multiple, optional)<ActiveSelect kind="addon" multiple value={addonIds} onChange={(e) => setAddonIds(Array.from(e.target.selectedOptions, (option) => option.value))} /></HelpLabel>
 
-          <label>Usage quantities (meter_key -&gt; quantity)</label>
+          <HelpLabel>Usage quantities (meter_key -&gt; quantity)</HelpLabel>
           {meterRows.map((row, i) => (
             <div className="toolbar" key={i}>
               <HelpInput help="Enter the usage meter key supplying billable quantities, for example vehicles." placeholder="meter_key, e.g. vehicles" value={row.key} onChange={(e) => updateRow(i, 'key', e.target.value)} />

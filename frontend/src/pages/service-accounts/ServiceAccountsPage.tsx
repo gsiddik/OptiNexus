@@ -1,4 +1,4 @@
-import { HelpInput, HelpSelect } from '../../components/FieldControls';
+import { HelpLabel, HelpInput, HelpSelect } from '../../components/FieldControls';
 import { useState } from 'react';
 import { applicationsApi, serviceAccountsApi } from '../../api/endpoints';
 import { useApiList, useApiResource } from '../../api/useApi';
@@ -117,14 +117,14 @@ function CreateServiceAccountForm({ onCreated }: { onCreated: (secret: { client_
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-      <label>
+      <HelpLabel>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></HelpLabel>
+      <HelpLabel>
         Application
         <HelpSelect help="Select the registered application to which this configuration applies." value={form.application_id} onChange={(e) => setForm({ ...form, application_id: e.target.value })}>
           <option value="">(none)</option>
           {(apps as Application[] | null)?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </HelpSelect>
-      </label>
+      </HelpLabel>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={submit}>Create</button>
       </div>

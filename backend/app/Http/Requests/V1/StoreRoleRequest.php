@@ -15,10 +15,10 @@ class StoreRoleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tenant_id' => ['nullable', 'uuid', 'exists:tenants,id'],
+            'tenant_id' => ['exclude'],
             'application_id' => ['nullable', 'uuid', 'exists:applications,id'],
             'name' => ['required', 'string', 'max:255'],
-            'code' => ['required', 'string', 'max:100'],
+            'code' => ['exclude'],
             'description' => ['nullable', 'string'],
             'role_type' => ['required', 'string', 'in:'.implode(',', Role::TYPES)],
         ];

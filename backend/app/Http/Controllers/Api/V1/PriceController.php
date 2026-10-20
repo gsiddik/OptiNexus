@@ -21,7 +21,7 @@ class PriceController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Price::query()->with('tiers');
+        $query = Price::query()->with(['plan', 'addon'])->with('tiers');
 
         foreach (['plan_id', 'addon_id', 'tenant_id', 'status', 'price_type'] as $filter) {
             if ($value = $request->query($filter)) {

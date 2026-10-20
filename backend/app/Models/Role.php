@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'tenant_id', 'application_id', 'name', 'code', 'description',
-    'role_type', 'is_system', 'origin', 'created_by', 'status',
+    'role_type', 'is_system', 'auto_capability_permissions', 'origin', 'created_by', 'status',
 ])]
 class Role extends Model
 {
@@ -36,6 +36,7 @@ class Role extends Model
     {
         return [
             'is_system' => 'boolean',
+            'auto_capability_permissions' => 'boolean',
         ];
     }
 

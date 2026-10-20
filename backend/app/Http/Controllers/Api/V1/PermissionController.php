@@ -21,7 +21,7 @@ class PermissionController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Permission::query();
+        $query = Permission::query()->with(['application', 'capability.parent.parent.parent.parent.parent']);
 
         foreach (['application_id', 'capability_id', 'status'] as $filter) {
             if ($value = $request->query($filter)) {

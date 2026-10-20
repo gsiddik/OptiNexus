@@ -1,4 +1,4 @@
-import { HelpSelect, HelpInput, HelpTextarea } from '../../../components/FieldControls';
+import { HelpLabel, HelpSelect, HelpInput, HelpTextarea } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { notificationTemplatesApi, notificationsApi } from '../../../api/endpoints';
@@ -88,16 +88,16 @@ function SendForm({ onSent }: { onSent: () => void }) {
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>
+      <HelpLabel>
         Template
         <HelpSelect help="Enter or select the unique notification template code." value={form.template_code} onChange={(e) => setForm({ ...form, template_code: e.target.value })}>
           <option value="">Select template...</option>
           {((templates as NotificationTemplate[] | null) ?? []).map((t) => <option key={t.id} value={t.template_code}>{t.name}</option>)}
         </HelpSelect>
-      </label>
-      <label>Recipient User IDs (comma-separated)<HelpInput help="Enter recipient user IDs separated by commas." value={form.recipient_user_ids} onChange={(e) => setForm({ ...form, recipient_user_ids: e.target.value })} /></label>
-      <label>Tenant ID (optional, enforces tenant membership)<HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: e.target.value })} /></label>
-      <label>Context (JSON, available as {'{{'} data.* {'}}'})<HelpTextarea help="Enter a valid JSON object providing the context for this operation." rows={5} value={form.context} onChange={(e) => setForm({ ...form, context: e.target.value })} /></label>
+      </HelpLabel>
+      <HelpLabel>Recipient User IDs (comma-separated)<HelpInput help="Enter recipient user IDs separated by commas." value={form.recipient_user_ids} onChange={(e) => setForm({ ...form, recipient_user_ids: e.target.value })} /></HelpLabel>
+      <HelpLabel>Tenant ID (optional, enforces tenant membership)<HelpInput help="Enter the tenant ID for this operation. Leave empty only if the field allows global scope." value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: e.target.value })} /></HelpLabel>
+      <HelpLabel>Context (JSON, available as {'{{'} data.* {'}}'})<HelpTextarea help="Enter a valid JSON object providing the context for this operation." rows={5} value={form.context} onChange={(e) => setForm({ ...form, context: e.target.value })} /></HelpLabel>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting || !form.template_code}>Send</button>
       </div>

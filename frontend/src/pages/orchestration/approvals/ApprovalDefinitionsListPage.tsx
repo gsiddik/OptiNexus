@@ -1,4 +1,4 @@
-import { HelpInput, HelpSelect, HelpTextarea } from '../../../components/FieldControls';
+import { HelpLabel, HelpInput, HelpSelect, HelpTextarea } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { approvalDefinitionsApi } from '../../../api/endpoints';
@@ -87,25 +87,25 @@ function CreateForm({ onCreated }: { onCreated: (id: string) => void }) {
   return (
     <div className="form">
       <ErrorAlert message={error} />
-      <label>Definition Code<HelpInput help="Enter a unique code identifying this approval definition." value={form.definition_code} onChange={(e) => setForm({ ...form, definition_code: e.target.value })} /></label>
-      <label>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-      <label>
+      <HelpLabel>Definition Code<HelpInput help="Enter a unique code identifying this approval definition." value={form.definition_code} onChange={(e) => setForm({ ...form, definition_code: e.target.value })} /></HelpLabel>
+      <HelpLabel>Name<HelpInput help="Enter a readable name used to identify this record in lists and selections." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></HelpLabel>
+      <HelpLabel>
         Rule Type
         <HelpSelect help="Choose how approval levels are evaluated." value={form.rule_type} onChange={(e) => setForm({ ...form, rule_type: e.target.value })}>
           <option value="SEQUENTIAL">SEQUENTIAL</option>
           <option value="ANY_OF">ANY_OF</option>
           <option value="ALL_OF">ALL_OF</option>
         </HelpSelect>
-      </label>
-      <label className="checkbox-label">
+      </HelpLabel>
+      <HelpLabel className="checkbox-label">
         <HelpInput help="Enable only when requesters may approve their own requests." type="checkbox" checked={form.self_approval_allowed} onChange={(e) => setForm({ ...form, self_approval_allowed: e.target.checked })} />
         Allow self-approval
-      </label>
-      <label>Expires After (hours, optional)<HelpInput help="Optional number of hours before a pending approval expires." type="number" value={form.expires_after_hours} onChange={(e) => setForm({ ...form, expires_after_hours: e.target.value })} /></label>
-      <label>
+      </HelpLabel>
+      <HelpLabel>Expires After (hours, optional)<HelpInput help="Optional number of hours before a pending approval expires." type="number" value={form.expires_after_hours} onChange={(e) => setForm({ ...form, expires_after_hours: e.target.value })} /></HelpLabel>
+      <HelpLabel>
         Levels (JSON: level_order, name, approver_type, approver_reference)
         <HelpTextarea help="Enter a JSON array of approval levels, including the required approvers and order." rows={8} value={form.levels} onChange={(e) => setForm({ ...form, levels: e.target.value })} />
-      </label>
+      </HelpLabel>
       <p className="muted">approver_type: USER (a user id), ROLE/TENANT_ROLE/APPLICATION_ROLE (a role code), or DYNAMIC.</p>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>Create</button>

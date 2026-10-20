@@ -11,14 +11,17 @@ use App\Http\Resources\V1\ApplicationResource;
 use App\Http\Resources\V1\TenantResource;
 use App\Http\Resources\V1\UserResource;
 use App\Models\Application;
+use App\Models\Entitlement;
 use App\Models\Tenant;
 use App\Models\TenantMembership;
 use App\Models\User;
 use App\Services\AuditService;
+use App\Services\Commercial\EntitlementService;
 use App\Services\Oidc\SessionRevocationService;
 use App\Services\Seats\SeatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class TenantController extends Controller
@@ -114,6 +117,34 @@ class TenantController extends Controller
     }
 
     /** Seats of every application the tenant has, as OptiNexus counts them (used, reserved, limit, available, over-limit). Read-only. */
+    public function updateSeats(Request $request, Tenant $tenant, Application $application, EntitlementService $entitlements): JsonResponse
+    {
+        $data = $request->validate([
+            'limit' => ['required', 'integer', 'min:0', 'max:2000000000'],
+            'reason' => ['required', 'string', 'min:10', 'max:500'],
+        ]);
+        if (! $tenant->applications()->where('applications.id', $application->id)->wherePivot('status', 'ACTIVE')->exists() || ! $this->seats->declares($application)) {
+            return $this->fail('SEAT_APPLICATION_INVALID', 'Select an assigned application that declares a user limit.', 422);
+        }
+
+        DB::transaction(function () use ($tenant, $application, $data, $request, $entitlements): void {
+            $this->seats->lock($tenant->id, [$application->id]);
+            $key = $this->seats->limitKey();
+            // Preserve the history of the previous application override, including scheduled overrides.
+            Entitlement::query()->where('tenant_id', $tenant->id)->where('application_id', $application->id)
+                ->where('entitlement_type', 'LIMIT')->where('entitlement_key', $key)->where('source_type', 'MANUAL_OVERRIDE')
+                ->whereIn('status', ['ACTIVE', 'SUSPENDED'])->update(['status' => 'REVOKED', 'effective_until' => now()]);
+            $entitlement = $entitlements->manualOverride($tenant, [
+                'application_id' => $application->id, 'entitlement_type' => 'LIMIT', 'entitlement_key' => $key,
+                'value' => $data['limit'], 'reason' => $data['reason'],
+            ], $request->user());
+            $this->audit->record('tenant.seats_updated', $request, tenantId: $tenant->id, applicationId: $application->id,
+                resourceType: 'Entitlement', resourceId: $entitlement->id, newValue: $entitlement->toArray());
+        });
+
+        return $this->ok($this->seats->forTenant($tenant)->map->toArray());
+    }
+
     public function seats(Tenant $tenant): JsonResponse
     {
         return $this->ok($this->seats->forTenant($tenant)->map(fn ($status): array => $status->toArray())->all());

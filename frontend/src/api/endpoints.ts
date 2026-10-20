@@ -86,6 +86,13 @@ export async function listAll<T>(fetchPage: (params: ListParams) => Promise<ApiE
   return rows;
 }
 
+export const formOptionsApi = {
+  plans: () => unwrap<Plan[]>(apiClient.get('/form-options/plans')),
+  addons: () => unwrap<Addon[]>(apiClient.get('/form-options/addons')),
+  tenants: () => unwrap<Tenant[]>(apiClient.get('/form-options/tenants')),
+  subscriptions: () => unwrap<Subscription[]>(apiClient.get('/form-options/subscriptions')),
+};
+
 // ---------------------------------------------------------------- Auth
 export const authApi = {
   login: (email: string, password: string) =>
@@ -124,6 +131,7 @@ export const tenantsApi = {
     apiClient.post(`/tenants/${id}/applications/${applicationId}`),
   detachApplication: (id: string, applicationId: string) =>
     apiClient.delete(`/tenants/${id}/applications/${applicationId}`),
+  updateSeats: (id: string, applicationId: string, data: { limit: number; reason: string }) => unwrap<SeatStatus[]>(apiClient.put(`/tenants/${id}/seats/${applicationId}`, data)),
   seats: (id: string) => unwrap<SeatStatus[]>(apiClient.get(`/tenants/${id}/seats`)),
   admins: (id: string) => unwrap<User[]>(apiClient.get(`/tenants/${id}/admins`)),
   addAdmin: (id: string, userId: string) => apiClient.post(`/tenants/${id}/admins/${userId}`),
@@ -262,6 +270,7 @@ export const plansApi = {
   activate: (id: string) => unwrap<Plan>(apiClient.post(`/plans/${id}/activate`)),
   deactivate: (id: string) => unwrap<Plan>(apiClient.post(`/plans/${id}/deactivate`)),
   retire: (id: string) => unwrap<Plan>(apiClient.post(`/plans/${id}/retire`)),
+  capabilityOptions: (id: string) => unwrap<import('../components/CapabilityPicker').CapabilityGroup[]>(apiClient.get(`/plans/${id}/capability-options`)),
   capabilities: (id: string) => unwrap<Capability[]>(apiClient.get(`/plans/${id}/capabilities`)),
   attachCapability: (id: string, capabilityId: string) => apiClient.post(`/plans/${id}/capabilities/${capabilityId}`),
   detachCapability: (id: string, capabilityId: string) => apiClient.delete(`/plans/${id}/capabilities/${capabilityId}`),
@@ -280,6 +289,7 @@ export const addonsApi = {
   activate: (id: string) => unwrap<Addon>(apiClient.post(`/addons/${id}/activate`)),
   deactivate: (id: string) => unwrap<Addon>(apiClient.post(`/addons/${id}/deactivate`)),
   retire: (id: string) => unwrap<Addon>(apiClient.post(`/addons/${id}/retire`)),
+  capabilityOptions: (id: string) => unwrap<import('../components/CapabilityPicker').CapabilityGroup[]>(apiClient.get(`/addons/${id}/capability-options`)),
   capabilities: (id: string) => unwrap<Capability[]>(apiClient.get(`/addons/${id}/capabilities`)),
   attachCapability: (id: string, capabilityId: string) => apiClient.post(`/addons/${id}/capabilities/${capabilityId}`),
   detachCapability: (id: string, capabilityId: string) => apiClient.delete(`/addons/${id}/capabilities/${capabilityId}`),
@@ -568,6 +578,7 @@ export const onboardingApi = {
 // ------------------------------------------------------------- First Admin Tenant (operator-created accounts)
 const adminAccountsBase = (tenantId: string) => `/ecosystem/tenants/${encodeURIComponent(tenantId)}/admin-accounts`;
 export const adminAccountsApi = {
+  accountOptions: (tenantId: string) => unwrap<{ id: string; name: string; email: string }[]>(apiClient.get(`${adminAccountsBase(tenantId)}/account-options`)),
   list: (tenantId: string) => unwrap<AdminAccount[]>(apiClient.get(adminAccountsBase(tenantId))),
   create: (tenantId: string, payload: AdminAccountCreate) => unwrap<AdminAccountCreated>(apiClient.post(adminAccountsBase(tenantId), payload)),
   verifyEmail: (tenantId: string, userId: string, payload: { email: string; reason: string }) =>

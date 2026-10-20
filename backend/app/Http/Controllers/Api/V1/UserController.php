@@ -8,10 +8,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\StoreUserRequest;
 use App\Http\Requests\V1\UpdateUserRequest;
 use App\Http\Resources\V1\ApplicationResource;
+use App\Http\Resources\V1\PermissionResource;
 use App\Http\Resources\V1\RoleResource;
 use App\Http\Resources\V1\TenantResource;
 use App\Http\Resources\V1\UserResource;
 use App\Models\Application;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\TenantMembership;
@@ -24,6 +26,8 @@ use App\Services\PrivilegeEscalationGuard;
 use App\Services\Seats\SeatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -107,7 +111,18 @@ class UserController extends Controller
             return $this->fail('ACTIVATION_NOT_COMPLETE', 'This account activates itself when its e-mail address is verified and its holder has chosen a password. It cannot be activated by hand.', 409, ['state' => $user->activationState()]);
         }
 
-        return $this->transitionTo($request, $user, User::STATUS_ACTIVE, [User::STATUS_INVITED, User::STATUS_SUSPENDED]);
+        if ($response = $this->guardTransition($user, User::STATUS_ACTIVE, [User::STATUS_INVITED, User::STATUS_SUSPENDED])) {
+            return $response;
+        }
+        $password = Str::password(20);
+        DB::transaction(function () use ($user, $password, $request): void {
+            $user->update(['password' => $password, 'status' => User::STATUS_ACTIVE]);
+            $this->audit->record('user.activated', $request, resourceType: 'User', resourceId: $user->id, newValue: ['status' => User::STATUS_ACTIVE, 'password_generated' => true]);
+        });
+        $this->revocation->logoutEverywhere($user, 'password_generated', $request);
+
+        return $this->ok([...(new UserResource($user))->resolve($request), 'generated_password' => $password])
+            ->header('Cache-Control', 'no-store, private')->header('Pragma', 'no-cache');
     }
 
     public function suspend(Request $request, User $user): JsonResponse
@@ -209,13 +224,38 @@ class UserController extends Controller
             $query->where('tenant_id', $tenantId);
         }
 
-        return $this->ok(RoleResource::collection($query->get()->pluck('role')->filter()));
+        return $this->ok(RoleResource::collection($query->get()->pluck('role')->filter()->unique('id')->values()));
     }
 
     public function attachRole(Request $request, User $user, Role $role): JsonResponse
     {
         $validated = $request->validate(['tenant_id' => ['nullable', 'uuid', 'exists:tenants,id']]);
         $tenantId = $validated['tenant_id'] ?? null;
+
+        if ($role->role_type !== Role::TYPE_SYSTEM && ! $tenantId) {
+            $memberships = $user->tenantMemberships()->where('status', TenantMembership::STATUS_ACTIVE)
+                ->whereHas('tenant', fn ($query) => $query->where('status', Tenant::STATUS_ACTIVE))->get();
+            if ($memberships->isEmpty()) {
+                return $this->fail('TENANT_ACCESS_DENIED', 'Add an active tenant membership first.', 422);
+            }
+            foreach ($memberships as $membership) {
+                if (($role->tenant_id && $role->tenant_id !== $membership->tenant_id)
+                    || ! $this->escalationGuard->canGrantRole($request->user(), $role, $membership->tenant_id)) {
+                    return $this->fail('PRIVILEGE_ESCALATION_DENIED', 'The role cannot be assigned in every active membership.', 403);
+                }
+            }
+            DB::transaction(function () use ($memberships, $user, $role, $request): void {
+                foreach ($memberships as $membership) {
+                    $assignment = $user->userRoles()->firstOrCreate(['role_id' => $role->id, 'tenant_id' => $membership->tenant_id], ['granted_by' => $request->user()->id]);
+                    if ($assignment->wasRecentlyCreated) {
+                        $this->audit->record('user.role_assigned', $request, resourceType: 'User', resourceId: $user->id,
+                            newValue: ['role_id' => $role->id], tenantId: $membership->tenant_id);
+                    }
+                }
+            });
+
+            return $this->created(new RoleResource($role));
+        }
 
         if (($role->role_type !== Role::TYPE_SYSTEM) && ! $tenantId) {
             return $this->fail('VALIDATION_ERROR', 'tenant_id is required to assign a TENANT or APPLICATION role.', 422);
@@ -246,7 +286,9 @@ class UserController extends Controller
         $tenantId = $request->query('tenant_id');
 
         $query = $user->userRoles()->where('role_id', $role->id);
-        $tenantId ? $query->where('tenant_id', $tenantId) : $query->whereNull('tenant_id');
+        if ($tenantId) {
+            $query->where('tenant_id', $tenantId);
+        }
         $query->delete();
 
         $this->audit->record('user.role_revoked', $request, resourceType: 'User', resourceId: $user->id, oldValue: ['role_id' => $role->id, 'tenant_id' => $tenantId], tenantId: $tenantId);
@@ -260,12 +302,24 @@ class UserController extends Controller
         $applicationId = $request->query('application_id');
 
         $permissions = $this->authorization->effectivePermissions($user, $tenantId, $applicationId);
+        if (! $tenantId) {
+            foreach ($user->tenantMemberships()->where('status', TenantMembership::STATUS_ACTIVE)->pluck('tenant_id') as $memberTenantId) {
+                $permissions = $permissions->union($this->authorization->effectivePermissions($user, $memberTenantId, $applicationId));
+            }
+        }
+
+        $definitions = Permission::query()->whereIn('permission_key', $permissions->keys())
+            ->with(['application', 'capability.parent.parent.parent.parent.parent'])->get()->keyBy('permission_key');
 
         return $this->ok([
             'user_id' => $user->id,
             'tenant_id' => $tenantId,
             'application_id' => $applicationId,
-            'permissions' => $permissions->map(fn ($v, $key) => ['permission_key' => $key, 'scope' => $v['scope']])->values(),
+            'permissions' => $permissions->map(function ($grant, $key) use ($definitions, $request) {
+                $definition = $definitions->get($key);
+
+                return [...($definition ? (new PermissionResource($definition))->resolve($request) : ['permission_key' => $key]), 'scope' => $grant['scope']];
+            })->values(),
         ]);
     }
 

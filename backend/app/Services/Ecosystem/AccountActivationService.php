@@ -38,7 +38,7 @@ class AccountActivationService
     public function issueTemporaryPassword(User $user): string
     {
         $plain = '';
-        $length = (int) config('activation.temporary_password_length');
+        $length = max(12, (int) config('activation.temporary_password_length'));
         for ($i = 0; $i < $length; $i++) {
             $plain .= self::ALPHABET[random_int(0, strlen(self::ALPHABET) - 1)];
         }

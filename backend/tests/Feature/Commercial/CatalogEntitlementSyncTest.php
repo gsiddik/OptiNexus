@@ -229,5 +229,4 @@ class CatalogEntitlementSyncTest extends TestCase
         }
         $this->assertTrue(app(EntitlementService::class)->check($tenant, 'optifleet', $module->code)['allowed']);
     }
-
 }

@@ -7,6 +7,7 @@ use App\Models\Entitlement;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
+use DateTimeInterface;
 use Illuminate\Support\Collection;
 
 /**
@@ -56,13 +57,13 @@ class EntitlementService
             }
 
             foreach ($addon->capabilities as $capability) {
-                $this->grant($subscription, Entitlement::TYPE_CAPABILITY, $capability->code, 'true', Entitlement::SOURCE_ADDON, $addon->id, $capability->application_id, $capability->id);
+                $this->grant($subscription, Entitlement::TYPE_CAPABILITY, $capability->code, 'true', Entitlement::SOURCE_ADDON, $addon->id, $capability->application_id, $capability->id, $item->end_at);
             }
 
             foreach ($addon->limits as $limit) {
                 // Addon limits are deltas (e.g. "+50 vehicles"), summed with
                 // the plan's base limit during effective resolution.
-                $this->grant($subscription, Entitlement::TYPE_LIMIT, $limit->limit_key, (string) $limit->limit_delta, Entitlement::SOURCE_ADDON, $addon->id, null, null);
+                $this->grant($subscription, Entitlement::TYPE_LIMIT, $limit->limit_key, (string) $limit->limit_delta, Entitlement::SOURCE_ADDON, $addon->id, null, null, $item->end_at);
             }
         }
     }
@@ -205,7 +206,7 @@ class EntitlementService
         return ['allowed' => $allowed, 'entitlement_key' => $entitlementKey, 'value' => $match['value'], 'source' => $match['source']];
     }
 
-    private function grant(Subscription $subscription, string $type, string $key, string $value, string $sourceType, string $sourceReferenceId, ?string $applicationId, ?string $capabilityId): void
+    private function grant(Subscription $subscription, string $type, string $key, string $value, string $sourceType, string $sourceReferenceId, ?string $applicationId, ?string $capabilityId, ?DateTimeInterface $effectiveUntil = null): void
     {
         Entitlement::create([
             'tenant_id' => $subscription->tenant_id,
@@ -219,6 +220,7 @@ class EntitlementService
             'source_type' => $sourceType,
             'source_reference_id' => $sourceReferenceId,
             'effective_from' => now(),
+            'effective_until' => $effectiveUntil,
         ]);
     }
 }

@@ -80,3 +80,5 @@ Use Fleet's exported manifest as the authority for permission-to-capability owne
 - Review found two access regressions to resolve before merge: rebuilding a live subscription could discard an individual entitlement suspension; generation also consumed ended/future add-on items.
 - Preserve non-expired individual suspensions by commercial source/key when replacing history rows. Apply a shared `SubscriptionItem.inForce()` time-window scope to generation, affected-subscriber selection and CLI preview.
 - Added HTTP/CLI regression coverage for an operator-suspended capability, plus start/end boundary cases for add-ons across separate tenants. Await new-head PostgreSQL CI before merging.
+
+- Add-on grants now carry the subscription item's `end_at` as `effective_until`, so current capability grants and limit deltas expire at the boundary even without another catalog edit. The regression advances time to verify both expire while the Plan's base limit remains.

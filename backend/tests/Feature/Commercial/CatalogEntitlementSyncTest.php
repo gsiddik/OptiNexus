@@ -228,5 +228,10 @@ class CatalogEntitlementSyncTest extends TestCase
             $this->assertFalse(app(EntitlementService::class)->check($other, 'optifleet', $module->code)['allowed']);
         }
         $this->assertTrue(app(EntitlementService::class)->check($tenant, 'optifleet', $module->code)['allowed']);
+        $this->postJson("/api/v1/addons/{$addon->id}/limits", ['limit_key' => 'vehicles', 'limit_delta' => 5])->assertOk();
+        $this->assertEquals(15, app(EntitlementService::class)->check($tenant, 'optifleet', 'vehicles')['value']);
+        $this->travel(1)->days();
+        $this->assertFalse(app(EntitlementService::class)->check($tenant, 'optifleet', $module->code)['allowed']);
+        $this->assertEquals(10, app(EntitlementService::class)->check($tenant, 'optifleet', 'vehicles')['value']);
     }
 }

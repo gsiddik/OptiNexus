@@ -53,7 +53,7 @@ class ServiceAccount extends Model
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['allowed_scopes' => 'array'];
+        return ['allowed_scopes' => 'array', 'last_used_at' => 'datetime'];
     }
 
     /** No allow-list (NULL) keeps accounts registered before the list existed working; a list is exact. */

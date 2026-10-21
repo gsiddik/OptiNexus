@@ -81,6 +81,21 @@ class OnboardingReportTest extends TestCase
         $this->assertSame('WARN', $this->statuses($this->report($tenant)->json('data.checks'))['optiaccounting.oidc_pkce']);
     }
 
+    public function test_an_active_tenant_report_formats_a_persisted_service_account_usage_timestamp(): void
+    {
+        $this->actingAsSuperAdmin();
+        $tenant = $this->makeTenant();
+        $fleet = $this->makeApplication(['application_code' => 'optifleet']);
+        $tenant->applications()->attach($fleet->id, ['id' => (string) Str::uuid(), 'status' => 'ACTIVE']);
+        [, $account] = $this->issueServiceAccountTokenFor($fleet->id);
+        $account->forceFill(['last_used_at' => '2026-10-21 02:30:00'])->save();
+
+        $this->report($tenant)->assertOk()
+            ->assertJsonPath('data.tenant.status', Tenant::STATUS_ACTIVE)
+            ->assertJsonPath('data.applications.0.service_account.present', true)
+            ->assertJsonPath('data.applications.0.service_account.last_used_at', '2026-10-21T02:30:00+00:00');
+    }
+
     public function test_it_is_closed_to_tenant_users_and_checks_the_tenant_permission(): void
     {
         $tenant = $this->makeTenant();

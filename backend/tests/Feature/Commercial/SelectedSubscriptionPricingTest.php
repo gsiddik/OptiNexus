@@ -4,6 +4,8 @@ namespace Tests\Feature\Commercial;
 
 use App\Models\Subscription;
 use App\Services\Commercial\BillingCalculationService;
+use App\Services\Commercial\EntitlementService;
+use App\Services\Commercial\SubscriptionLifecycleService;
 use App\Services\Commercial\SubscriptionPriceSelection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -44,6 +46,35 @@ class SelectedSubscriptionPricingTest extends TestCase
         $this->assertNull($error);
         $this->assertCount(1, $billing->items);
         $this->assertSame($type === 'FLAT' ? '12.35' : '37.05', $billing->subtotal);
+    }
+
+    public function test_selected_addon_pricing_preserves_limits_and_bills_the_saved_quantity(): void
+    {
+        $this->actingAsCommercialRole('SUBSCRIPTION_ADMIN');
+        $customer = $this->makeCustomer();
+        $tenant = $this->makeTenant($customer);
+        $product = $this->makeProduct();
+        $plan = $this->makePlan($product);
+        $addon = $this->makeAddon($product);
+        $plan->limits()->create(['limit_key' => 'vehicle', 'limit_value' => 10, 'is_unlimited' => false]);
+        $addon->limits()->create(['limit_key' => 'vehicle', 'limit_delta' => 5]);
+        $basePrice = $this->makeFlatPrice($plan, ['unit_amount' => '10.00']);
+        $addonPrice = $this->makeFlatPrice($addon, ['price_type' => 'PER_VEHICLE', 'unit_amount' => '2.50']);
+        $response = $this->postJson('/api/v1/subscriptions', [
+            'customer_id' => $customer->id, 'tenant_id' => $tenant->id, 'plan_id' => $plan->id,
+            'price_items' => [['price_id' => $basePrice->id], ['price_id' => $addonPrice->id, 'quantity' => 3]],
+        ])->assertCreated();
+        $addonItem = collect($response->json('data.items'))->firstWhere('price_id', $addonPrice->id);
+        $this->assertSame('PER_VEHICLE', $addonItem['price_type']);
+        $this->assertSame('3.0000', $addonItem['quantity']);
+        $this->assertSame('7.50', $addonItem['total_price']);
+        $subscription = Subscription::findOrFail($response->json('data.id'));
+        app(SubscriptionLifecycleService::class)->activate($subscription);
+        $limits = app(EntitlementService::class)->effectiveEntitlements($tenant)->keyBy('entitlement_key');
+        $this->assertEquals(15, $limits['vehicle']['value']);
+        [$billing] = app(BillingCalculationService::class)->calculate($subscription, now()->startOfMonth(), now()->endOfMonth());
+        $this->assertCount(2, $billing->items);
+        $this->assertSame('17.50', $billing->subtotal);
     }
 
     public function test_options_use_effective_tenant_override_and_exclude_unapproved_or_deferred_prices(): void

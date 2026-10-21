@@ -145,6 +145,29 @@ describe('catalog relation forms', () => {
     await waitFor(() => expect(calls.find((call) => call.method === 'POST' && call.url === '/subscriptions')?.body).toMatchObject({ plan_id: 'plan1', price_items: [{ price_id: 'price1', quantity: label ? 7 : 1 }] }));
   });
 
+  it('selects an add-on Pricing row and displays the saved item type and totals', async () => {
+    serve((call) => call.url === '/subscriptions/sub1' ? ok({ id: 'sub1', subscription_number: 'SUB-1', status: 'DRAFT', items: [{ id: 'item1', item_type: 'ADDON', price_type: 'PER_VEHICLE', addon_name: 'Extra Vehicles', quantity: '3.0000', unit_price: '2.50', total_price: '7.50' }] }) : call.url === '/subscriptions/options/prices' ? ok([
+      { id: 'price1', plan_id: 'plan1', plan_name: 'Fleet Plan', price_type: 'FLAT', currency: 'IDR', unit_amount: '10.00', billing_interval: 'MONTHLY' },
+      { id: 'price2', addon_id: 'addon1', addon_name: 'Extra Vehicles', price_type: 'PER_VEHICLE', currency: 'IDR', unit_amount: '2.50', billing_interval: 'MONTHLY' },
+    ]) : undefined);
+    const dialog = await open('/subscriptions', 'New Subscription');
+    await within(dialog).findByRole('option', { name: /Acme Logistics/ });
+    await userEvent.selectOptions(within(dialog).getByLabelText('Customer ID'), 'c1');
+    await within(dialog).findByRole('option', { name: /Acme Tenant/ });
+    await userEvent.selectOptions(within(dialog).getByLabelText('Tenant ID'), 't1');
+    await within(dialog).findByRole('option', { name: /Extra Vehicles \(PER_VEHICLE\)/ });
+    await userEvent.selectOptions(within(dialog).getByLabelText('Plan ID', { exact: true }), 'price1');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Add Plan/Add-on' }));
+    await userEvent.selectOptions(within(dialog).getByLabelText('Plan/Add-on', { exact: true }), 'price2');
+    await userEvent.type(within(dialog).getByLabelText('Number of Vehicle(s)'), '3');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(calls.find((call) => call.method === 'POST' && call.url === '/subscriptions')?.body).toMatchObject({ plan_id: 'plan1', price_items: [{ price_id: 'price1', quantity: 1 }, { price_id: 'price2', quantity: 3 }] }));
+    cleanup();
+    renderApp('/subscriptions/sub1');
+    expect(await screen.findByRole('columnheader', { name: 'Total Price' })).toBeTruthy();
+    expect(screen.getByRole('row', { name: /PER_VEHICLE Extra Vehicles 3.0000 2.50 7.50/ })).toBeTruthy();
+  });
+
   it.each([['plan:plan1', 'plan_id', 'plan1', 'addon_id'], ['addon:addon1', 'addon_id', 'addon1', 'plan_id']])('prices %s using one target only', async (target, field, id, absent) => {
     serve();
     const dialog = await open('/prices', 'New Price');

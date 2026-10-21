@@ -243,6 +243,6 @@ describe('request logs and sync health', () => {
     serve([LINK_VIEW, LOG_VIEW]);
     renderApp(`/tenants/${TENANT}/gateway`);
     expect(await screen.findByText('Tautan perangkat')).toBeTruthy();
-    expect(screen.getByText('Ambigu')).toBeTruthy();
+    expect(await screen.findByText('Ambigu', { selector: '.badge' })).toBeTruthy();
   });
 });

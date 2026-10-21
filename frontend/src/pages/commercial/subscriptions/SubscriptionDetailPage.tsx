@@ -76,15 +76,15 @@ export function SubscriptionDetailPage() {
           ) : (
             <table className="data-table">
               <thead>
-                <tr><th>Type</th><th>Plan/Addon</th><th>Quantity</th><th>Unit Price</th></tr>
+                <tr><th>Type</th><th>Plan/Addon</th><th>Quantity</th><th>Unit Price</th><th>Total Price</th></tr>
               </thead>
               <tbody>
                 {subscription.items.map((it) => (
                   <tr key={it.id}>
-                    <td>{it.item_type}</td>
+                    <td>{it.price_type ?? it.item_type}</td>
                     <td>{it.plan_name ?? it.addon_name ?? '—'}</td>
                     <td>{it.quantity}</td>
-                    <td>{it.unit_price ?? '—'}</td>
+                    <td>{it.unit_price ?? '—'}</td><td>{it.total_price ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>

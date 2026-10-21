@@ -61,13 +61,31 @@ class BillingCalculationService
             $subtotal = Money::zero();
             $tax = Money::zero();
 
-            $this->chargePlanRecurring($billing, $subscription, $subtotal, $tax);
-            $this->chargeAddonRecurring($billing, $subscription, $periodStart, $periodEnd, $subtotal, $tax);
-            $this->chargeUsageComponents($billing, $subscription, 'plan_id', $subscription->plan_id, $periodStart, $periodEnd, $subtotal, $tax);
-
-            foreach ($subscription->items()->where('item_type', SubscriptionItem::TYPE_ADDON)->get() as $item) {
-                if ($item->addon_id) {
-                    $this->chargeUsageComponents($billing, $subscription, 'addon_id', $item->addon_id, $periodStart, $periodEnd, $subtotal, $tax);
+            $selected = $subscription->items()->where('start_at', '<=', $periodEnd)
+                ->where(fn ($query) => $query->whereNull('end_at')->orWhere('end_at', '>', $periodStart))
+                ->with(['price.taxCode', 'plan', 'addon'])->get()
+                ->filter(fn (SubscriptionItem $item) => ($item->metadata['selected_pricing'] ?? false) === true);
+            if ($selected->isNotEmpty()) {
+                foreach ($selected as $item) {
+                    $price = $item->price;
+                    if (! $price || $item->unit_price === null) {
+                        throw new \LogicException('The purchased pricing snapshot is incomplete.');
+                    }
+                    $rated = ['quantity' => (string) $item->quantity, 'billable_quantity' => (string) $item->quantity,
+                        'unit_amount' => (string) $item->unit_price,
+                        'amount' => Money::multiplyByQuantity((string) $item->unit_price, (string) $item->quantity)];
+                    $this->writeItem($billing, $item->addon_id ? BillingItem::TYPE_ADDON : BillingItem::TYPE_RECURRING,
+                        $item->plan?->name ?? $item->addon?->name ?? 'Subscription item', $price, $rated, $subtotal, $tax, $item->id);
+                }
+            } else {
+                $this->chargePlanRecurring($billing, $subscription, $subtotal, $tax);
+                $this->chargeAddonRecurring($billing, $subscription, $periodStart, $periodEnd, $subtotal, $tax);
+                $this->chargeUsageComponents($billing, $subscription, 'plan_id', $subscription->plan_id, $periodStart, $periodEnd, $subtotal, $tax);
+    
+                foreach ($subscription->items()->where('item_type', SubscriptionItem::TYPE_ADDON)->get() as $item) {
+                    if ($item->addon_id) {
+                        $this->chargeUsageComponents($billing, $subscription, 'addon_id', $item->addon_id, $periodStart, $periodEnd, $subtotal, $tax);
+                    }
                 }
             }
 

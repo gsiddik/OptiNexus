@@ -23,6 +23,7 @@ export function TenantDetailPage({ initialTab = 'details' }: { initialTab?: Tab 
   const { hasPermission } = useAuth();
   const { t } = useI18n();
   const { data: tenant, loading, error, reload } = useApiResource<Tenant>(() => tenantsApi.get(id!), [id]);
+  const [assignmentRevision, setAssignmentRevision] = useState(0);
   const [tab, setTab] = useState<Tab>(initialTab);
 
   if (loading) return <LoadingSpinner />;
@@ -41,7 +42,7 @@ export function TenantDetailPage({ initialTab = 'details' }: { initialTab?: Tab 
         hasPermission={hasPermission}
         onDone={reload}
         actions={[
-          { key: 'provision', label: 'Provision', allowedFrom: ['DRAFT'], permission: 'cgo.tenant.provision', action: () => tenantsApi.provision(tenant.id) },
+          { key: 'provision', label: 'Provision', allowedFrom: ['DRAFT'], permission: 'cgo.tenant.provision', disabledReason: tenant.provisioning_blocker, action: () => tenantsApi.provision(tenant.id) },
           { key: 'activate', label: 'Activate', allowedFrom: ['PROVISIONING'], permission: 'cgo.tenant.activate', action: () => tenantsApi.activate(tenant.id) },
           { key: 'suspend', label: 'Suspend', allowedFrom: ['ACTIVE'], permission: 'cgo.tenant.suspend', action: () => tenantsApi.suspend(tenant.id) },
           { key: 'reactivate', label: 'Reactivate', allowedFrom: ['SUSPENDED'], permission: 'cgo.tenant.activate', action: () => tenantsApi.reactivate(tenant.id) },
@@ -50,6 +51,7 @@ export function TenantDetailPage({ initialTab = 'details' }: { initialTab?: Tab 
         ]}
       />
 
+      {tenant.status === 'DRAFT' && tenant.provisioning_blocker && <p className="muted">{tenant.provisioning_blocker}</p>}
       <div className="toolbar">
         <Link className="btn btn-secondary btn-sm tab-link" to={`/tenants/${tenant.id}/onboarding`}>{t('nav.onboarding')}</Link>
         <Link className="btn btn-secondary btn-sm tab-link" to={`/tenants/${tenant.id}/gateway`}>{t('nav.gateway')}</Link>
@@ -74,8 +76,8 @@ export function TenantDetailPage({ initialTab = 'details' }: { initialTab?: Tab 
       )}
       {tab === 'applications' && (
         <>
-          <TenantApplications tenant={tenant} />
-          <TenantSeats tenant={tenant} />
+          <TenantApplications tenant={tenant} onChanged={() => { setAssignmentRevision((value) => value + 1); reload(); }} />
+          <TenantSeats tenant={tenant} revision={assignmentRevision} />
         </>
       )}
       {tab === 'admins' && <TenantAdmins tenant={tenant} />}
@@ -83,7 +85,7 @@ export function TenantDetailPage({ initialTab = 'details' }: { initialTab?: Tab 
   );
 }
 
-function TenantApplications({ tenant }: { tenant: Tenant }) {
+function TenantApplications({ tenant, onChanged }: { tenant: Tenant; onChanged: () => void }) {
   const { data: apps, loading, error, reload } = useApiResource<Application[]>(() => tenantsApi.applications(tenant.id), [tenant.id]);
   const { data: allApps } = useApiResource(() => applicationsApi.list({ per_page: 100 }).then((e) => e.data), []);
   const [selected, setSelected] = useState('');
@@ -96,6 +98,7 @@ function TenantApplications({ tenant }: { tenant: Tenant }) {
       await tenantsApi.attachApplication(tenant.id, selected);
       setSelected('');
       reload();
+      onChanged();
     } catch (err) {
       setActionError(unwrapError(err).message);
     }
@@ -105,6 +108,7 @@ function TenantApplications({ tenant }: { tenant: Tenant }) {
     try {
       await tenantsApi.detachApplication(tenant.id, applicationId);
       reload();
+      onChanged();
     } catch (err) {
       setActionError(unwrapError(err).message);
     }

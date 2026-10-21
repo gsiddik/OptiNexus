@@ -20,6 +20,21 @@ export function AddonDetailPage() {
   const { data: addon, loading, error, reload } = useApiResource<Addon>(() => addonsApi.get(id!), [id]);
   const { data: limits, reload: reloadLimits } = useApiResource<AddonLimit[]>(() => addonsApi.limits(id!), [id]);
 
+  const [pendingLimit, setPendingLimit] = useState<AddonLimit | null>(null);
+  const [removingLimit, setRemovingLimit] = useState(false);
+  const [limitError, setLimitError] = useState<string | null>(null);
+  async function removeLimit() {
+    if (!pendingLimit || !addon || removingLimit) return;
+    setRemovingLimit(true);
+    setLimitError(null);
+    try {
+      await addonsApi.removeLimit(addon.id, pendingLimit.id);
+      setPendingLimit(null);
+      reloadLimits();
+    } catch (err) { setLimitError(unwrapError(err).message); }
+    finally { setRemovingLimit(false); }
+  }
+
   if (loading) return <LoadingSpinner />;
   if (error) return <ErrorAlert message={error} />;
   if (!addon) return null;
@@ -47,19 +62,20 @@ export function AddonDetailPage() {
           <h3>Details</h3>
           <dl className="definition-list">
             <dt>Addon Code</dt><dd>{addon.addon_code}</dd>
-            <dt>Product ID</dt><dd>{addon.product_id ?? '—'}</dd>
+            <dt>Product Name</dt><dd>{addon.product_name ?? '—'}</dd>
             <dt>Description</dt><dd>{addon.description ?? '—'}</dd>
           </dl>
         </div>
 
         <div className="card">
           <h3>Limits</h3>
+          <ErrorAlert message={limitError} />
           {(limits ?? []).length === 0 ? (
             <p className="muted">No limit deltas configured.</p>
           ) : (
             <table className="data-table">
               <thead>
-                <tr><th>Key</th><th>Delta</th><th>Unit</th></tr>
+                <tr><th>Key</th><th>Delta</th><th>Unit</th>{hasPermission('cgo.addon.limit.configure') && <th>Action</th>}</tr>
               </thead>
               <tbody>
                 {limits!.map((l) => (
@@ -67,6 +83,7 @@ export function AddonDetailPage() {
                     <td>{l.limit_key}</td>
                     <td>{l.limit_delta}</td>
                     <td>{l.unit ?? '—'}</td>
+                    {hasPermission('cgo.addon.limit.configure') && <td><button className="btn btn-danger btn-sm" disabled={removingLimit} aria-label={`Remove limit ${l.limit_key}`} onClick={() => { setLimitError(null); setPendingLimit(l); }}>Remove</button></td>}
                   </tr>
                 ))}
               </tbody>
@@ -77,6 +94,7 @@ export function AddonDetailPage() {
           </PermissionGuard>
         </div>
 
+        <ConfirmDialog open={!!pendingLimit} title="Remove Add-on Limit" message={<>Remove limit "{pendingLimit?.limit_key}" from this add-on and its existing subscriptions?<ErrorAlert message={limitError} /></>} confirmLabel="Remove" danger busy={removingLimit} onConfirm={removeLimit} onCancel={() => { if (!removingLimit) setPendingLimit(null); }} />
         <AddonCapabilities addonId={addon.id} productId={addon.product_id} />
       </div>
     </div>

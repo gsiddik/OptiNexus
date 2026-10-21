@@ -59,6 +59,13 @@ class SubscriptionController extends Controller
         return $this->ok(Tenant::query()->where('customer_id', $data['customer_id'])->orderBy('name')->get(['id', 'customer_id', 'name', 'tenant_code']));
     }
 
+    public function priceOptions(Request $request, \App\Services\Commercial\SubscriptionPriceSelection $selection): JsonResponse
+    {
+        $data = $request->validate(['tenant_id' => ['required', 'uuid', 'exists:tenants,id']]);
+
+        return $this->ok(\App\Http\Resources\V1\PriceResource::collection($selection->options(Tenant::findOrFail($data['tenant_id']))));
+    }
+
     public function store(StoreSubscriptionRequest $request): JsonResponse
     {
         $data = $request->validated();

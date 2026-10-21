@@ -43,7 +43,13 @@ class SubscriptionLifecycleService
             return [null, 'PRODUCT_NOT_ACTIVE'];
         }
 
-        $subscription = DB::transaction(function () use ($customer, $tenant, $plan, $options) {
+        $selected = isset($options['price_items'])
+            ? app(SubscriptionPriceSelection::class)->validate($plan, $tenant, $options['price_items']) : null;
+        if ($selected !== null && ! empty($options['addon_ids'])) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['addon_ids' => 'Use price_items for all selected add-ons.']);
+        }
+
+        $subscription = DB::transaction(function () use ($customer, $tenant, $plan, $options, $selected) {
             $subscription = Subscription::create([
                 'subscription_number' => $this->numbers->nextSubscriptionNumber(),
                 'customer_id' => $customer->id,
@@ -58,7 +64,21 @@ class SubscriptionLifecycleService
                 'metadata' => $options['metadata'] ?? null,
             ]);
 
-            $this->snapshotPlanItem($subscription, $plan);
+            if ($selected !== null) {
+                foreach ($selected as $entry) {
+                    $price = $entry['price'];
+                    SubscriptionItem::create([
+                        'subscription_id' => $subscription->id,
+                        'item_type' => $price->plan_id ? SubscriptionItem::TYPE_PLAN : SubscriptionItem::TYPE_ADDON,
+                        'plan_id' => $price->plan_id, 'addon_id' => $price->addon_id, 'price_id' => $price->id,
+                        'quantity' => $entry['quantity'], 'unit_price' => Money::normalize($price->unit_amount ?? '0.00'),
+                        'currency' => $price->currency, 'start_at' => now(),
+                        'metadata' => ['selected_pricing' => true, 'price_type' => $price->price_type],
+                    ]);
+                }
+            } else {
+                $this->snapshotPlanItem($subscription, $plan);
+            }
 
             foreach ($options['addon_ids'] ?? [] as $addonId) {
                 $addon = Addon::query()->find($addonId);
@@ -146,11 +166,32 @@ class SubscriptionLifecycleService
             return 'INVALID_SUBSCRIPTION_TRANSITION';
         }
 
-        DB::transaction(function () use ($subscription, $newPlan) {
+        $selectedItem = $subscription->items()->where('item_type', SubscriptionItem::TYPE_PLAN)->inForce()->first();
+        $selectedPrice = null;
+        if (($selectedItem?->metadata['selected_pricing'] ?? false) === true) {
+            $selectedPrice = $this->rating->resolveEffectivePrice('plan_id', $newPlan->id, $subscription->tenant,
+                priceType: $selectedItem->metadata['price_type'] ?? null);
+            if (! $selectedPrice) {
+                return 'SELECTED_PRICE_NOT_AVAILABLE';
+            }
+        }
+
+        DB::transaction(function () use ($subscription, $newPlan, $selectedItem, $selectedPrice) {
             $subscription->items()->where('item_type', SubscriptionItem::TYPE_PLAN)->whereNull('end_at')->update(['end_at' => now()]);
 
             $subscription->update(['plan_id' => $newPlan->id, 'billing_interval' => $newPlan->billing_interval, 'currency' => $newPlan->currency]);
-            $this->snapshotPlanItem($subscription, $newPlan);
+            if ($selectedPrice) {
+                SubscriptionItem::create([
+                    'subscription_id' => $subscription->id, 'item_type' => SubscriptionItem::TYPE_PLAN,
+                    'plan_id' => $newPlan->id, 'price_id' => $selectedPrice->id,
+                    'quantity' => $selectedPrice->price_type === 'FLAT' ? 1 : $selectedItem->quantity,
+                    'unit_price' => Money::normalize($selectedPrice->unit_amount ?? '0.00'),
+                    'currency' => $newPlan->currency, 'start_at' => now(),
+                    'metadata' => ['selected_pricing' => true, 'price_type' => $selectedPrice->price_type],
+                ]);
+            } else {
+                $this->snapshotPlanItem($subscription, $newPlan);
+            }
 
             $this->entitlements->generateFromSubscription($subscription->refresh());
         });

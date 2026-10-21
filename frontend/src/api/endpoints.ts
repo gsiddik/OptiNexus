@@ -282,6 +282,7 @@ export const plansApi = {
 
 // ------------------------------------------------------------------ Addons
 export const addonsApi = {
+  removeLimit: (id: string, limitId: string) => apiClient.delete(`/addons/${id}/limits/${limitId}`),
   list: (params?: ListParams) => unwrapFull<Addon[]>(apiClient.get('/addons', { params })),
   get: (id: string) => unwrap<Addon>(apiClient.get(`/addons/${id}`)),
   create: (payload: Partial<Addon>) => unwrap<Addon>(apiClient.post('/addons', payload)),
@@ -334,11 +335,12 @@ export const pricingApi = {
 
 // ------------------------------------------------------------ Subscriptions
 export const subscriptionsApi = {
+  priceOptions: (tenantId: string) => unwrap<Price[]>(apiClient.get('/subscriptions/options/prices', { params: { tenant_id: tenantId } })),
   customerOptions: () => unwrap<Pick<Customer, 'id' | 'legal_name' | 'customer_code'>[]>(apiClient.get('/subscriptions/options/customers')),
   tenantOptions: (customerId: string) => unwrap<Pick<Tenant, 'id' | 'customer_id' | 'name' | 'tenant_code'>[]>(apiClient.get('/subscriptions/options/tenants', { params: { customer_id: customerId } })),
   list: (params?: ListParams) => unwrapFull<Subscription[]>(apiClient.get('/subscriptions', { params })),
   get: (id: string) => unwrap<Subscription>(apiClient.get(`/subscriptions/${id}`)),
-  create: (payload: Partial<Subscription> & { customer_id: string; tenant_id: string; plan_id: string; idempotency_key?: string }) =>
+  create: (payload: Partial<Subscription> & { customer_id: string; tenant_id: string; plan_id: string; price_items?: { price_id: string; quantity?: number }[]; idempotency_key?: string }) =>
     unwrap<Subscription>(apiClient.post('/subscriptions', payload)),
   update: (id: string, payload: { auto_renew?: boolean; metadata?: Record<string, unknown> | null }) =>
     unwrap<Subscription>(apiClient.put(`/subscriptions/${id}`, payload)),

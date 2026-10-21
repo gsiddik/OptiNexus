@@ -91,6 +91,18 @@ class Tenant extends Model
         return $this->hasMany(UsageEvent::class);
     }
 
+    public function provisioningBlocker(): ?string
+    {
+        if (! $this->subscriptions()->whereNotIn('status', ['CANCELLED', 'TERMINATED', 'EXPIRED'])->exists()) {
+            return 'Create a subscription for this tenant before provisioning.';
+        }
+        if (! $this->applications()->wherePivot('status', 'ACTIVE')->exists()) {
+            return 'Assign an application to this tenant before provisioning.';
+        }
+
+        return null;
+    }
+
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;

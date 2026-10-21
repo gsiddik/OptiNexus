@@ -146,9 +146,13 @@ class EntitlementService
     /**
      * @return Collection<int, array{entitlement_key:string, entitlement_type:string, value:mixed, source:string}>
      */
-    public function effectiveEntitlements(Tenant $tenant, ?string $applicationCode = null): Collection
+    public function effectiveEntitlements(Tenant $tenant, ?string $applicationCode = null, ?array $limitSubscriptionIds = null): Collection
     {
         $rows = $this->effectiveRows($tenant, $applicationCode);
+        if ($limitSubscriptionIds !== null) {
+            $rows = $rows->filter(fn (Entitlement $row) => $row->entitlement_type !== Entitlement::TYPE_LIMIT ||
+                $row->subscription_id === null || in_array($row->subscription_id, $limitSubscriptionIds, true));
+        }
 
         $groups = $rows->groupBy(fn (Entitlement $e) => $e->entitlement_type.':'.$e->entitlement_key);
 

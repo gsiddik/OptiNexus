@@ -21,6 +21,7 @@ class TenantResource extends JsonResource
             'currency' => $this->currency,
             'language' => $this->language,
             'status' => $this->status,
+            'provisioning_blocker' => $this->status === Tenant::STATUS_DRAFT ? $this->resource->provisioningBlocker() : null,
             'metadata' => $this->metadata,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

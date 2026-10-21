@@ -1,0 +1,76 @@
+name: Nexus regression
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexus-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: cgo_test
+          POSTGRES_USER: cgo
+          POSTGRES_PASSWORD: cgo_secret_dev
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U cgo -d cgo_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_pgsql, pgsql, bcmath, intl, pcntl
+          tools: composer:v2
+          coverage: none
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - name: Prepare application
+        run: |
+          cp .env.example .env
+          php artisan key:generate --no-interaction
+          php artisan passport:keys --force --no-interaction
+      - name: Backend regression
+        run: vendor/bin/phpunit --no-progress --log-junit "$RUNNER_TEMP/nexus-tests.xml"
+      - name: Format changed PHP files
+        if: always()
+        run: |
+          vendor/bin/pint --format agent app/Models/ServiceAccount.php app/Services/AuthorizationService.php tests/Feature/Governance/OnboardingReportTest.php tests/Feature/CapabilityRoleAccessTest.php
+          git diff --exit-code -- app/Models/ServiceAccount.php app/Services/AuthorizationService.php tests/Feature/Governance/OnboardingReportTest.php tests/Feature/CapabilityRoleAccessTest.php
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nexus-backend-results
+          path: ${{ runner.temp }}/nexus-tests.xml
+
+  frontend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npm run lint

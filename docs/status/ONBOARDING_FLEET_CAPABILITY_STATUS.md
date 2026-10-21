@@ -15,3 +15,11 @@
 - PHP/Composer are absent from this runtime. Runtime setup is in progress; do not report backend tests as passed until executed.
 - Add regression coverage for used service accounts and capability/core permission resolution, implement fixes, then run affected frontend/backend checks.
 - Publish subsequent checkpoints and open a PR after validation. Windows browser acceptance remains external to this environment.
+
+## Implementation checkpoint
+
+- Added the missing service-account timestamp cast and an HTTP regression using a persisted non-null usage timestamp.
+- Automatic role resolution now includes application-core permissions, expands purchased parent capabilities, and observes effective manual overrides. Disabled ancestors, application scope and tenant status remain boundaries. Explicit customized roles are unchanged.
+- Local frontend onboarding tests: 46/46 passed.
+- Local PHP prerequisite download/install is blocked/unavailable; no backend PASS is claimed. Added PR regression CI with PHP 8.4/PostgreSQL 16 plus frontend tests/build/lint so backend behavior can be executed before review.
+- Git CLI push lacks credentials; publishing checkpoints through the authenticated GitHub connector.

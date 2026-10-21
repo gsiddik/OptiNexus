@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Application;
+use App\Models\Capability;
 use App\Models\Customer;
 use App\Models\Entitlement;
 use App\Models\Permission;
@@ -105,19 +106,61 @@ class AuthorizationService
         return $permissions;
     }
 
-    /** Permissions belonging to capability entitlements currently purchased by this tenant. */
+    /** Permissions of purchased capabilities and the core of their enabled application. */
     public function capabilityPermissions(Role $role, string $tenantId): Collection
     {
         $tenant = Tenant::query()->find($tenantId);
-        if (! $tenant) {
+        if (! $tenant || ! $this->tenantIsUsable($tenant)) {
             return collect();
         }
-        $capabilities = app(EntitlementService::class)->effectiveRows($tenant)
-            ->where('entitlement_type', Entitlement::TYPE_CAPABILITY)
-            ->filter(fn ($row) => $row->decodedValue() === true)->pluck('capability_id')->filter();
 
-        return Permission::query()->with(['application', 'capability.parent.parent.parent.parent.parent'])->where('status', Permission::STATUS_ACTIVE)->whereIn('capability_id', $capabilities)
-            ->when($role->application_id, fn ($query) => $query->where('application_id', $role->application_id))->get();
+        $entitlements = app(EntitlementService::class);
+        $applicationIds = $entitlements->effectiveRows($tenant)->pluck('application_id')->filter()->unique();
+        $applications = Application::query()->whereIn('id', $applicationIds)
+            ->where('application_code', '!=', 'cgo')
+            ->when($role->application_id, fn ($query) => $query->where('id', $role->application_id))->get();
+        $permissions = collect();
+
+        foreach ($applications as $application) {
+            if (! $this->applicationIsUsable($application)) {
+                continue;
+            }
+            $effective = $entitlements->effectiveEntitlements($tenant, $application->application_code);
+            $applicationGrant = $effective->first(fn (array $row): bool => $row['entitlement_type'] === Entitlement::TYPE_APPLICATION
+                && $row['entitlement_key'] === $application->application_code);
+            $capabilityGrants = $effective->where('entitlement_type', Entitlement::TYPE_CAPABILITY)->keyBy('entitlement_key');
+            $enabled = $capabilityGrants->whereStrict('value', true)->keys()->all();
+            $denied = $capabilityGrants->whereStrict('value', false)->keys()->all();
+            if (($applicationGrant && $applicationGrant['value'] !== true) || (! $applicationGrant && $enabled === [])) {
+                continue;
+            }
+
+            $capabilities = Capability::query()->where('application_id', $application->id)->get()->keyBy('id');
+            $grantedIds = $capabilities->filter(function (Capability $capability) use ($capabilities, $enabled, $denied): bool {
+                $granted = false;
+                $visited = [];
+                do {
+                    if (isset($visited[$capability->id]) || $capability->status !== Capability::STATUS_ACTIVE || in_array($capability->code, $denied, true)) {
+                        return false;
+                    }
+                    $visited[$capability->id] = true;
+                    $granted = $granted || in_array($capability->code, $enabled, true);
+                    if ($capability->parent_id === null) {
+                        return $granted;
+                    }
+                    $capability = $capabilities->get($capability->parent_id);
+                } while ($capability);
+
+                return false;
+            })->keys();
+
+            $permissions = $permissions->merge(Permission::query()
+                ->with(['application', 'capability.parent.parent.parent.parent.parent'])
+                ->where('application_id', $application->id)->where('status', Permission::STATUS_ACTIVE)
+                ->where(fn ($query) => $query->whereNull('capability_id')->orWhereIn('capability_id', $grantedIds))->get());
+        }
+
+        return $permissions;
     }
 
     public function userHasPermission(User $user, string $permissionKey, ?string $tenantId = null, ?string $applicationId = null): bool

@@ -181,4 +181,53 @@ class CatalogEntitlementSyncTest extends TestCase
         $this->deleteJson("/api/v1/plans/{$plan->id}/limits/{$limit->id}")->assertForbidden();
         $this->assertDatabaseHas('plan_limits', ['id' => $limit->id]);
     }
+
+    public function test_catalog_edits_and_cli_refresh_preserve_individually_suspended_entitlements(): void
+    {
+        [$tenant, $fleet, $product, $plan, $subscription] = $this->subscribedFleet();
+        $module = $this->addModule($fleet, $product, 'inventory');
+        $this->postJson("/api/v1/plans/{$plan->id}/capabilities/{$module->id}")->assertCreated();
+        $held = $subscription->entitlements()->where('entitlement_key', $module->code)->where('status', 'ACTIVE')->firstOrFail();
+        $this->actingAsCommercialRole('SUBSCRIPTION_ADMIN');
+        $this->postJson("/api/v1/entitlements/{$held->id}/suspend")->assertOk();
+        $this->actingAsCommercialRole('PRODUCT_MANAGER');
+        $this->postJson("/api/v1/plans/{$plan->id}/limits", ['limit_key' => 'vehicles', 'limit_value' => 10, 'is_unlimited' => false])->assertOk();
+        $this->assertFalse(app(EntitlementService::class)->check($tenant, 'optifleet', $module->code)['allowed']);
+        $this->assertSame('REVOKED', $held->refresh()->status);
+        $this->assertDatabaseHas('entitlements', ['subscription_id' => $subscription->id, 'entitlement_key' => $module->code, 'status' => 'SUSPENDED']);
+        $this->artisan('ecosystem:refresh-entitlements', ['tenant' => $tenant->id, '--apply' => true])->assertSuccessful();
+        $this->assertFalse(app(EntitlementService::class)->check($tenant, 'optifleet', $module->code)['allowed']);
+        $this->assertEquals(10, app(EntitlementService::class)->check($tenant, 'optifleet', 'vehicles')['value']);
+    }
+
+    public function test_addon_edits_and_plan_refresh_only_grant_addon_items_inside_their_validity_window(): void
+    {
+        [$tenant, $fleet, $product, $plan, $subscription] = $this->subscribedFleet();
+        $addon = $this->makeAddon($product);
+        $module = $this->addModule($fleet, $product, 'partner');
+        $subscription->items()->create(['item_type' => 'ADDON', 'addon_id' => $addon->id, 'currency' => 'IDR', 'start_at' => now(), 'end_at' => now()->addDay()]);
+        $excluded = [];
+        foreach (['ended', 'future'] as $window) {
+            $other = $this->makeTenant();
+            $copy = $subscription->replicate();
+            $copy->fill(['tenant_id' => $other->id, 'customer_id' => $other->customer_id, 'subscription_number' => 'SUB-'.$window]);
+            $copy->save();
+            app(EntitlementService::class)->generateFromSubscription($copy);
+            $copy->items()->create(['item_type' => 'ADDON', 'addon_id' => $addon->id, 'currency' => 'IDR',
+                'start_at' => $window === 'ended' ? now()->subDay() : now()->addSecond(), 'end_at' => $window === 'ended' ? now() : null]);
+            $excluded[] = [$other, $copy, $copy->entitlements()->count()];
+        }
+        $this->postJson("/api/v1/addons/{$addon->id}/capabilities/{$module->id}")->assertCreated();
+        $this->assertTrue(app(EntitlementService::class)->check($tenant, 'optifleet', $module->code)['allowed']);
+        foreach ($excluded as [$other, $copy, $before]) {
+            $this->assertSame($before, $copy->entitlements()->count());
+            $this->assertFalse(app(EntitlementService::class)->check($other, 'optifleet', $module->code)['allowed']);
+        }
+        $this->postJson("/api/v1/plans/{$plan->id}/limits", ['limit_key' => 'vehicles', 'limit_value' => 10, 'is_unlimited' => false])->assertOk();
+        foreach ($excluded as [$other]) {
+            $this->assertFalse(app(EntitlementService::class)->check($other, 'optifleet', $module->code)['allowed']);
+        }
+        $this->assertTrue(app(EntitlementService::class)->check($tenant, 'optifleet', $module->code)['allowed']);
+    }
+
 }

@@ -31,7 +31,7 @@ class RefreshSubscriptionEntitlements extends Command
         }
         $query = Subscription::query()->where('tenant_id', $tenant->id)
             ->whereIn('status', [...Subscription::ACTIVE_LIKE_STATUSES, Subscription::STATUS_SUSPENDED]);
-        $subscriptions = (clone $query)->with(['plan.capabilities', 'items.addon.capabilities'])->get();
+        $subscriptions = (clone $query)->with(['plan.capabilities', 'items' => fn ($query) => $query->inForce()->with('addon.capabilities')])->get();
         foreach ($subscriptions as $subscription) {
             $this->line($subscription->subscription_number.' | '.$subscription->status.' | '.$subscription->plan?->name);
             $codes = $subscription->plan?->capabilities->pluck('code')->all() ?? [];

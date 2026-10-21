@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -29,6 +30,14 @@ class SubscriptionItem extends Model
             'end_at' => 'datetime',
             'metadata' => 'array',
         ];
+    }
+
+    public function scopeInForce(Builder $query): Builder
+    {
+        $at = now();
+
+        return $query->where('start_at', '<=', $at)
+            ->where(fn ($query) => $query->whereNull('end_at')->orWhere('end_at', '>', $at));
     }
 
     public function subscription(): BelongsTo

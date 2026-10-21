@@ -49,7 +49,7 @@ class EntitlementService
             $this->grant($subscription, Entitlement::TYPE_LIMIT, $limit->limit_key, $value, Entitlement::SOURCE_PLAN, $plan->id, null, null);
         }
 
-        foreach ($subscription->items()->where('item_type', 'ADDON')->with('addon.capabilities.application', 'addon.limits')->get() as $item) {
+        foreach ($subscription->items()->where('item_type', 'ADDON')->inForce()->with('addon.capabilities.application', 'addon.limits')->get() as $item) {
             $addon = $item->addon;
             if (! $addon) {
                 continue;

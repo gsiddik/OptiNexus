@@ -73,3 +73,10 @@ Use Fleet's exported manifest as the authority for permission-to-capability owne
 - Re-fetched both baselines: Nexus main remains `78e67252760ad9363fcec253e863886dd1ca8d45`; Fleet main remains `e9b2c85f7e7e6dff193d0781753e94b06b6af0b6`. Fleet catalog/router/sidebar files match the inspected checkout; no changes were made in Fleet.
 - Reviewed transactional catalog edits, subscription locking, source-scoped history revocation, suspension preservation, CLI tenant selection, permissions on deletion and accessible permission help. Added explicit fixture types during cleanup.
 - All requested changes are in PR #15. Awaiting final-head CI before marking the PR ready; merge remains unauthorized.
+
+## Owner-authorized merge review (2026-10-21)
+
+- Owner authorized merge only after successful review. Fresh remote head was `54958be24f4a15260f157a85a72e35c28581367a`; CI 39532832124 passed and there were no unresolved review threads.
+- Review found two access regressions to resolve before merge: rebuilding a live subscription could discard an individual entitlement suspension; generation also consumed ended/future add-on items.
+- Preserve non-expired individual suspensions by commercial source/key when replacing history rows. Apply a shared `SubscriptionItem.inForce()` time-window scope to generation, affected-subscriber selection and CLI preview.
+- Added HTTP/CLI regression coverage for an operator-suspended capability, plus start/end boundary cases for add-ons across separate tenants. Await new-head PostgreSQL CI before merging.

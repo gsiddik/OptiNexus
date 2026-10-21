@@ -23,3 +23,12 @@
 - Local frontend onboarding tests: 46/46 passed.
 - Local PHP prerequisite download/install is blocked/unavailable; no backend PASS is claimed. Added PR regression CI with PHP 8.4/PostgreSQL 16 plus frontend tests/build/lint so backend behavior can be executed before review.
 - Git CLI push lacks credentials; publishing checkpoints through the authenticated GitHub connector.
+
+## Validation and handoff checkpoint
+
+- Published draft PR: https://github.com/gsiddik/OptiNexus/pull/14 (base `main`). Do not merge without owner instruction.
+- GitHub regression run 39519456748: backend passed **557 tests / 4167 assertions**, PHP 8.4.26 + PostgreSQL 16. Frontend passed **224 tests**, production build and lint.
+- The same run's Pint step found only one unused test import (`Role`); removed it as the final cleanup. The PR checks verify the cleaned head again.
+- No schema migration or Fleet code change is required. After an approved deployment, renew/revalidate the Fleet session and verify the affected role against the tenant's real Product/Plan/Add-on capability entitlements. An explicit custom role retains its own grants; subscription limits and local Fleet restrictions remain enforced.
+- Complete application access does not confer governance/Superadmin rights or automatically change `is_tenant_admin`. Member delegation continues to require the existing tenant-admin membership authorization.
+- Windows/Podman browser acceptance and the exact live tenant catalog/subscription state have not been inspected in this environment.

@@ -67,3 +67,9 @@ Use Fleet's exported manifest as the authority for permission-to-capability owne
 - Draft run 39531608484: backend passed **561 tests / 4218 assertions**, PHP 8.4.26 + PostgreSQL 16; changed-file Pint also passed.
 - Added final regression cases for add-on capability changes, expired-subscription exclusion, CLI tenant isolation, actual commercial-context API output and unauthorized limit deletion. These additions await the next CI run.
 - Verified Fleet routes and corrected Maintenance History's manifest ownership to VEHICLE (the current Fleet API places the history route inside `module:VEHICLE`, even though its sidebar group is History). No menu-label inference is used to grant access.
+
+## Review checkpoint
+
+- Re-fetched both baselines: Nexus main remains `78e67252760ad9363fcec253e863886dd1ca8d45`; Fleet main remains `e9b2c85f7e7e6dff193d0781753e94b06b6af0b6`. Fleet catalog/router/sidebar files match the inspected checkout; no changes were made in Fleet.
+- Reviewed transactional catalog edits, subscription locking, source-scoped history revocation, suspension preservation, CLI tenant selection, permissions on deletion and accessible permission help. Added explicit fixture types during cleanup.
+- All requested changes are in PR #15. Awaiting final-head CI before marking the PR ready; merge remains unauthorized.

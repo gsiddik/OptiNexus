@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Commercial;
 
+use App\Models\Application;
 use App\Models\Capability;
 use App\Models\Entitlement;
+use App\Models\Product;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\AuthorizationService;
@@ -39,7 +41,7 @@ class CatalogEntitlementSyncTest extends TestCase
         return [$tenant, $fleet, $product, $plan, $subscription];
     }
 
-    private function addModule($fleet, $product, string $module): Capability
+    private function addModule(Application $fleet, Product $product, string $module): Capability
     {
         $capability = Capability::create([
             'application_id' => $fleet->id, 'code' => 'optifleet.'.$module,

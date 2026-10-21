@@ -162,6 +162,26 @@ class AddonController extends Controller
         });
     }
 
+    public function removeLimit(Request $request, Addon $addon, AddonLimit $limit): JsonResponse
+    {
+        return DB::transaction(function () use ($request, $addon, $limit): JsonResponse {
+            Addon::query()->whereKey($addon->id)->lockForUpdate()->firstOrFail();
+
+            if ($limit->addon_id !== $addon->id) {
+                return $this->fail('RESOURCE_NOT_FOUND', 'This limit does not belong to the given add-on.', 404);
+            }
+
+            $old = $limit->toArray();
+            $limit->delete();
+
+            $this->entitlements->forAddon($addon, $request);
+
+            $this->audit->record('addon.limit_removed', $request, resourceType: 'Addon', resourceId: $addon->id, oldValue: $old);
+
+            return $this->ok(null);
+        });
+    }
+
     private function transitionTo(Request $request, Addon $addon, string $to, array $allowedFrom): JsonResponse
     {
         if ($response = $this->guardTransition($addon, $to, $allowedFrom)) {

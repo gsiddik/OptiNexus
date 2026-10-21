@@ -10,6 +10,7 @@ export interface LifecycleAction {
   action: () => Promise<unknown>;
   permission?: string;
   danger?: boolean;
+  disabledReason?: string | null;
 }
 
 export function LifecycleActions({
@@ -50,7 +51,7 @@ export function LifecycleActions({
     <div className="lifecycle-actions">
       {error && <div className="alert alert-error" role="alert">{error}</div>}
       {visible.map((a) => (
-        <button key={a.key} className={a.danger ? 'btn btn-danger' : 'btn btn-secondary'} disabled={busy} onClick={() => setPending(a)}>
+        <button key={a.key} className={a.danger ? 'btn btn-danger' : 'btn btn-secondary'} disabled={busy || !!a.disabledReason} title={a.disabledReason ?? undefined} onClick={() => setPending(a)}>
           {a.label}
         </button>
       ))}

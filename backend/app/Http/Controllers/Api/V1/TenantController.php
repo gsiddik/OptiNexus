@@ -83,7 +83,17 @@ class TenantController extends Controller
 
     public function provision(Request $request, Tenant $tenant): JsonResponse
     {
-        return $this->transitionTo($request, $tenant, Tenant::STATUS_PROVISIONING, [Tenant::STATUS_DRAFT]);
+        return DB::transaction(function () use ($request, $tenant): JsonResponse {
+            $tenant = Tenant::query()->whereKey($tenant->id)->lockForUpdate()->firstOrFail();
+            if ($response = $this->guardTransition($tenant, Tenant::STATUS_PROVISIONING, [Tenant::STATUS_DRAFT])) {
+                return $response;
+            }
+            if ($reason = $tenant->provisioningBlocker()) {
+                return $this->fail('TENANT_PROVISION_PREREQUISITES', $reason, 422);
+            }
+
+            return $this->transitionTo($request, $tenant, Tenant::STATUS_PROVISIONING, [Tenant::STATUS_DRAFT]);
+        });
     }
 
     public function activate(Request $request, Tenant $tenant): JsonResponse

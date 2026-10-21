@@ -20,4 +20,5 @@ Route::prefix('addons')->name('addons.')->middleware(['auth:sanctum', 'ecosystem
 
     Route::get('/{addon}/limits', [AddonController::class, 'limits'])->middleware('permission:cgo.addon.view')->name('limits.index');
     Route::post('/{addon}/limits', [AddonController::class, 'configureLimit'])->middleware('permission:cgo.addon.limit.configure')->name('limits.configure');
+    Route::delete('/{addon}/limits/{limit}', [AddonController::class, 'removeLimit'])->middleware('permission:cgo.addon.limit.configure')->name('limits.remove');
 });

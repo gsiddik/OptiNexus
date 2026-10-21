@@ -2,8 +2,14 @@
 
 namespace Tests\Feature\Commercial;
 
+use App\Models\Capability;
 use App\Models\Entitlement;
+use App\Models\User;
+use App\Services\Commercial\EntitlementService;
+use App\Services\Commercial\SubscriptionLifecycleService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
+use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\CreatesCommercialFixtures;
 use Tests\Concerns\CreatesGovernanceFixtures;
 use Tests\TestCase;
@@ -16,14 +22,14 @@ class EntitlementTest extends TestCase
     {
         $this->actingAsCommercialRole('SUBSCRIPTION_ADMIN');
         $application = $this->makeApplication(['application_code' => 'optifleet']);
-        $vehicleCapability = \App\Models\Capability::create(['application_id' => $application->id, 'type' => \App\Models\Capability::TYPE_FEATURE, 'code' => 'vehicle_feature', 'name' => 'Vehicle Feature', 'status' => 'ACTIVE']);
+        $vehicleCapability = Capability::create(['application_id' => $application->id, 'type' => Capability::TYPE_FEATURE, 'code' => 'vehicle_feature', 'name' => 'Vehicle Feature', 'status' => 'ACTIVE']);
         $customer = $this->makeCustomer();
         $tenant = $this->makeTenant($customer);
-        $this->grantApplicationAccess(\App\Models\User::factory()->create(), $tenant, $application);
+        $this->grantApplicationAccess(User::factory()->create(), $tenant, $application);
         $product = $this->makeProduct();
-        $product->applications()->attach($application->id, ['id' => (string) \Illuminate\Support\Str::uuid()]);
+        $product->applications()->attach($application->id, ['id' => (string) Str::uuid()]);
         $plan = $this->makePlan($product);
-        $plan->capabilities()->attach($vehicleCapability->id, ['id' => (string) \Illuminate\Support\Str::uuid()]);
+        $plan->capabilities()->attach($vehicleCapability->id, ['id' => (string) Str::uuid()]);
         $plan->limits()->create(['limit_key' => 'vehicle_limit', 'limit_value' => '100.0000', 'is_unlimited' => false, 'unit' => 'vehicle']);
         $this->makeFlatPrice($plan);
 
@@ -46,7 +52,7 @@ class EntitlementTest extends TestCase
         // subscription upgrade-with-addon flow would produce.
         $subscription = $tenant->subscriptions()->first();
         $subscription->items()->create(['item_type' => 'ADDON', 'addon_id' => $addon->id, 'quantity' => 1, 'currency' => 'IDR', 'start_at' => now()]);
-        app(\App\Services\Commercial\EntitlementService::class)->generateFromSubscription($subscription->refresh());
+        app(EntitlementService::class)->generateFromSubscription($subscription->refresh());
 
         $response = $this->getJson("/api/v1/tenants/{$tenant->id}/effective-entitlements")->assertStatus(200);
 
@@ -122,14 +128,30 @@ class EntitlementTest extends TestCase
     public function test_human_bearer_token_cannot_call_the_machine_only_check_endpoint(): void
     {
         [$tenant] = $this->activeSubscribedTenant();
-        $user = \App\Models\User::factory()->create(['status' => 'ACTIVE']);
-        \Laravel\Sanctum\Sanctum::actingAs($user);
+        $user = User::factory()->create(['status' => 'ACTIVE']);
+        Sanctum::actingAs($user);
 
         $this->postJson('/api/v1/entitlements/check', [
             'tenant_id' => $tenant->id,
             'application_code' => 'optifleet',
             'entitlement_key' => 'vehicle_limit',
         ])->assertStatus(401);
+    }
+
+    public function test_resource_limits_are_scoped_to_the_calling_application(): void
+    {
+        [$tenant, $application, $product, $plan] = $this->activeSubscribedTenant();
+        $entry = $this->makeApplication(['application_code' => 'optientry']);
+        $entryProduct = $this->makeProduct();
+        $entryProduct->applications()->attach($entry->id, ['id' => (string) Str::uuid()]);
+        $entryPlan = $this->makePlan($entryProduct);
+        $entryPlan->limits()->create(['limit_key' => 'vehicle_limit', 'limit_value' => 999, 'is_unlimited' => false]);
+        [$entrySubscription] = app(SubscriptionLifecycleService::class)->create($tenant->customer, $tenant, $entryPlan);
+        app(SubscriptionLifecycleService::class)->activate($entrySubscription);
+        $token = $this->issueServiceAccountToken($application->id, ['commercial.read']);
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")->getJson("/api/v1/tenants/{$tenant->id}/commercial-context")->assertOk();
+        $this->assertEquals(100, $response->json('data.resource_limits.vehicle_limit'));
     }
 
     public function test_commercial_context_requires_the_commercial_read_scope(): void

@@ -25,13 +25,13 @@ const TONE: Record<SeatState, 'success' | 'warning' | 'danger' | 'info' | 'neutr
  * Read-only seat picture of a tenant, exactly as OptiNexus counts it (used, reserved, limit, available). Over-limit is shown beside
  * the numbers, never as a negative availability. The operator changes the limit through the entitlement, not here.
  */
-export function TenantSeats({ tenant }: { tenant: Tenant }) {
+export function TenantSeats({ tenant, revision = 0 }: { tenant: Tenant; revision?: number }) {
   const { t } = useI18n();
-  const { data, loading, error, reload } = useApiResource<SeatStatus[]>(() => tenantsApi.seats(tenant.id), [tenant.id]);
+  const { data, loading, error, reload } = useApiResource<SeatStatus[]>(() => tenantsApi.seats(tenant.id), [tenant.id, revision]);
 
   const { hasPermission } = useAuth();
   const [editing, setEditing] = useState(false);
-  const apps = useApiResource(() => tenantsApi.applications(tenant.id), [tenant.id]);
+  const apps = useApiResource(() => tenantsApi.applications(tenant.id), [tenant.id, revision]);
   const number = (value: number | null) => (value === null ? '—' : String(value));
 
   const columns: Column<SeatStatus>[] = [

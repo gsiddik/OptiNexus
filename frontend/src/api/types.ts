@@ -28,6 +28,7 @@ export interface Customer {
 }
 
 export interface Tenant {
+  provisioning_blocker?: string | null;
   id: string;
   tenant_code: string;
   customer_id: string;
@@ -275,6 +276,8 @@ export interface Price {
 }
 
 export interface SubscriptionItem {
+  price_type?: PriceType | null;
+  total_price?: string | null;
   plan_name?: string | null;
   addon_name?: string | null;
 

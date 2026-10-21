@@ -10,6 +10,7 @@ use App\Http\Requests\V1\StoreEntitlementOverrideRequest;
 use App\Http\Resources\V1\EntitlementResource;
 use App\Http\Resources\V1\SubscriptionResource;
 use App\Models\Entitlement;
+use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Services\AuditService;
 use App\Services\Commercial\EntitlementService;
@@ -65,10 +66,19 @@ class EntitlementController extends Controller
         ]);
     }
 
-    public function commercialContext(Tenant $tenant): JsonResponse
+    public function commercialContext(Request $request, Tenant $tenant): JsonResponse
     {
-        $subscriptions = $tenant->subscriptions()->with(['plan', 'product'])->whereIn('status', \App\Models\Subscription::ACTIVE_LIKE_STATUSES)->get();
+        $subscriptions = $tenant->subscriptions()->with(['plan', 'product'])->whereIn('status', Subscription::ACTIVE_LIKE_STATUSES)->get();
         $effective = $this->entitlements->effectiveEntitlements($tenant);
+        $account = $request->attributes->get('service_account');
+        if ($account->tenant_id !== null && $account->tenant_id !== $tenant->id) {
+            return $this->fail('TENANT_SCOPE_MISMATCH', 'The service account belongs to another tenant.', 403);
+        }
+        $application = $account->application;
+        $limitSubscriptionIds = $application ? $tenant->subscriptions()
+            ->whereHas('product.applications', fn ($query) => $query->where('applications.id', $application->id))->pluck('id')->all() : [];
+        $resourceLimits = $application ? $this->entitlements->effectiveEntitlements($tenant, $application->application_code, $limitSubscriptionIds)
+            ->where('entitlement_type', Entitlement::TYPE_LIMIT)->pluck('value', 'entitlement_key') : collect();
 
         return $this->ok([
             'tenant_id' => $tenant->id,
@@ -76,6 +86,7 @@ class EntitlementController extends Controller
             'subscriptions' => SubscriptionResource::collection($subscriptions),
             'applications_enabled' => $effective->where('entitlement_type', Entitlement::TYPE_APPLICATION)->where('value', true)->pluck('entitlement_key')->values(),
             'effective_entitlements' => $effective->values(),
+            'resource_limits' => (object) $resourceLimits->all(),
         ]);
     }
 

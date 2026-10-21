@@ -235,7 +235,7 @@ function AddLimitForm({ planId, onAdded }: { planId: string; onAdded: () => void
   return (
     <div className="form form-inline" style={{ marginTop: '1rem' }}>
       <ErrorAlert message={error} />
-      <HelpLabel>Key<HelpInput help="Enter the limit key used by the consuming application, for example seats or vehicle_limit." value={form.limit_key} onChange={(e) => setForm({ ...form, limit_key: e.target.value })} /></HelpLabel>
+      <HelpLabel>Key<HelpInput help="Use the resource key required by the consuming application. Fleet subscription resources: vehicle, user, branch, workshop, warehouse." value={form.limit_key} onChange={(e) => setForm({ ...form, limit_key: e.target.value })} /></HelpLabel>
       <HelpLabel>Value<HelpInput help="Enter a non-negative limit, or enable Unlimited to remove the ceiling." value={form.limit_value} disabled={form.is_unlimited} onChange={(e) => setForm({ ...form, limit_value: e.target.value })} /></HelpLabel>
       <HelpLabel>
         <HelpInput help="Enable unlimited usage instead of a numeric ceiling for this limit." type="checkbox" checked={form.is_unlimited} onChange={(e) => setForm({ ...form, is_unlimited: e.target.checked })} /> Unlimited

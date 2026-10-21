@@ -51,10 +51,34 @@ export function SecretDialog({ title, clientId, secret, onClose, labels, note }:
     closeRef.current?.focus();
   }, []);
 
+  function legacyCopy(): boolean {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const input = document.createElement('textarea');
+    input.value = secret;
+    input.setAttribute('readonly', '');
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    // Keep it inside the dialog for browsers that restrict focus to a modal.
+    secretRef.current?.parentElement?.appendChild(input);
+    try {
+      input.focus();
+      input.select();
+      input.setSelectionRange(0, secret.length);
+      return typeof document.execCommand === 'function' && document.execCommand('copy');
+    } catch { return false; }
+    finally { input.remove(); previousFocus?.focus(); }
+  }
+
   async function copy() {
     setCopyFailed(false);
     try {
-      await navigator.clipboard.writeText(secret);
+      // HTTP localtest.me may not expose the secure-context Clipboard API.
+      if (!navigator.clipboard?.writeText) {
+        if (!legacyCopy()) throw new Error('Clipboard unavailable');
+      } else {
+        try { await navigator.clipboard.writeText(secret); }
+        catch { if (!legacyCopy()) throw new Error('Clipboard denied'); }
+      }
       setCopied(true);
       setConfirmClose(false);
     } catch {

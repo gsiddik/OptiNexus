@@ -8,6 +8,8 @@ import { SecretDialog } from './SecretDialog';
 afterEach(() => {
   cleanup();
   setLocale('en');
+  vi.restoreAllMocks();
+  Reflect.deleteProperty(document, 'execCommand');
 });
 
 describe('SecretDialog', () => {
@@ -24,7 +26,40 @@ describe('SecretDialog', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('is in Indonesian', () => {
+  it('copies through the browser fallback when the secure Clipboard API is rejected', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('denied'));
+    const exec = vi.fn(() => true);
+    Object.defineProperty(document, 'execCommand', { configurable: true, value: exec });
+    const onClose = vi.fn();
+    render(<SecretDialog title="Temporary password" clientId="user" secret="private-password" onClose={onClose} />);
+    await user.click(screen.getByRole('button', { name: 'Copy secret' }));
+    expect(exec).toHaveBeenCalledWith('copy');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(document.querySelector('textarea')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('copies on HTTP origins where navigator.clipboard is unavailable', async () => {
+    const user = userEvent.setup();
+    const descriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
+    const exec = vi.fn(() => (document.activeElement as HTMLTextAreaElement).value === 'http-password');
+    Object.defineProperty(document, 'execCommand', { configurable: true, value: exec });
+    try {
+      render(<SecretDialog title="Temporary password" clientId="user" secret="http-password" onClose={() => undefined} />);
+      await user.click(screen.getByRole('button', { name: 'Copy secret' }));
+      expect(exec).toHaveBeenCalledWith('copy');
+      expect(screen.getByRole('button', { name: 'Copied' })).toBeTruthy();
+      expect(document.querySelector('textarea')).toBeNull();
+    } finally {
+      if (descriptor) Object.defineProperty(navigator, 'clipboard', descriptor);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
+  it('is in Indonesian' , () => {
     setLocale('id');
     render(<SecretDialog title="Client secret untuk X" clientId="onx_x" secret="abc123" onClose={() => undefined} />);
     expect(screen.getByRole('button', { name: 'Salin secret' })).toBeTruthy();

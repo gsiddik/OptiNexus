@@ -19,8 +19,26 @@ export function PlanDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
   const { data: plan, loading, error, reload } = useApiResource<Plan>(() => plansApi.get(id!), [id]);
-  const { data: limits, reload: reloadLimits } = useApiResource<PlanLimit[]>(() => plansApi.limits(id!), [id]);
+  const { data: limits, loading: limitsLoading, error: limitsError, reload: reloadLimits } = useApiResource<PlanLimit[]>(() => plansApi.limits(id!), [id]);
+  const [pendingLimit, setPendingLimit] = useState<PlanLimit | null>(null);
+  const [removingLimit, setRemovingLimit] = useState(false);
+  const [limitError, setLimitError] = useState<string | null>(null);
   const [showClone, setShowClone] = useState(false);
+
+  async function removeLimit() {
+    if (!pendingLimit || !plan || removingLimit) return;
+    setRemovingLimit(true);
+    setLimitError(null);
+    try {
+      await plansApi.removeLimit(plan.id, pendingLimit.id);
+      setPendingLimit(null);
+      reloadLimits();
+    } catch (err) {
+      setLimitError(unwrapError(err).message);
+    } finally {
+      setRemovingLimit(false);
+    }
+  }
 
   if (loading) return <LoadingSpinner />;
   if (error) return <ErrorAlert message={error} />;
@@ -54,7 +72,7 @@ export function PlanDetailPage() {
           <h3>Details</h3>
           <dl className="definition-list">
             <dt>Plan Code</dt><dd>{plan.plan_code}</dd>
-            <dt>Product ID</dt><dd>{plan.product_id}</dd>
+            <dt>Product Name</dt><dd>{plan.product_name ?? '—'}</dd>
             <dt>Description</dt><dd>{plan.description ?? '—'}</dd>
             <dt>Billing Interval</dt><dd>{plan.billing_interval}</dd>
             <dt>Currency</dt><dd>{plan.currency}</dd>
@@ -65,12 +83,14 @@ export function PlanDetailPage() {
 
         <div className="card">
           <h3>Limits</h3>
-          {(limits ?? []).length === 0 ? (
+          <p className="muted">Changes apply to existing subscriptions using this plan.</p>
+          <ErrorAlert message={limitsError ?? limitError} />
+          {limitsLoading ? <LoadingSpinner /> : (limits ?? []).length === 0 ? (
             <p className="muted">No limits configured.</p>
           ) : (
             <table className="data-table">
               <thead>
-                <tr><th>Key</th><th>Value</th><th>Unlimited</th><th>Unit</th></tr>
+                <tr><th>Key</th><th>Value</th><th>Unlimited</th><th>Unit</th>{hasPermission('cgo.plan.limit.configure') && <th>Action</th>}</tr>
               </thead>
               <tbody>
                 {limits!.map((l) => (
@@ -79,6 +99,10 @@ export function PlanDetailPage() {
                     <td>{l.limit_value ?? '—'}</td>
                     <td>{l.is_unlimited ? 'Yes' : 'No'}</td>
                     <td>{l.unit ?? '—'}</td>
+                    {hasPermission('cgo.plan.limit.configure') && <td>
+                      <button className="btn btn-danger btn-sm" aria-label={`Remove limit ${l.limit_key}`} disabled={removingLimit}
+                        onClick={() => { setLimitError(null); setPendingLimit(l); }}>Remove</button>
+                    </td>}
                   </tr>
                 ))}
               </tbody>
@@ -91,6 +115,17 @@ export function PlanDetailPage() {
 
         <PlanCapabilities planId={plan.id} productId={plan.product_id} />
       </div>
+
+      <ConfirmDialog
+        open={!!pendingLimit}
+        title="Remove Plan Limit"
+        message={<>Remove limit "{pendingLimit?.limit_key}" from this plan and its existing subscriptions?<ErrorAlert message={limitError} /></>}
+        confirmLabel="Remove"
+        danger
+        busy={removingLimit}
+        onConfirm={removeLimit}
+        onCancel={() => { if (!removingLimit) setPendingLimit(null); }}
+      />
 
       <Modal open={showClone} title="Clone Plan" onClose={() => setShowClone(false)}>
         <ClonePlanForm planId={plan.id} onCloned={() => setShowClone(false)} />
@@ -138,6 +173,7 @@ function PlanCapabilities({ planId, productId }: { planId: string; productId: st
   return (
     <div className="card">
       <h3>Capabilities</h3>
+      <p className="muted">Include the capabilities purchased with this plan. Changes update existing subscriptions.</p>
       <ErrorAlert message={error ?? optionsError ?? actionError} />
       {loading ? (
         <LoadingSpinner />

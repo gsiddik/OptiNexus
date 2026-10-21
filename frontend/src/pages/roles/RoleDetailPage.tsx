@@ -80,7 +80,7 @@ export function RoleDetailPage() {
           {[...perms.reduce((groups, p) => { const module = p.module_name ?? p.permission_key.split('.')[1] ?? 'General'; groups.set(module, [...(groups.get(module) ?? []), p]); return groups; }, new Map<string, Permission[]>())].map(([module, items]) => <fieldset key={module}><legend>{module}</legend><div className="permission-grid">
             {items.map((p) => (
               <HelpLabel key={p.id} className="permission-toggle">
-                <HelpInput help="Check to grant this permission to the role; uncheck to revoke it."
+                <HelpInput help={p.description?.trim() || p.name?.trim() || p.permission_key.split('.').join(' ')}
                   type="checkbox"
                   checked={grantedIds.has(p.id)}
                   disabled={busy || role.is_system || !hasPermission('cgo.role.permission.grant')}

@@ -16,3 +16,12 @@
 ## Next actions
 
 Implement plan UI regression coverage, reconcile purchased plan entitlements without granting unpurchased modules, add existing-install repair/diagnostics, then permission-specific tooltip coverage. Commit/push checkpoints and create PR after validation.
+
+## Implementation checkpoint
+
+- Plan detail now uses `product_name` and exposes authorized limit removal with confirmation, retryable errors and list refresh. Three focused frontend tests pass.
+- Plan/add-on capability and limit changes reconcile existing live subscription entitlements transactionally. Suspended subscription snapshots remain suspended; draft/expired/cancelled subscriptions are excluded. Regeneration only revokes PLAN/ADDON source rows, preserving manual overrides and custom-role grants.
+- Added `ecosystem:refresh-entitlements <tenant UUID/code>` (preview) and `--apply` (explicit repair) for pre-existing stale installations. No role, price or subscription status is changed.
+- Added regression using the actual Fleet menu permission keys: maintenance policies/schedules/requests, part requests, maintenance history, product/UOM, inventory/movements, returns, stock opname, used parts, PO and vendor.
+- PHP 8.5 and Composer are now available; dependencies/Boost setup completed. SQLite cannot run the existing PostgreSQL-only migration constraints. Full backend checks will run on PostgreSQL 16 in CI.
+- Matrix help now uses each permission's description with its readable name as fallback. Accessibility/read-only behavior is being checked.

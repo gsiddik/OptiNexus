@@ -14,15 +14,17 @@ use App\Models\Capability;
 use App\Models\Plan;
 use App\Models\PlanLimit;
 use App\Services\AuditService;
+use App\Services\Commercial\CatalogEntitlementSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PlanController extends Controller
 {
     use ApiResponses, HandlesLifecycleTransitions;
 
-    public function __construct(private readonly AuditService $audit) {}
+    public function __construct(private readonly AuditService $audit, private readonly CatalogEntitlementSyncService $entitlements) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -130,28 +132,40 @@ class PlanController extends Controller
 
     public function attachCapability(Request $request, Plan $plan, Capability $capability): JsonResponse
     {
-        if (! $plan->product?->capabilities()->where('capabilities.id', $capability->id)->exists()) {
-            return $this->fail('CAPABILITY_NOT_IN_PRODUCT', 'Select a capability included in the parent product.', 422);
-        }
+        return DB::transaction(function () use ($request, $plan, $capability): JsonResponse {
+            Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
 
-        if ($plan->capabilities()->where('capabilities.id', $capability->id)->exists()) {
-            return $this->fail('DUPLICATE_RESOURCE', 'This capability is already included in the plan.', 409);
-        }
+            if (! $plan->product?->capabilities()->where('capabilities.id', $capability->id)->exists()) {
+                return $this->fail('CAPABILITY_NOT_IN_PRODUCT', 'Select a capability included in the parent product.', 422);
+            }
 
-        $plan->capabilities()->attach($capability->id, ['id' => (string) Str::uuid()]);
+            if ($plan->capabilities()->where('capabilities.id', $capability->id)->exists()) {
+                return $this->fail('DUPLICATE_RESOURCE', 'This capability is already included in the plan.', 409);
+            }
 
-        $this->audit->record('plan.capability_assigned', $request, resourceType: 'Plan', resourceId: $plan->id, newValue: ['capability_id' => $capability->id]);
+            $plan->capabilities()->attach($capability->id, ['id' => (string) Str::uuid()]);
 
-        return $this->created(CapabilityResource::collection($plan->capabilities()->get()));
+            $this->entitlements->forPlan($plan, $request);
+
+            $this->audit->record('plan.capability_assigned', $request, resourceType: 'Plan', resourceId: $plan->id, newValue: ['capability_id' => $capability->id]);
+
+            return $this->created(CapabilityResource::collection($plan->capabilities()->get()));
+        });
     }
 
     public function detachCapability(Request $request, Plan $plan, Capability $capability): JsonResponse
     {
-        $plan->capabilities()->detach($capability->id);
+        return DB::transaction(function () use ($request, $plan, $capability): JsonResponse {
+            Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
 
-        $this->audit->record('plan.capability_revoked', $request, resourceType: 'Plan', resourceId: $plan->id, oldValue: ['capability_id' => $capability->id]);
+            $plan->capabilities()->detach($capability->id);
 
-        return $this->ok(null);
+            $this->entitlements->forPlan($plan, $request);
+
+            $this->audit->record('plan.capability_revoked', $request, resourceType: 'Plan', resourceId: $plan->id, oldValue: ['capability_id' => $capability->id]);
+
+            return $this->ok(null);
+        });
     }
 
     public function limits(Plan $plan): JsonResponse
@@ -161,39 +175,51 @@ class PlanController extends Controller
 
     public function configureLimit(Request $request, Plan $plan): JsonResponse
     {
-        $validated = $request->validate([
-            'limit_key' => ['required', 'string', 'max:100'],
-            'limit_value' => ['nullable', 'numeric', 'min:0', 'required_if:is_unlimited,false'],
-            'is_unlimited' => ['sometimes', 'boolean'],
-            'unit' => ['nullable', 'string', 'max:50'],
-        ]);
+        return DB::transaction(function () use ($request, $plan): JsonResponse {
+            Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
 
-        $limit = PlanLimit::query()->updateOrCreate(
-            ['plan_id' => $plan->id, 'limit_key' => $validated['limit_key']],
-            [
-                'limit_value' => $validated['is_unlimited'] ?? false ? null : $validated['limit_value'],
-                'is_unlimited' => $validated['is_unlimited'] ?? false,
-                'unit' => $validated['unit'] ?? null,
-            ],
-        );
+            $validated = $request->validate([
+                'limit_key' => ['required', 'string', 'max:100'],
+                'limit_value' => ['nullable', 'numeric', 'min:0', 'required_if:is_unlimited,false'],
+                'is_unlimited' => ['sometimes', 'boolean'],
+                'unit' => ['nullable', 'string', 'max:50'],
+            ]);
 
-        $this->audit->record('plan.limit_configured', $request, resourceType: 'Plan', resourceId: $plan->id, newValue: $limit->toArray());
+            $limit = PlanLimit::query()->updateOrCreate(
+                ['plan_id' => $plan->id, 'limit_key' => $validated['limit_key']],
+                [
+                    'limit_value' => $validated['is_unlimited'] ?? false ? null : $validated['limit_value'],
+                    'is_unlimited' => $validated['is_unlimited'] ?? false,
+                    'unit' => $validated['unit'] ?? null,
+                ],
+            );
 
-        return $this->ok(new PlanLimitResource($limit));
+            $this->entitlements->forPlan($plan, $request);
+
+            $this->audit->record('plan.limit_configured', $request, resourceType: 'Plan', resourceId: $plan->id, newValue: $limit->toArray());
+
+            return $this->ok(new PlanLimitResource($limit));
+        });
     }
 
     public function removeLimit(Request $request, Plan $plan, PlanLimit $limit): JsonResponse
     {
-        if ($limit->plan_id !== $plan->id) {
-            return $this->fail('RESOURCE_NOT_FOUND', 'This limit does not belong to the given plan.', 404);
-        }
+        return DB::transaction(function () use ($request, $plan, $limit): JsonResponse {
+            Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
 
-        $old = $limit->toArray();
-        $limit->delete();
+            if ($limit->plan_id !== $plan->id) {
+                return $this->fail('RESOURCE_NOT_FOUND', 'This limit does not belong to the given plan.', 404);
+            }
 
-        $this->audit->record('plan.limit_removed', $request, resourceType: 'Plan', resourceId: $plan->id, oldValue: $old);
+            $old = $limit->toArray();
+            $limit->delete();
 
-        return $this->ok(null);
+            $this->entitlements->forPlan($plan, $request);
+
+            $this->audit->record('plan.limit_removed', $request, resourceType: 'Plan', resourceId: $plan->id, oldValue: $old);
+
+            return $this->ok(null);
+        });
     }
 
     private function transitionTo(Request $request, Plan $plan, string $to, array $allowedFrom): JsonResponse

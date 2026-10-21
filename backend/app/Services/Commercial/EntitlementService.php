@@ -88,6 +88,7 @@ class EntitlementService
     public function revokeSourcedEntitlements(Subscription $subscription, string $reason): void
     {
         Entitlement::query()->where('subscription_id', $subscription->id)
+            ->whereIn('source_type', [Entitlement::SOURCE_PLAN, Entitlement::SOURCE_ADDON])
             ->whereIn('status', [Entitlement::STATUS_ACTIVE, Entitlement::STATUS_SUSPENDED])
             ->update(['status' => Entitlement::STATUS_REVOKED, 'effective_until' => now(), 'reason' => $reason, 'updated_at' => now()]);
     }

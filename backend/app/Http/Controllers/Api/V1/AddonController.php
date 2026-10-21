@@ -14,15 +14,17 @@ use App\Models\Addon;
 use App\Models\AddonLimit;
 use App\Models\Capability;
 use App\Services\AuditService;
+use App\Services\Commercial\CatalogEntitlementSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class AddonController extends Controller
 {
     use ApiResponses, HandlesLifecycleTransitions;
 
-    public function __construct(private readonly AuditService $audit) {}
+    public function __construct(private readonly AuditService $audit, private readonly CatalogEntitlementSyncService $entitlements) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -95,28 +97,40 @@ class AddonController extends Controller
 
     public function attachCapability(Request $request, Addon $addon, Capability $capability): JsonResponse
     {
-        if (! $addon->product?->capabilities()->where('capabilities.id', $capability->id)->exists()) {
-            return $this->fail('CAPABILITY_NOT_IN_PRODUCT', 'Select a capability included in the parent product.', 422);
-        }
+        return DB::transaction(function () use ($request, $addon, $capability): JsonResponse {
+            Addon::query()->whereKey($addon->id)->lockForUpdate()->firstOrFail();
 
-        if ($addon->capabilities()->where('capabilities.id', $capability->id)->exists()) {
-            return $this->fail('DUPLICATE_RESOURCE', 'This capability is already included in the add-on.', 409);
-        }
+            if (! $addon->product?->capabilities()->where('capabilities.id', $capability->id)->exists()) {
+                return $this->fail('CAPABILITY_NOT_IN_PRODUCT', 'Select a capability included in the parent product.', 422);
+            }
 
-        $addon->capabilities()->attach($capability->id, ['id' => (string) Str::uuid()]);
+            if ($addon->capabilities()->where('capabilities.id', $capability->id)->exists()) {
+                return $this->fail('DUPLICATE_RESOURCE', 'This capability is already included in the add-on.', 409);
+            }
 
-        $this->audit->record('addon.capability_assigned', $request, resourceType: 'Addon', resourceId: $addon->id, newValue: ['capability_id' => $capability->id]);
+            $addon->capabilities()->attach($capability->id, ['id' => (string) Str::uuid()]);
 
-        return $this->created(CapabilityResource::collection($addon->capabilities()->get()));
+            $this->entitlements->forAddon($addon, $request);
+
+            $this->audit->record('addon.capability_assigned', $request, resourceType: 'Addon', resourceId: $addon->id, newValue: ['capability_id' => $capability->id]);
+
+            return $this->created(CapabilityResource::collection($addon->capabilities()->get()));
+        });
     }
 
     public function detachCapability(Request $request, Addon $addon, Capability $capability): JsonResponse
     {
-        $addon->capabilities()->detach($capability->id);
+        return DB::transaction(function () use ($request, $addon, $capability): JsonResponse {
+            Addon::query()->whereKey($addon->id)->lockForUpdate()->firstOrFail();
 
-        $this->audit->record('addon.capability_revoked', $request, resourceType: 'Addon', resourceId: $addon->id, oldValue: ['capability_id' => $capability->id]);
+            $addon->capabilities()->detach($capability->id);
 
-        return $this->ok(null);
+            $this->entitlements->forAddon($addon, $request);
+
+            $this->audit->record('addon.capability_revoked', $request, resourceType: 'Addon', resourceId: $addon->id, oldValue: ['capability_id' => $capability->id]);
+
+            return $this->ok(null);
+        });
     }
 
     public function limits(Addon $addon): JsonResponse
@@ -126,20 +140,26 @@ class AddonController extends Controller
 
     public function configureLimit(Request $request, Addon $addon): JsonResponse
     {
-        $validated = $request->validate([
-            'limit_key' => ['required', 'string', 'max:100'],
-            'limit_delta' => ['required', 'numeric'],
-            'unit' => ['nullable', 'string', 'max:50'],
-        ]);
+        return DB::transaction(function () use ($request, $addon): JsonResponse {
+            Addon::query()->whereKey($addon->id)->lockForUpdate()->firstOrFail();
 
-        $limit = AddonLimit::query()->updateOrCreate(
-            ['addon_id' => $addon->id, 'limit_key' => $validated['limit_key']],
-            ['limit_delta' => $validated['limit_delta'], 'unit' => $validated['unit'] ?? null],
-        );
+            $validated = $request->validate([
+                'limit_key' => ['required', 'string', 'max:100'],
+                'limit_delta' => ['required', 'numeric'],
+                'unit' => ['nullable', 'string', 'max:50'],
+            ]);
 
-        $this->audit->record('addon.limit_configured', $request, resourceType: 'Addon', resourceId: $addon->id, newValue: $limit->toArray());
+            $limit = AddonLimit::query()->updateOrCreate(
+                ['addon_id' => $addon->id, 'limit_key' => $validated['limit_key']],
+                ['limit_delta' => $validated['limit_delta'], 'unit' => $validated['unit'] ?? null],
+            );
 
-        return $this->ok(new AddonLimitResource($limit));
+            $this->entitlements->forAddon($addon, $request);
+
+            $this->audit->record('addon.limit_configured', $request, resourceType: 'Addon', resourceId: $addon->id, newValue: $limit->toArray());
+
+            return $this->ok(new AddonLimitResource($limit));
+        });
     }
 
     private function transitionTo(Request $request, Addon $addon, string $to, array $allowedFrom): JsonResponse

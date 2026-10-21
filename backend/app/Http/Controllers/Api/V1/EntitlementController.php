@@ -10,6 +10,7 @@ use App\Http\Requests\V1\StoreEntitlementOverrideRequest;
 use App\Http\Resources\V1\EntitlementResource;
 use App\Http\Resources\V1\SubscriptionResource;
 use App\Models\Entitlement;
+use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Services\AuditService;
 use App\Services\Commercial\EntitlementService;
@@ -67,7 +68,7 @@ class EntitlementController extends Controller
 
     public function commercialContext(Request $request, Tenant $tenant): JsonResponse
     {
-        $subscriptions = $tenant->subscriptions()->with(['plan', 'product'])->whereIn('status', \App\Models\Subscription::ACTIVE_LIKE_STATUSES)->get();
+        $subscriptions = $tenant->subscriptions()->with(['plan', 'product'])->whereIn('status', Subscription::ACTIVE_LIKE_STATUSES)->get();
         $effective = $this->entitlements->effectiveEntitlements($tenant);
         $account = $request->attributes->get('service_account');
         if ($account->tenant_id !== null && $account->tenant_id !== $tenant->id) {

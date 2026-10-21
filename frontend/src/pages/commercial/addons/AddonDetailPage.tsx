@@ -198,7 +198,7 @@ function AddLimitForm({ addonId, onAdded }: { addonId: string; onAdded: () => vo
   return (
     <div className="form form-inline" style={{ marginTop: '1rem' }}>
       <ErrorAlert message={error} />
-      <HelpLabel>Key<HelpInput help="Enter the limit key used by the consuming application, for example seats or vehicle_limit." value={form.limit_key} onChange={(e) => setForm({ ...form, limit_key: e.target.value })} /></HelpLabel>
+      <HelpLabel>Key<HelpInput help="Use the resource key required by the consuming application. Fleet subscription resources: vehicle, user, branch, workshop, warehouse." value={form.limit_key} onChange={(e) => setForm({ ...form, limit_key: e.target.value })} /></HelpLabel>
       <HelpLabel>Delta<HelpInput help="Enter the quantity added by this add-on; a negative number reduces the limit." value={form.limit_delta} onChange={(e) => setForm({ ...form, limit_delta: e.target.value })} /></HelpLabel>
       <HelpLabel>Unit<HelpInput help="Enter a measurement unit, for example seat, vehicle, or device." value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></HelpLabel>
       <button className="btn btn-secondary" onClick={submit} disabled={submitting || !form.limit_key}>Add Limit</button>

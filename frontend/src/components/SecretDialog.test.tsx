@@ -41,6 +41,24 @@ describe('SecretDialog', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it('copies on HTTP origins where navigator.clipboard is unavailable', async () => {
+    const user = userEvent.setup();
+    const descriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
+    const exec = vi.fn(() => (document.activeElement as HTMLTextAreaElement).value === 'http-password');
+    Object.defineProperty(document, 'execCommand', { configurable: true, value: exec });
+    try {
+      render(<SecretDialog title="Temporary password" clientId="user" secret="http-password" onClose={() => undefined} />);
+      await user.click(screen.getByRole('button', { name: 'Copy secret' }));
+      expect(exec).toHaveBeenCalledWith('copy');
+      expect(screen.getByRole('button', { name: 'Copied' })).toBeTruthy();
+      expect(document.querySelector('textarea')).toBeNull();
+    } finally {
+      if (descriptor) Object.defineProperty(navigator, 'clipboard', descriptor);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
   it('is in Indonesian' , () => {
     setLocale('id');
     render(<SecretDialog title="Client secret untuk X" clientId="onx_x" secret="abc123" onClose={() => undefined} />);

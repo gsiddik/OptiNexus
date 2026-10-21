@@ -4,9 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Commercial\SubscriptionLifecycleService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Concerns\CreatesGovernanceFixtures;
+use Illuminate\Support\Str;
 use Tests\Concerns\CreatesCommercialFixtures;
+use Tests\Concerns\CreatesGovernanceFixtures;
 use Tests\TestCase;
 
 class TenantLifecycleTest extends TestCase
@@ -29,9 +31,9 @@ class TenantLifecycleTest extends TestCase
         $this->postJson("/api/v1/tenants/{$id}/provision")->assertStatus(422);
         $tenant = Tenant::findOrFail($id);
         $plan = $this->makePlan($this->makeProduct());
-        app(\App\Services\Commercial\SubscriptionLifecycleService::class)->create($customer, $tenant, $plan);
+        app(SubscriptionLifecycleService::class)->create($customer, $tenant, $plan);
         $this->postJson("/api/v1/tenants/{$id}/provision")->assertStatus(422);
-        $tenant->applications()->attach($this->makeApplication()->id, ['id' => (string) \Illuminate\Support\Str::uuid(), 'status' => 'ACTIVE']);
+        $tenant->applications()->attach($this->makeApplication()->id, ['id' => (string) Str::uuid(), 'status' => 'ACTIVE']);
         $this->postJson("/api/v1/tenants/{$id}/provision")->assertJsonPath('data.status', Tenant::STATUS_PROVISIONING);
         $this->postJson("/api/v1/tenants/{$id}/activate")->assertJsonPath('data.status', Tenant::STATUS_ACTIVE);
         $this->postJson("/api/v1/tenants/{$id}/suspend")->assertJsonPath('data.status', Tenant::STATUS_SUSPENDED);

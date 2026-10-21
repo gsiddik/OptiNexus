@@ -10,7 +10,9 @@ use App\Models\SubscriptionItem;
 use App\Models\Tenant;
 use App\Support\DocumentNumberService;
 use App\Support\Money;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Guards every Subscription status transition explicitly (no arbitrary
@@ -46,7 +48,7 @@ class SubscriptionLifecycleService
         $selected = isset($options['price_items'])
             ? app(SubscriptionPriceSelection::class)->validate($plan, $tenant, $options['price_items']) : null;
         if ($selected !== null && ! empty($options['addon_ids'])) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['addon_ids' => 'Use price_items for all selected add-ons.']);
+            throw ValidationException::withMessages(['addon_ids' => 'Use price_items for all selected add-ons.']);
         }
 
         $subscription = DB::transaction(function () use ($customer, $tenant, $plan, $options, $selected) {
@@ -315,9 +317,9 @@ class SubscriptionLifecycleService
         ]);
     }
 
-    private function periodEnd(\DateTimeInterface $start, string $interval): \Illuminate\Support\Carbon
+    private function periodEnd(\DateTimeInterface $start, string $interval): Carbon
     {
-        $start = \Illuminate\Support\Carbon::parse($start);
+        $start = Carbon::parse($start);
 
         return match ($interval) {
             'MONTHLY' => $start->copy()->addMonthNoOverflow(),

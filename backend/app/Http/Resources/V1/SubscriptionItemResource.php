@@ -3,6 +3,7 @@
 namespace App\Http\Resources\V1;
 
 use App\Models\SubscriptionItem;
+use App\Support\Money;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -18,7 +19,7 @@ class SubscriptionItemResource extends JsonResource
             'plan_name' => $this->plan?->name,
             'addon_name' => $this->addon?->name,
             'price_type' => $this->metadata['price_type'] ?? $this->price?->price_type,
-            'total_price' => $this->unit_price !== null ? \App\Support\Money::multiplyByQuantity((string) $this->unit_price, (string) $this->quantity) : null,
+            'total_price' => $this->unit_price !== null ? Money::multiplyByQuantity((string) $this->unit_price, (string) $this->quantity) : null,
             'item_type' => $this->item_type,
             'plan_id' => $this->plan_id,
             'addon_id' => $this->addon_id,

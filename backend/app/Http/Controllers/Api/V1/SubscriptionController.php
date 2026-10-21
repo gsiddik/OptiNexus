@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Api\V1\Concerns\ApiResponses;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\StoreSubscriptionRequest;
+use App\Http\Resources\V1\PriceResource;
 use App\Http\Resources\V1\SubscriptionResource;
 use App\Models\Customer;
 use App\Models\Plan;
@@ -12,6 +13,7 @@ use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Services\AuditService;
 use App\Services\Commercial\SubscriptionLifecycleService;
+use App\Services\Commercial\SubscriptionPriceSelection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -59,11 +61,11 @@ class SubscriptionController extends Controller
         return $this->ok(Tenant::query()->where('customer_id', $data['customer_id'])->orderBy('name')->get(['id', 'customer_id', 'name', 'tenant_code']));
     }
 
-    public function priceOptions(Request $request, \App\Services\Commercial\SubscriptionPriceSelection $selection): JsonResponse
+    public function priceOptions(Request $request, SubscriptionPriceSelection $selection): JsonResponse
     {
         $data = $request->validate(['tenant_id' => ['required', 'uuid', 'exists:tenants,id']]);
 
-        return $this->ok(\App\Http\Resources\V1\PriceResource::collection($selection->options(Tenant::findOrFail($data['tenant_id']))));
+        return $this->ok(PriceResource::collection($selection->options(Tenant::findOrFail($data['tenant_id']))));
     }
 
     public function store(StoreSubscriptionRequest $request): JsonResponse

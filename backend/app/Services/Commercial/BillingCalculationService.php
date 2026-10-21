@@ -81,7 +81,7 @@ class BillingCalculationService
                 $this->chargePlanRecurring($billing, $subscription, $subtotal, $tax);
                 $this->chargeAddonRecurring($billing, $subscription, $periodStart, $periodEnd, $subtotal, $tax);
                 $this->chargeUsageComponents($billing, $subscription, 'plan_id', $subscription->plan_id, $periodStart, $periodEnd, $subtotal, $tax);
-    
+
                 foreach ($subscription->items()->where('item_type', SubscriptionItem::TYPE_ADDON)->get() as $item) {
                     if ($item->addon_id) {
                         $this->chargeUsageComponents($billing, $subscription, 'addon_id', $item->addon_id, $periodStart, $periodEnd, $subtotal, $tax);

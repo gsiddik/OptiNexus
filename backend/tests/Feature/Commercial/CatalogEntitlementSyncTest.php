@@ -131,6 +131,21 @@ class CatalogEntitlementSyncTest extends TestCase
         $this->getJson("/api/v1/plans/{$plan->id}")->assertOk()->assertJsonPath('data.product_name', $product->name);
     }
 
+    public function test_removing_an_addon_limit_reconciles_subscribers_and_rejects_a_foreign_limit(): void
+    {
+        [$tenant, $fleet, $product, $plan, $subscription] = $this->subscribedFleet();
+        $addon = $this->makeAddon($product);
+        $otherAddon = $this->makeAddon($product);
+        $subscription->items()->create(['item_type' => 'ADDON', 'addon_id' => $addon->id, 'quantity' => 1, 'unit_price' => 0, 'currency' => 'IDR', 'start_at' => now()]);
+        $this->postJson("/api/v1/plans/{$plan->id}/limits", ['limit_key' => 'vehicle', 'limit_value' => 10, 'is_unlimited' => false])->assertOk();
+        $limitId = $this->postJson("/api/v1/addons/{$addon->id}/limits", ['limit_key' => 'vehicle', 'limit_delta' => 5])->assertOk()->json('data.id');
+        $this->assertEquals(15, app(EntitlementService::class)->check($tenant, 'optifleet', 'vehicle')['value']);
+        $this->deleteJson("/api/v1/addons/{$otherAddon->id}/limits/{$limitId}")->assertNotFound();
+        $this->deleteJson("/api/v1/addons/{$addon->id}/limits/{$limitId}")->assertOk();
+        $this->assertDatabaseMissing('addon_limits', ['id' => $limitId]);
+        $this->assertEquals(10, app(EntitlementService::class)->check($tenant, 'optifleet', 'vehicle')['value']);
+    }
+
     public function test_refresh_command_is_preview_by_default_and_repairs_only_the_selected_tenant_without_reactivating_suspended_access(): void
     {
         [$tenant, $fleet, $product, $plan, $subscription] = $this->subscribedFleet();

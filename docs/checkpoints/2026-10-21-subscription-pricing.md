@@ -8,4 +8,4 @@ USAGE and TIERED are deferred pending owner decision. Keep the existing requirem
 
 Validation: frontend tests/build locally, backend regression tests through CI (PHP/Composer unavailable in this environment). Deployment script must preserve existing data and target main only after the PRs are merged.
 
-Progress: baseline inspected and implementation branches created. No application changes yet.
+Progress: first implementation checkpoint published. Nexus PR #16 and Fleet PR #39 are drafts while regression tests and review are in progress. Frontend targeted copy/add-on/pricing tests pass locally. Backend validation runs in GitHub Actions; no deployment or merge performed.

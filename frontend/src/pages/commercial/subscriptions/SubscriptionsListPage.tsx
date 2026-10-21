@@ -58,7 +58,7 @@ export function SubscriptionsListPage() {
 }
 
 export function CreateSubscriptionForm({ onCreated }: { onCreated: () => void }) {
-  const [form, setForm] = useState({ customer_id: '', tenant_id: '', plan_id: '', idempotency_key: '', auto_renew: true });
+  const [form, setForm] = useState({ customer_id: '', tenant_id: '', idempotency_key: '', auto_renew: true });
   const [priceItems, setPriceItems] = useState([{ price_id: '', quantity: '' }]);
   const prices = useApiResource(() => form.tenant_id ? subscriptionsApi.priceOptions(form.tenant_id) : Promise.resolve([]), [form.tenant_id]);
   const selectedPrices = priceItems.map((item) => (prices.data ?? []).find((price) => price.id === item.price_id));

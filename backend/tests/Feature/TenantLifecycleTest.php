@@ -31,7 +31,7 @@ class TenantLifecycleTest extends TestCase
         $plan = $this->makePlan($this->makeProduct());
         app(\App\Services\Commercial\SubscriptionLifecycleService::class)->create($customer, $tenant, $plan);
         $this->postJson("/api/v1/tenants/{$id}/provision")->assertStatus(422);
-        $tenant->applications()->attach($this->makeApplication()->id, ['status' => 'ACTIVE']);
+        $tenant->applications()->attach($this->makeApplication()->id, ['id' => (string) \Illuminate\Support\Str::uuid(), 'status' => 'ACTIVE']);
         $this->postJson("/api/v1/tenants/{$id}/provision")->assertJsonPath('data.status', Tenant::STATUS_PROVISIONING);
         $this->postJson("/api/v1/tenants/{$id}/activate")->assertJsonPath('data.status', Tenant::STATUS_ACTIVE);
         $this->postJson("/api/v1/tenants/{$id}/suspend")->assertJsonPath('data.status', Tenant::STATUS_SUSPENDED);

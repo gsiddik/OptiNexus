@@ -85,6 +85,9 @@ class TenantController extends Controller
     {
         return DB::transaction(function () use ($request, $tenant): JsonResponse {
             $tenant = Tenant::query()->whereKey($tenant->id)->lockForUpdate()->firstOrFail();
+            if ($response = $this->guardTransition($tenant, Tenant::STATUS_PROVISIONING, [Tenant::STATUS_DRAFT])) {
+                return $response;
+            }
             if ($reason = $tenant->provisioningBlocker()) {
                 return $this->fail('TENANT_PROVISION_PREREQUISITES', $reason, 422);
             }

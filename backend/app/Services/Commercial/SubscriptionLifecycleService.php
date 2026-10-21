@@ -166,11 +166,12 @@ class SubscriptionLifecycleService
             return 'INVALID_SUBSCRIPTION_TRANSITION';
         }
 
-        $selectedItem = $subscription->items()->where('item_type', SubscriptionItem::TYPE_PLAN)->inForce()->first();
+        $selectedItem = $subscription->items()->where('item_type', SubscriptionItem::TYPE_PLAN)->inForce()->with('price')->first();
         $selectedPrice = null;
         if (($selectedItem?->metadata['selected_pricing'] ?? false) === true) {
             $selectedPrice = $this->rating->resolveEffectivePrice('plan_id', $newPlan->id, $subscription->tenant,
-                priceType: $selectedItem->metadata['price_type'] ?? null);
+                priceType: $selectedItem->metadata['price_type'] ?? null,
+                unitName: $selectedItem->price?->unit_name, meterKey: $selectedItem->price?->meter_key);
             if (! $selectedPrice) {
                 return 'SELECTED_PRICE_NOT_AVAILABLE';
             }

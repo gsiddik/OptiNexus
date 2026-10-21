@@ -132,6 +132,22 @@ class EntitlementTest extends TestCase
         ])->assertStatus(401);
     }
 
+    public function test_resource_limits_are_scoped_to_the_calling_application(): void
+    {
+        [$tenant, $application, $product, $plan] = $this->activeSubscribedTenant();
+        $entry = $this->makeApplication(['application_code' => 'optientry']);
+        $entryProduct = $this->makeProduct();
+        $entryProduct->applications()->attach($entry->id, ['id' => (string) \Illuminate\Support\Str::uuid()]);
+        $entryPlan = $this->makePlan($entryProduct);
+        $entryPlan->limits()->create(['limit_key' => 'vehicle_limit', 'limit_value' => 999, 'is_unlimited' => false]);
+        [$entrySubscription] = app(\App\Services\Commercial\SubscriptionLifecycleService::class)->create($tenant->customer, $tenant, $entryPlan);
+        app(\App\Services\Commercial\SubscriptionLifecycleService::class)->activate($entrySubscription);
+        $token = $this->issueServiceAccountToken($application->id, ['commercial.read']);
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")->getJson("/api/v1/tenants/{$tenant->id}/commercial-context")->assertOk();
+        $this->assertEquals(100, $response->json('data.resource_limits.vehicle_limit'));
+    }
+
     public function test_commercial_context_requires_the_commercial_read_scope(): void
     {
         [$tenant, $application] = $this->activeSubscribedTenant();

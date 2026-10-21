@@ -9,7 +9,7 @@ afterEach(() => {
   cleanup();
   setLocale('en');
   vi.restoreAllMocks();
-  delete (document as Document & { execCommand?: unknown }).execCommand;
+  Reflect.deleteProperty(document, 'execCommand');
 });
 
 describe('SecretDialog', () => {

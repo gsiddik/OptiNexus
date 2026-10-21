@@ -164,6 +164,7 @@ class CatalogEntitlementSyncTest extends TestCase
         $expired = $subscription->replicate();
         $expired->fill(['status' => 'EXPIRED', 'subscription_number' => 'EXPIRED-SUB']);
         $expired->save();
+        $expired->items()->create(['item_type' => 'ADDON', 'addon_id' => $addon->id, 'quantity' => 1, 'unit_price' => 0, 'currency' => 'IDR', 'start_at' => now()]);
         $module = $this->addModule($fleet, $product, 'partner');
         $this->postJson("/api/v1/addons/{$addon->id}/capabilities/{$module->id}")->assertCreated();
         $this->assertTrue(app(EntitlementService::class)->check($tenant, 'optifleet', $module->code)['allowed']);

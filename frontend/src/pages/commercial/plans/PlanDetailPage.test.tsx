@@ -37,7 +37,7 @@ it('shows the product name and removes a limit after confirmation, then refreshe
   await userEvent.click(await screen.findByRole('button', { name: 'Remove limit vehicle_limit' }));
   expect(calls.some((c) => c.method === 'DELETE')).toBe(false);
   const dialog = screen.getByRole('alertdialog', { name: 'Remove Plan Limit' });
-  await userEvent.click(within(dialog).getByRole('button', { name: 'Remove', exact: true }));
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Remove' }));
   expect(await screen.findByText('No limits configured.')).toBeTruthy();
   expect(calls.filter((c) => c.method === 'DELETE').map((c) => c.url)).toEqual(['/plans/p1/limits/l1']);
 });
@@ -53,7 +53,7 @@ it('allows canceling without deleting and hides removal from read-only operators
 it('keeps the limit and confirmation available when removal fails', async () => {
   serve(true, true);
   await userEvent.click(await screen.findByRole('button', { name: 'Remove limit vehicle_limit' }));
-  await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Remove', exact: true }));
+  await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Remove' }));
   await waitFor(() => expect(within(screen.getByRole('alertdialog')).getByText(/Cannot remove this limit/)).toBeTruthy());
   expect(screen.getByRole('button', { name: 'Remove limit vehicle_limit' })).toBeTruthy();
 });

@@ -6,6 +6,7 @@ use App\Models\Capability;
 use App\Models\Entitlement;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\AuthorizationService;
 use App\Services\Commercial\EntitlementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -55,7 +56,7 @@ class CatalogEntitlementSyncTest extends TestCase
         $menus = [
             'maintenance' => ['maintenance_policy.view', 'maintenance_schedule.view', 'maintenance_request.view'],
             'work_order' => ['part_request.view'],
-            'history' => ['maintenance_history.view'],
+            'vehicle' => ['maintenance_history.view'],
             'inventory' => ['product.view', 'inventory.view', 'part_return.view', 'inventory.stock_opname', 'used_part.view'],
             'procurement' => ['purchase_order.view'],
             'partner' => ['partner.view'],
@@ -64,6 +65,8 @@ class CatalogEntitlementSyncTest extends TestCase
         $user = User::factory()->create(['status' => 'ACTIVE']);
         $this->attachUserToTenant($user, $tenant, $role);
         $this->grantApplicationAccess($user, $tenant, $fleet);
+        $unbought = $this->addModule($fleet, $product, 'analytics');
+        $this->makePermission($fleet, 'optifleet.analytics.overview.view', $unbought);
         $expected = [];
         foreach ($menus as $module => $keys) {
             $capability = $this->addModule($fleet, $product, $module);
@@ -76,11 +79,15 @@ class CatalogEntitlementSyncTest extends TestCase
         $this->actingAsSuperAdmin();
         $matrix = $this->getJson("/api/v1/roles/{$role->id}/permissions")->assertOk();
         $this->assertEqualsCanonicalizing($expected, array_column($matrix->json('data'), 'permission_key'));
-        [$token] = $this->issueServiceAccountTokenFor($fleet->id);
+        [$token] = $this->issueServiceAccountTokenFor($fleet->id, ['authorization.check', 'commercial.read']);
         $response = $this->withHeader('Authorization', "Bearer {$token}")->postJson('/api/v1/authorization/effective-permissions', [
             'user_id' => $user->id, 'tenant_id' => $tenant->id, 'application_code' => 'optifleet',
         ])->assertOk()->assertJsonPath('data.allowed', true);
         $this->assertEqualsCanonicalizing($expected, array_column($response->json('data.permissions'), 'permission'));
+        $commercial = $this->withHeader('Authorization', "Bearer {$token}")->getJson("/api/v1/tenants/{$tenant->id}/commercial-context")->assertOk();
+        $capabilities = collect($commercial->json('data.effective_entitlements'))->where('entitlement_type', 'CAPABILITY')->whereStrict('value', true)->pluck('entitlement_key')->all();
+        $this->assertEqualsCanonicalizing(['optifleet.maintenance', 'optifleet.work_order', 'optifleet.vehicle', 'optifleet.inventory', 'optifleet.procurement', 'optifleet.partner'], $capabilities);
+
     }
 
     public function test_capability_removal_reconciles_access_but_keeps_manual_denials_and_custom_roles(): void
@@ -97,6 +104,8 @@ class CatalogEntitlementSyncTest extends TestCase
         $this->postJson("/api/v1/plans/{$plan->id}/capabilities/{$module->id}")->assertCreated();
         $this->assertFalse(app(EntitlementService::class)->check($tenant, 'optifleet', $module->code)['allowed']);
         $this->assertSame('ACTIVE', $override->refresh()->status);
+        $automatic = $this->makeTenantRole($tenant, [], ['auto_capability_permissions' => true]);
+        $this->assertFalse(app(AuthorizationService::class)->capabilityPermissions($automatic, $tenant->id)->contains('id', $permission->id));
         $this->assertFalse($role->refresh()->auto_capability_permissions);
         $this->assertFalse($role->permissions()->whereKey($permission->id)->exists());
         $this->deleteJson("/api/v1/plans/{$plan->id}/capabilities/{$module->id}")->assertOk();
@@ -123,6 +132,11 @@ class CatalogEntitlementSyncTest extends TestCase
     public function test_refresh_command_is_preview_by_default_and_repairs_only_the_selected_tenant_without_reactivating_suspended_access(): void
     {
         [$tenant, $fleet, $product, $plan, $subscription] = $this->subscribedFleet();
+        $otherTenant = $this->makeTenant();
+        $otherSubscription = $subscription->replicate();
+        $otherSubscription->fill(['tenant_id' => $otherTenant->id, 'customer_id' => $otherTenant->customer_id, 'subscription_number' => 'OTHER-SUB']);
+        $otherSubscription->save();
+        app(EntitlementService::class)->generateFromSubscription($otherSubscription);
         $module = $this->addModule($fleet, $product, 'maintenance');
         $plan->capabilities()->attach($module->id, ['id' => (string) Str::uuid()]);
         $before = Entitlement::count();
@@ -131,11 +145,37 @@ class CatalogEntitlementSyncTest extends TestCase
         $this->artisan('ecosystem:refresh-entitlements', ['tenant' => 'MISSING'])->assertFailed();
         $this->artisan('ecosystem:refresh-entitlements', ['tenant' => $tenant->id, '--apply' => true])->assertSuccessful();
         $this->assertTrue(app(EntitlementService::class)->check($tenant, 'optifleet', $module->code)['allowed']);
+        $this->assertFalse(app(EntitlementService::class)->check($otherTenant, 'optifleet', $module->code)['allowed']);
         $subscription->update(['status' => 'SUSPENDED']);
         app(EntitlementService::class)->suspendForSubscription($subscription);
         $this->artisan('ecosystem:refresh-entitlements', ['tenant' => $tenant->id, '--apply' => true])->assertSuccessful();
         $this->assertSame('SUSPENDED', $subscription->refresh()->status);
         $this->assertFalse(app(EntitlementService::class)->check($tenant, 'optifleet', $module->code)['allowed']);
         $this->assertSame(0, $subscription->entitlements()->where('status', 'ACTIVE')->count());
+    }
+
+    public function test_addon_capability_changes_reach_existing_subscribers_without_granting_expired_subscriptions(): void
+    {
+        [$tenant, $fleet, $product, $plan, $subscription] = $this->subscribedFleet();
+        $addon = $this->makeAddon($product);
+        $subscription->items()->create(['item_type' => 'ADDON', 'addon_id' => $addon->id, 'quantity' => 1, 'unit_price' => 0, 'currency' => 'IDR', 'start_at' => now()]);
+        $expired = $subscription->replicate();
+        $expired->fill(['status' => 'EXPIRED', 'subscription_number' => 'EXPIRED-SUB']);
+        $expired->save();
+        $module = $this->addModule($fleet, $product, 'partner');
+        $this->postJson("/api/v1/addons/{$addon->id}/capabilities/{$module->id}")->assertCreated();
+        $this->assertTrue(app(EntitlementService::class)->check($tenant, 'optifleet', $module->code)['allowed']);
+        $this->assertSame(0, $expired->entitlements()->count());
+        $this->deleteJson("/api/v1/addons/{$addon->id}/capabilities/{$module->id}")->assertOk();
+        $this->assertFalse(app(EntitlementService::class)->check($tenant, 'optifleet', $module->code)['allowed']);
+    }
+
+    public function test_limit_removal_requires_configuration_permission_and_keeps_the_limit_on_403(): void
+    {
+        [, , , $plan] = $this->subscribedFleet();
+        $limit = $plan->limits()->create(['limit_key' => 'vehicles', 'limit_value' => 10, 'is_unlimited' => false]);
+        $this->actingAsCommercialRole('SUBSCRIPTION_ADMIN');
+        $this->deleteJson("/api/v1/plans/{$plan->id}/limits/{$limit->id}")->assertForbidden();
+        $this->assertDatabaseHas('plan_limits', ['id' => $limit->id]);
     }
 }

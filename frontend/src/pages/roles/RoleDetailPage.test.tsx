@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { TOKEN_STORAGE_KEY } from '../../api/client';
@@ -32,7 +32,7 @@ it('explains each permission using its description or readable name, including o
   expect(help.className).toContain('field-tooltip-open');
   expect(checkbox.getAttribute('aria-describedby')).toBe(help.id);
   const other = screen.getByRole('checkbox', { name: 'optifleet.product.view' });
-  within(other.closest('label')!).getByRole('button', { name: 'Field information' }).focus();
+  fireEvent.focus(within(other.closest('label')!).getByRole('button', { name: 'Field information' }));
   expect(screen.getByText('Product: View').className).toContain('field-tooltip-open');
   expect(mock.calls.some((c) => c.method === 'POST' || c.method === 'DELETE')).toBe(false);
 });

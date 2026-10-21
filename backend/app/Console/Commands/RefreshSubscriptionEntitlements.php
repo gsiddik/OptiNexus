@@ -2,9 +2,11 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Entitlement;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Services\Commercial\CatalogEntitlementSyncService;
+use App\Services\Commercial\EntitlementService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
@@ -15,7 +17,7 @@ class RefreshSubscriptionEntitlements extends Command
 
     protected $description = 'Preview or refresh one tenant\'s subscription entitlements without changing roles, prices or manual overrides';
 
-    public function handle(CatalogEntitlementSyncService $sync): int
+    public function handle(CatalogEntitlementSyncService $sync, EntitlementService $entitlements): int
     {
         $key = (string) $this->argument('tenant');
         $tenant = Tenant::query()->where('tenant_code', $key)->first();
@@ -38,6 +40,8 @@ class RefreshSubscriptionEntitlements extends Command
             }
             $this->line('Purchased capabilities: '.implode(', ', array_unique($codes)));
         }
+        $effective = $entitlements->effectiveEntitlements($tenant)->where('entitlement_type', Entitlement::TYPE_CAPABILITY)->whereStrict('value', true)->pluck('entitlement_key')->all();
+        $this->line('Currently effective capabilities: '.implode(', ', $effective));
         if (! $this->option('apply')) {
             $this->info('Preview only. No changes made. Use --apply to refresh the listed subscriptions. Suspended subscriptions remain suspended.');
 

@@ -16,6 +16,8 @@ class StoreSubscriptionRequest extends FormRequest
         return [
             'customer_id' => ['required', 'uuid', 'exists:customers,id'],
             'tenant_id' => ['required', 'uuid', 'exists:tenants,id'],
+            'application_ids' => ['sometimes', 'array', 'min:1', 'max:100'],
+            'application_ids.*' => ['required', 'uuid', 'distinct', 'exists:applications,id'],
             'plan_id' => ['required', 'uuid', 'exists:plans,id'],
             'price_items' => ['sometimes', 'array', 'min:1', 'max:100'],
             'price_items.*.price_id' => ['required', 'uuid', 'exists:prices,id'],

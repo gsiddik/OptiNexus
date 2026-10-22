@@ -3,18 +3,26 @@
 namespace App\Http\Resources\V1;
 
 use App\Models\Billing;
+use App\Models\Invoice;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /** @mixin Billing */
 class BillingResource extends JsonResource
 {
+    private function invoicesBlockingGeneration(): bool
+    {
+        return Invoice::where('billing_id', $this->id)->whereNotIn('status', ['CANCELLED', 'VOID'])->exists();
+    }
+
     public function toArray(Request $request): array
     {
-        $this->resource->loadMissing(['tenant', 'subscription', 'customer']);
+        $this->resource->loadMissing(['tenant', 'subscription', 'customer', 'invoice']);
 
         return [
             'id' => $this->id,
+            'invoice' => $this->invoice ? ['id' => $this->invoice->id, 'invoice_number' => $this->invoice->invoice_number, 'status' => $this->invoice->status] : null,
+            'can_generate_invoice' => $this->status === Billing::STATUS_FINALIZED && ! $this->invoicesBlockingGeneration(),
             'customer_name' => $this->customer?->business_name ?? $this->customer?->legal_name,
             'tenant_name' => $this->tenant?->name,
             'subscription_number' => $this->subscription?->subscription_number,

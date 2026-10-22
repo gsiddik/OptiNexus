@@ -37,11 +37,12 @@ class EntitlementService
             return;
         }
 
-        foreach ($plan->product->applications as $application) {
+        $applicationIds = app(SubscriptionApplicationService::class)->applicationIds($subscription);
+        foreach ($plan->product->applications->whereIn('id', $applicationIds) as $application) {
             $this->grant($subscription, Entitlement::TYPE_APPLICATION, $application->application_code, 'true', Entitlement::SOURCE_PLAN, $plan->id, $application->id, null);
         }
 
-        foreach ($plan->capabilities as $capability) {
+        foreach ($plan->capabilities->whereIn('application_id', $applicationIds) as $capability) {
             $this->grant($subscription, Entitlement::TYPE_CAPABILITY, $capability->code, 'true', Entitlement::SOURCE_PLAN, $plan->id, $capability->application_id, $capability->id);
         }
 
@@ -56,7 +57,7 @@ class EntitlementService
                 continue;
             }
 
-            foreach ($addon->capabilities as $capability) {
+            foreach ($addon->capabilities->whereIn('application_id', $applicationIds) as $capability) {
                 $this->grant($subscription, Entitlement::TYPE_CAPABILITY, $capability->code, 'true', Entitlement::SOURCE_ADDON, $addon->id, $capability->application_id, $capability->id, $item->end_at);
             }
 

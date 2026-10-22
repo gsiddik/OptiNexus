@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'ecosystem'])->group(function () {
     Route::get('/invoices', [InvoiceController::class, 'index'])->middleware('permission:cgo.invoice.view')->name('invoices.index');
+    Route::get('/invoices/{invoice}/download', [InvoiceController::class, 'download'])->middleware('permission:cgo.invoice.view,invoice')->name('invoices.download');
     Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->middleware('permission:cgo.invoice.view,invoice')->name('invoices.show');
 
     Route::post('/invoices/generate-from-billing/{billing}', [InvoiceController::class, 'generateFromBilling'])->middleware('permission:cgo.invoice.create')->name('invoices.generate');
@@ -28,6 +29,7 @@ Route::prefix('invoice-payments/{payment}')->middleware(['auth:sanctum', 'ecosys
 Route::prefix('commercial-portal/tenants/{tenant}')->middleware('service_account:commercial.read')->group(function () {
     $controller = CommercialPortalController::class;
     Route::get('/invoices', [$controller, 'invoiceIndex']);
+    Route::get('/invoices/{invoice}/download', [InvoiceController::class, 'download'])->middleware('permission:cgo.invoice.view,invoice')->name('invoices.download');
     Route::get('/invoices/{invoice}', [$controller, 'invoiceShow']);
     Route::get('/payments', [$controller, 'paymentIndex']);
     Route::get('/payments/{payment}', [$controller, 'paymentShow']);

@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\OidcClient;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Ecosystem\ManagedCredentialService;
 use App\Services\Ecosystem\TenantAdminBootstrapService;
 use App\Services\Oidc\OidcKeyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -449,5 +450,18 @@ class AccountActivationFlowTest extends TestCase
             Queue::assertNothingPushed();
         }
         parent::tearDown();
+    }
+
+    public function test_reactivation_reuses_the_oidc_password_change_gate_before_any_code_is_issued(): void
+    {
+        $this->verifyEmail();
+        $this->admin->forceFill(['status' => 'SUSPENDED', 'activated_at' => now(), 'password_change_required' => false])->save();
+        $this->temporary = DB::transaction(fn () => app(ManagedCredentialService::class)->restart($this->admin));
+        $this->authorizeRequest();
+        $this->signIn()->assertRedirect('/oidc/activate');
+        $this->assertSame('INVITED', $this->admin->fresh()->status);
+        $this->choose()->assertRedirectContains('code=');
+        $this->assertSame('ACTIVE', $this->admin->fresh()->status);
+        $this->assertFalse($this->admin->fresh()->password_change_required);
     }
 }

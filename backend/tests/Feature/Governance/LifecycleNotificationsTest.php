@@ -11,6 +11,7 @@ use App\Services\Ecosystem\AccountActivationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Tests\Concerns\CreatesCommercialFixtures;
 use Tests\Concerns\CreatesGovernanceFixtures;
 use Tests\TestCase;
@@ -101,5 +102,27 @@ class LifecycleNotificationsTest extends TestCase
         $this->assertSame(0, Notification::where('recipient_user_id', $admin->id)->count());
         $this->makeFlatPrice($subscription->plan, ['unit_amount' => '250000.00']);
         $this->assertSame(1, Notification::where('recipient_user_id', $admin->id)->where('subject', 'Subscription pricing changed')->count());
+    }
+
+    public function test_subscription_selection_assigns_only_included_apps_and_rejects_unrelated_apps(): void
+    {
+        Queue::fake();
+        $this->actingAsCommercialRole('SUBSCRIPTION_ADMIN');
+        $customer = $this->makeCustomer();
+        $tenant = $this->makeTenant($customer);
+        $product = $this->makeProduct();
+        $plan = $this->makePlan($product);
+        $one = $this->makeApplication();
+        $two = $this->makeApplication();
+        foreach ([$one, $two] as $application) {
+            $product->applications()->attach($application->id, ['id' => (string) Str::uuid()]);
+        }
+        $data = ['customer_id' => $customer->id, 'tenant_id' => $tenant->id, 'plan_id' => $plan->id];
+        $this->postJson('/api/v1/subscriptions', [...$data, 'application_ids' => [$one->id]])->assertCreated();
+        $this->assertSame([$one->id], $tenant->applications()->pluck('applications.id')->all());
+        $other = $this->makeApplication();
+        $this->postJson('/api/v1/subscriptions', [...$data, 'application_ids' => [$other->id]])->assertStatus(422);
+        $this->assertSame(1, $tenant->subscriptions()->count());
+        $this->assertSame([$one->id], $tenant->applications()->pluck('applications.id')->all());
     }
 }

@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../i18n';
 import { HelpLabel, HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -45,7 +46,7 @@ export function PricesListPage() {
               { key: 'amount', header: 'Unit Amount', render: (r) => r.unit_amount ?? '—' },
               { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
               { key: 'approval', header: 'Approval', render: (r) => <StatusBadge status={r.approval_status} /> },
-              { key: 'effective', header: 'Effective From', render: (r) => r.effective_from },
+              { key: 'effective', header: 'Effective From', render: (r) => formatDateTime(r.effective_from) },
             ]}
           />
           <Pagination meta={meta} onPageChange={setPage} />
@@ -121,7 +122,7 @@ function CreatePriceForm({ onCreated }: { onCreated: () => void }) {
       <HelpLabel>Unit Name<HelpInput help="Optional billable unit name, for example user or vehicle." value={form.unit_name} onChange={(e) => setForm({ ...form, unit_name: e.target.value })} /></HelpLabel>
       <HelpLabel>Meter Key<HelpInput help="Enter the usage meter key supplying billable quantities, for example vehicles." value={form.meter_key} onChange={(e) => setForm({ ...form, meter_key: e.target.value })} /></HelpLabel>
       <HelpLabel>Included Quantity<HelpInput help="Optional quantity included in the base price before additional usage is charged." value={form.included_quantity} onChange={(e) => setForm({ ...form, included_quantity: e.target.value })} /></HelpLabel>
-      <HelpLabel>Effective From<HelpInput help="Select the date from which this price applies." type="date" value={form.effective_from} onChange={(e) => setForm({ ...form, effective_from: e.target.value })} /></HelpLabel>
+      <HelpLabel>Effective From<HelpInput help="Select the date from which this price applies." type="date" value={formatDateTime(form.effective_from)} onChange={(e) => setForm({ ...form, effective_from: e.target.value })} /></HelpLabel>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting || targets.loading || !!targets.error || !form.target}>Create</button>
       </div>

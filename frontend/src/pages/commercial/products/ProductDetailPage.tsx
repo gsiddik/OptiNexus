@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../i18n';
 import { HelpLabel, HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -48,7 +49,7 @@ export function ProductDetailPage() {
             <dt>Product Code</dt><dd>{product.product_code}</dd>
             <dt>Description</dt><dd>{product.description ?? '—'}</dd>
             <dt>Currency</dt><dd>{product.currency ?? '—'}</dd>
-            <dt>Created</dt><dd>{new Date(product.created_at).toLocaleString()}</dd>
+            <dt>Created</dt><dd>{formatDateTime(product.created_at)}</dd>
           </dl>
         </div>
 

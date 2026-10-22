@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../i18n';
 import { HelpInput } from '../../components/FieldControls';
 import { useState } from 'react';
 import { auditApi } from '../../api/endpoints';
@@ -42,7 +43,7 @@ export function AuditLogsPage() {
               { key: 'resource', header: 'Resource', render: (r) => `${r.resource_type ?? '—'} ${r.resource_id ?? ''}` },
               { key: 'actor', header: 'Actor', render: (r) => r.actor_identity ?? r.actor_user_id ?? 'system' },
               { key: 'source', header: 'Source', render: (r) => r.source ?? 'cgo' },
-              { key: 'when', header: 'When', render: (r) => new Date(r.created_at).toLocaleString() },
+              { key: 'when', header: 'When', render: (r) => formatDateTime(r.created_at) },
             ]}
           />
           <Pagination meta={meta} onPageChange={setPage} />

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Commercial\SubscriptionApplicationService;
 use App\Services\Commercial\SubscriptionLifecycleService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -53,28 +54,18 @@ class TenantLifecycleTest extends TestCase
             ->assertJsonPath('error.code', 'INVALID_STATE_TRANSITION');
     }
 
-    public function test_application_assignment_and_removal(): void
+    public function test_application_assignment_and_removal_are_subscription_managed(): void
     {
         $this->actingAsSuperAdmin();
         $tenant = $this->makeTenant();
         $application = $this->makeApplication();
-
-        $this->postJson("/api/v1/tenants/{$tenant->id}/applications/{$application->id}")
-            ->assertStatus(201);
-
-        $this->getJson("/api/v1/tenants/{$tenant->id}/applications")
-            ->assertStatus(200)
-            ->assertJsonFragment(['id' => $application->id]);
-
-        $this->postJson("/api/v1/tenants/{$tenant->id}/applications/{$application->id}")
-            ->assertStatus(409)
-            ->assertJsonPath('error.code', 'DUPLICATE_RESOURCE');
-
-        $this->deleteJson("/api/v1/tenants/{$tenant->id}/applications/{$application->id}")
-            ->assertStatus(200);
-
-        $this->getJson("/api/v1/tenants/{$tenant->id}/applications")
-            ->assertJsonMissing(['id' => $application->id]);
+        $this->postJson("/api/v1/tenants/{$tenant->id}/applications/{$application->id}")->assertStatus(409)
+            ->assertJsonPath('error.code', 'SUBSCRIPTION_MANAGED_APPLICATION');
+        $this->makeActiveApplicationSubscription($tenant, $application);
+        app(SubscriptionApplicationService::class)->sync($tenant);
+        $this->getJson("/api/v1/tenants/{$tenant->id}/applications")->assertOk()->assertJsonFragment(['id' => $application->id]);
+        $this->deleteJson("/api/v1/tenants/{$tenant->id}/applications/{$application->id}")->assertStatus(409);
+        $this->getJson("/api/v1/tenants/{$tenant->id}/applications")->assertJsonFragment(['id' => $application->id]);
     }
 
     public function test_tenant_admin_assignment(): void

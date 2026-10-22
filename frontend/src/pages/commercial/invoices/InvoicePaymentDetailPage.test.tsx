@@ -43,7 +43,7 @@ it('invoice detail uses names and numbers, preserves cancelled issue date and om
   }); restore = mock.restore;
   renderApp('/invoices/i1');
   expect(await screen.findByText('BILL-10')).toBeTruthy();
-  expect(screen.getByText('Customer One')).toBeTruthy(); expect(screen.getByText('Tenant One')).toBeTruthy(); expect(screen.getByText('SUB-10')).toBeTruthy(); expect(screen.getByText('2026-10-20')).toBeTruthy();
+  expect(screen.getByText('Customer One')).toBeTruthy(); expect(screen.getByText('Tenant One')).toBeTruthy(); expect(screen.getByText('SUB-10')).toBeTruthy(); expect(screen.getByText('20/10/2026, 00:00:00')).toBeTruthy();
   expect(screen.queryByText('hidden-billing')).toBeNull(); expect(screen.queryByText('hidden-customer')).toBeNull();
   expect(screen.queryByRole('button', { name: 'Mark Fully Paid' })).toBeNull(); expect(screen.queryByText('Record Payment')).toBeNull();
 });

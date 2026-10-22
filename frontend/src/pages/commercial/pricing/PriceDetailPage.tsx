@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../i18n';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { pricesApi } from '../../../api/endpoints';
@@ -84,8 +85,8 @@ export function PriceDetailPage() {
             <dt>Minimum Quantity</dt><dd>{price.minimum_quantity ?? '—'}</dd>
             <dt>Included Quantity</dt><dd>{price.included_quantity ?? '—'}</dd>
             <dt>Tax Code ID</dt><dd>{price.tax_code_id ?? '—'}</dd>
-            <dt>Effective From</dt><dd>{price.effective_from}</dd>
-            <dt>Effective Until</dt><dd>{price.effective_until ?? '—'}</dd>
+            <dt>Effective From</dt><dd>{formatDateTime(price.effective_from)}</dd>
+            <dt>Effective Until</dt><dd>{formatDateTime(price.effective_until)}</dd>
             <dt>Created By</dt><dd>{price.created_by ?? '—'}</dd>
             <dt>Approved By</dt><dd>{price.approved_by ?? '—'}</dd>
           </dl>

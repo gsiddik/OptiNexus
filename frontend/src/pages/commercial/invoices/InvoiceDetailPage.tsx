@@ -1,3 +1,5 @@
+import { DownloadInvoice } from '../../../components/DownloadInvoice';
+import { formatDateTime } from '../../../i18n';
 import { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { invoicesApi } from '../../../api/endpoints';
@@ -29,6 +31,7 @@ export function InvoiceDetailPage() {
         <StatusBadge status={invoice.status} />
       </div>
 
+      <DownloadInvoice id={invoice.id} number={invoice.invoice_number} />
       <LifecycleActions
         status={invoice.status}
         hasPermission={hasPermission}
@@ -48,8 +51,8 @@ export function InvoiceDetailPage() {
             <dt>Customer</dt><dd>{invoice.customer_name ?? '—'}</dd>
             <dt>Tenant Name</dt><dd>{invoice.tenant_name ?? '—'}</dd>
             <dt>Subscription#</dt><dd>{invoice.subscription_number ?? '—'}</dd>
-            <dt>Issue Date</dt><dd>{invoice.issue_date ?? '—'}</dd>
-            <dt>Due Date</dt><dd>{invoice.due_date}</dd>
+            <dt>Issue Date</dt><dd>{formatDateTime(invoice.issue_date)}</dd>
+            <dt>Due Date</dt><dd>{formatDateTime(invoice.due_date)}</dd>
             <dt>Currency</dt><dd>{invoice.currency}</dd>
             <dt>Subtotal</dt><dd>{invoice.subtotal}</dd>
             <dt>Discount Total</dt><dd>{invoice.discount_total}</dd>
@@ -57,9 +60,9 @@ export function InvoiceDetailPage() {
             <dt>Adjustment Total</dt><dd>{invoice.adjustment_total}</dd>
             <dt>Total</dt><dd><strong>{invoice.total}</strong></dd>
             <dt>Balance Due</dt><dd><strong>{invoice.balance_due}</strong></dd>
-            <dt>Issued At</dt><dd>{invoice.issued_at ?? '—'}</dd>
-            <dt>Paid At</dt><dd>{invoice.paid_at ?? '—'}</dd>
-            <dt>Cancelled At</dt><dd>{invoice.cancelled_at ?? '—'}</dd>
+            <dt>Issued At</dt><dd>{formatDateTime(invoice.issued_at)}</dd>
+            <dt>Paid At</dt><dd>{formatDateTime(invoice.paid_at)}</dd>
+            <dt>Cancelled At</dt><dd>{formatDateTime(invoice.cancelled_at)}</dd>
           </dl>
         </div>
 
@@ -100,7 +103,7 @@ export function InvoiceDetailPage() {
               <tbody>
                 {invoice.payments.map((p) => (
                   <tr key={p.id} onClick={() => navigate(`/invoice-payments/${p.id}`)} style={{ cursor: 'pointer' }}>
-                    <td><Link to={`/invoice-payments/${p.id}`}>{p.paid_at}</Link></td>
+                    <td><Link to={`/invoice-payments/${p.id}`}>{formatDateTime(p.paid_at)}</Link></td>
                     <td>{p.amount}</td>
                     <td>{p.method ?? '—'}</td>
                     <td>{p.reference ?? '—'}</td>

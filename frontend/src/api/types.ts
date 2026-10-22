@@ -330,6 +330,8 @@ export interface BillingAdjustment {
 }
 
 export interface Billing {
+  invoice?: { id: string; invoice_number: string; status: string } | null;
+  can_generate_invoice?: boolean;
   customer_name?: string | null;
   tenant_name?: string | null;
   subscription_number?: string | null;

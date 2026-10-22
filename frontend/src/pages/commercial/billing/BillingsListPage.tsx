@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../i18n';
 import { HelpLabel, HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -70,7 +71,7 @@ export function BillingsListPage() {
               { key: 'subscription', header: 'Subscription', render: (r) => r.subscription_number ?? '—' },
               { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
               { key: 'total', header: 'Total', render: (r) => `${r.total} ${r.currency}` },
-              { key: 'period', header: 'Period', render: (r) => `${r.period_start} → ${r.period_end}` },
+              { key: 'period', header: 'Period', render: (r) => `${formatDateTime(r.period_start)} → ${formatDateTime(r.period_end)}` },
             ]}
           />
           <Pagination meta={meta} onPageChange={setPage} />
@@ -125,8 +126,8 @@ function RunBillingForm({ onRan }: { onRan: (results: Array<Billing | BillingRun
       <HelpLabel>Tenant ID<HelpSelect help="Select an active tenant to filter subscriptions. Changing tenant clears the subscription." value={form.tenant_id} disabled={tenants.loading || !!tenants.error} onChange={(e) => setForm({ ...form, tenant_id: e.target.value, subscription_id: '' })}>
         <option value="">Select a tenant...</option>{(tenants.data ?? []).filter((t) => t.status === 'ACTIVE').map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
       </HelpSelect></HelpLabel>
-      <HelpLabel>Period Start (optional)<HelpInput help="Optional billing period start date. Leave empty to use the subscription's current period." type="date" value={form.period_start} onChange={(e) => setForm({ ...form, period_start: e.target.value })} /></HelpLabel>
-      <HelpLabel>Period End (optional)<HelpInput help="Optional billing period end date. It must follow the start date." type="date" value={form.period_end} onChange={(e) => setForm({ ...form, period_end: e.target.value })} /></HelpLabel>
+      <HelpLabel>Period Start (optional)<HelpInput help="Optional billing period start date. Leave empty to use the subscription's current period." type="date" value={formatDateTime(form.period_start)} onChange={(e) => setForm({ ...form, period_start: e.target.value })} /></HelpLabel>
+      <HelpLabel>Period End (optional)<HelpInput help="Optional billing period end date. It must follow the start date." type="date" value={formatDateTime(form.period_end)} onChange={(e) => setForm({ ...form, period_end: e.target.value })} /></HelpLabel>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={submit} disabled={submitting || subscriptions.loading || tenants.loading || !!subscriptions.error || !!tenants.error || (!form.subscription_id && !form.tenant_id)}>Run</button>
       </div>

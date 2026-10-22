@@ -4,7 +4,7 @@
 <h1>Invoice {{ $invoice->invoice_number }}</h1><p>Status: {{ $invoice->status }}</p>
 <dl><dt>Billing#</dt><dd>{{ $invoice->billing?->billing_number }}</dd><dt>Customer</dt><dd>{{ $invoice->customer?->business_name ?: $invoice->customer?->legal_name }}</dd>
 <dt>Tenant</dt><dd>{{ $invoice->tenant?->name }}</dd><dt>Subscription#</dt><dd>{{ $invoice->subscription?->subscription_number }}</dd>
-<dt>Issue Date</dt><dd>{{ ($invoice->issue_date ?? $invoice->issued_at)?->format('d/m/Y') ?? '—' }}</dd><dt>Due Date</dt><dd>{{ $invoice->due_date?->format('d/m/Y') }}</dd></dl>
+<dt>Issue Date</dt><dd>{{ ($invoice->issue_date ?? $invoice->issued_at)?->format('d/m/Y, H:i:s') ?? '—' }}</dd><dt>Due Date</dt><dd>{{ $invoice->due_date?->format('d/m/Y, H:i:s') }}</dd></dl>
 <table><thead><tr><th>Description</th><th>Qty</th><th>Unit amount</th><th>Total</th></tr></thead><tbody>
 @foreach($invoice->items as $item)<tr><td>{{ $item->description }}</td><td>{{ $item->quantity }}</td><td>{{ $item->unit_amount }}</td><td>{{ $item->total }}</td></tr>@endforeach
 </tbody></table><p>Currency: {{ $invoice->currency }}</p><p>Subtotal: {{ $invoice->subtotal }}<br>Discount: {{ $invoice->discount_total }}<br>Tax: {{ $invoice->tax_total }}<br>Adjustment: {{ $invoice->adjustment_total }}</p><h2>Total: {{ $invoice->total }}</h2><p>Balance due: {{ $invoice->balance_due }}</p>

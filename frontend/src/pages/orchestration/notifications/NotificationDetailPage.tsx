@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../i18n';
 import { useParams } from 'react-router-dom';
 import { notificationsApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
@@ -61,7 +62,7 @@ export function NotificationDetailPage() {
                   <td>{d.attempt_number}</td>
                   <td><StatusBadge status={d.status} /></td>
                   <td>{d.error_message ?? '—'}</td>
-                  <td>{new Date(d.created_at).toLocaleString()}</td>
+                  <td>{formatDateTime(d.created_at)}</td>
                 </tr>
               ))}
               {!notification.deliveries?.length && <tr><td colSpan={4} className="empty-cell">No delivery attempts yet.</td></tr>}

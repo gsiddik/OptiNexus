@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../i18n';
 import { useState, type FormEvent } from 'react';
 import { HelpLabel, HelpInput, HelpSelect } from '../../components/FieldControls';
 import { unwrapError } from '../../api/client';
@@ -42,7 +43,7 @@ export function CustomerDetailPage() {
       <div className="detail-grid">
         <div className="card">
           <h3>Details</h3>
-          {hasPermission('cgo.customer.update') && <ContactForm key={customer.updated_at} customer={customer} onSaved={reload} />}
+          {hasPermission('cgo.customer.update') && <ContactForm key={formatDateTime(customer.updated_at)} customer={customer} onSaved={reload} />}
           <dl className="definition-list">
             <dt>Customer Code</dt><dd>{customer.customer_code}</dd>
             <dt>Business Name</dt><dd>{customer.business_name ?? '—'}</dd>
@@ -50,7 +51,7 @@ export function CustomerDetailPage() {
             <dt>Industry</dt><dd>{customer.industry ?? '—'}</dd>
             <dt>Email</dt><dd>{customer.email ?? '—'}</dd>
             <dt>Phone</dt><dd>{customer.phone ?? '—'}</dd>
-            <dt>Created</dt><dd>{new Date(customer.created_at).toLocaleString()}</dd>
+            <dt>Created</dt><dd>{formatDateTime(customer.created_at)}</dd>
           </dl>
         </div>
       </div>

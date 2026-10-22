@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../i18n';
 import { HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { usageApi } from '../../../api/endpoints';
@@ -44,8 +45,8 @@ export function UsageEventsPage() {
               { key: 'meter', header: 'Meter Key', render: (r) => r.meter_key },
               { key: 'quantity', header: 'Quantity', render: (r) => r.quantity },
               { key: 'timestamp', header: 'Usage Timestamp', render: (r) => r.usage_timestamp },
-              { key: 'period_start', header: 'Period Start', render: (r) => r.period_start },
-              { key: 'period_end', header: 'Period End', render: (r) => r.period_end },
+              { key: 'period_start', header: 'Period Start', render: (r) => formatDateTime(r.period_start) },
+              { key: 'period_end', header: 'Period End', render: (r) => formatDateTime(r.period_end) },
               { key: 'source', header: 'Source', render: (r) => r.source ?? '—' },
             ]}
           />

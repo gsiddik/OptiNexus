@@ -92,8 +92,7 @@ class UserController extends Controller
         $old = $user->only(['name', 'email']);
         $wasVerified = $user->email_verified_at !== null;
         DB::transaction(function () use ($request, $user): void {
-            $user->refresh();
-            User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            $user->setRawAttributes(User::whereKey($user->id)->lockForUpdate()->firstOrFail()->getAttributes(), true);
             $changedEmail = isset($request->validated()['email']) && strcasecmp($request->validated()['email'], $user->email) !== 0;
             if ($changedEmail && $user->tenantMemberships()->exists() && ! in_array($user->status, [User::STATUS_ACTIVE, User::STATUS_INVITED], true)) {
                 abort(409, 'Reactivate this tenant account before changing its email.');

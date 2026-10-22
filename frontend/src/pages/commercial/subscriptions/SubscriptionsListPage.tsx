@@ -1,4 +1,4 @@
-import { useI18n } from '../../../i18n';
+import { formatDateTime } from '../../../i18n';
 import { HelpLabel, HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -16,7 +16,6 @@ import type { Subscription, PriceType } from '../../../api/types';
 
 export function SubscriptionsListPage() {
   const navigate = useNavigate();
-  const { locale } = useI18n();
   const { rows, meta, setPage, loading, error, reload } = useApiList<Subscription>((p) => subscriptionsApi.list({ page: p }));
   const [showCreate, setShowCreate] = useState(false);
 
@@ -43,7 +42,7 @@ export function SubscriptionsListPage() {
               { key: 'tenant', header: 'Tenant', render: (r) => r.tenant_name ?? '—' },
               { key: 'plan', header: 'Plan', render: (r) => r.plan_name ?? '—' },
               { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
-              { key: 'period_end', header: 'Current Period End', render: (r) => r.current_period_end ? new Date(r.current_period_end).toLocaleString(locale === 'id' ? 'id-ID' : 'en-US') : '—' },
+              { key: 'period_end', header: 'Current Period End', render: (r) => r.current_period_end ? formatDateTime(r.current_period_end) : '—' },
             ]}
           />
           <Pagination meta={meta} onPageChange={setPage} />

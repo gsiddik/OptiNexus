@@ -1,6 +1,7 @@
+import { formatDateTime } from '../../i18n';
 import { SecretDialog } from '../../components/SecretDialog';
 import { ActiveSelect } from '../../components/ActiveSelect';
-import { HelpSelect } from '../../components/FieldControls';
+import { HelpInput, HelpLabel, HelpSelect } from '../../components/FieldControls';
 import { Fragment, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { auditApi, rolesApi, usersApi } from '../../api/endpoints';
@@ -32,6 +33,7 @@ export function UserDetailPage() {
       </div>
       <p className="muted">{user.email}</p>
 
+      {hasPermission('cgo.user.update') && <ChangeEmail user={user} onChanged={reload} />}
       <LifecycleActions
         status={user.status}
         hasPermission={hasPermission}
@@ -206,7 +208,7 @@ function AuditHistoryPanel({ user }: { user: User }) {
             <tr key={log.id}>
               <td>{log.action}</td>
               <td>{log.resource_type ?? '—'} {log.resource_id ?? ''}</td>
-              <td>{new Date(log.created_at).toLocaleString()}</td>
+              <td>{formatDateTime(log.created_at)}</td>
             </tr>
           ))}
           {!logs.length && <tr><td colSpan={3} className="empty-cell">No audit history for this user yet.</td></tr>}
@@ -214,4 +216,20 @@ function AuditHistoryPanel({ user }: { user: User }) {
       </table>
     </div>
   );
+}
+
+function ChangeEmail({ user, onChanged }: { user: User; onChanged: () => void }) {
+  const [email, setEmail] = useState(user.email);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  async function save() {
+    setBusy(true); setError(null);
+    try { await usersApi.update(user.id, { email }); onChanged(); }
+    catch (err) { setError(unwrapError(err).message); }
+    finally { setBusy(false); }
+  }
+  return <div className="card"><h3>Change Email</h3><ErrorAlert message={error} />
+    <HelpLabel>Email<HelpInput type="email" help="For tenant accounts, this sends a temporary password to the new address and requires password replacement and email verification before application access." value={email} onChange={(e) => setEmail(e.target.value)} /></HelpLabel>
+    <button className="btn btn-secondary" disabled={busy || !email.trim() || email === user.email} onClick={save}>Save Email</button>
+  </div>;
 }

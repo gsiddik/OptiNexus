@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../i18n';
 import { HelpLabel, HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -137,7 +138,7 @@ function DeliveryLogs({ integrationId }: { integrationId: string }) {
                 <td>{l.response_status ?? '—'}</td>
                 <td>{l.duration_ms ? `${l.duration_ms}ms` : '—'}</td>
                 <td>{l.correlation_id ? <code>{l.correlation_id.slice(0, 8)}</code> : '—'}</td>
-                <td>{new Date(l.created_at).toLocaleString()}</td>
+                <td>{formatDateTime(l.created_at)}</td>
               </tr>
             ))}
             {!logs.length && <tr><td colSpan={5} className="empty-cell">No delivery logs yet.</td></tr>}

@@ -14,7 +14,7 @@ import { Modal } from '../../components/Modal';
 import { Pagination } from '../../components/Pagination';
 import { EmptyState, ErrorState, ForbiddenState } from '../../components/StateViews';
 import { Badge, StatusBadge } from '../../components/StatusBadge';
-import { formatDateTime, formatRelative, useI18n, type MessageKey } from '../../i18n';
+import { formatDateTime, useI18n, type MessageKey } from '../../i18n';
 import { classifyAll, countByClass, matchesSearch, onlyTenant, syncHealth, type Classified, type LinkClass, type SyncState } from './gatewayMapping';
 
 export const GATEWAY_LINK_VIEW = 'cgo.gateway.link.view';
@@ -139,7 +139,7 @@ function Summary({ counts, vehicleCount, health, loading, canLogs, canLinks }: {
             <div><Badge tone={HEALTH_TONE[health.state]}>{t(`gw.health.${health.state}` as MessageKey)}</Badge></div>
             <div className="muted summary-note">{t(`gw.health.${health.state}Help` as MessageKey)}</div>
             {health.lastAt ? (
-              <div className="summary-note" title={formatDateTime(health.lastAt)}>{t('gw.summary.lastRequest')}: {formatRelative(health.lastAt)}</div>
+              <div className="summary-note" title={formatDateTime(health.lastAt)}>{t('gw.summary.lastRequest')}: {formatDateTime(health.lastAt)}</div>
             ) : (
               <div className="muted summary-note">{t('gw.summary.noLogs')}</div>
             )}

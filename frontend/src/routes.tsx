@@ -44,6 +44,7 @@ const UsageEventsPage = lazyPage(() => import('./pages/commercial/usage/UsageEve
 const BillingsListPage = lazyPage(() => import('./pages/commercial/billing/BillingsListPage'), 'BillingsListPage');
 const BillingDetailPage = lazyPage(() => import('./pages/commercial/billing/BillingDetailPage'), 'BillingDetailPage');
 const InvoicesListPage = lazyPage(() => import('./pages/commercial/invoices/InvoicesListPage'), 'InvoicesListPage');
+const InvoicePaymentDetailPage = lazyPage(() => import('./pages/commercial/invoices/InvoicePaymentDetailPage'), 'InvoicePaymentDetailPage');
 const InvoiceDetailPage = lazyPage(() => import('./pages/commercial/invoices/InvoiceDetailPage'), 'InvoiceDetailPage');
 const PoliciesListPage = lazyPage(() => import('./pages/orchestration/policies/PoliciesListPage'), 'PoliciesListPage');
 const PolicyDetailPage = lazyPage(() => import('./pages/orchestration/policies/PolicyDetailPage'), 'PolicyDetailPage');
@@ -112,6 +113,7 @@ export const routeTree = (
       <Route path="/billings" element={<BillingsListPage />} />
       <Route path="/billings/:id" element={<BillingDetailPage />} />
       <Route path="/invoices" element={<InvoicesListPage />} />
+      <Route path="/invoice-payments/:id" element={<InvoicePaymentDetailPage />} />
       <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
       <Route path="/policies" element={<PoliciesListPage />} />
       <Route path="/policies/:id" element={<PolicyDetailPage />} />

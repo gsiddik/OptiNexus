@@ -71,9 +71,9 @@ export function BillingDetailPage() {
         <div className="card">
           <h3>Details</h3>
           <dl className="definition-list">
-            <dt>Customer ID</dt><dd>{billing.customer_id}</dd>
-            <dt>Tenant ID</dt><dd>{billing.tenant_id}</dd>
-            <dt>Subscription ID</dt><dd>{billing.subscription_id}</dd>
+            <dt>Customer</dt><dd>{billing.customer_name ?? '—'}</dd>
+            <dt>Tenant</dt><dd>{billing.tenant_name ?? '—'}</dd>
+            <dt>Subscription#</dt><dd>{billing.subscription_number ?? '—'}</dd>
             <dt>Period</dt><dd>{billing.period_start} → {billing.period_end}</dd>
             <dt>Currency</dt><dd>{billing.currency}</dd>
             <dt>Subtotal</dt><dd>{billing.subtotal}</dd>

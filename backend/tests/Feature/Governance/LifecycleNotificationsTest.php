@@ -53,7 +53,7 @@ class LifecycleNotificationsTest extends TestCase
         $this->assertSame(0, $user->tokens()->count());
         Queue::assertPushed(SendAccountCredential::class, fn ($job) => $job->userId === $user->id && $job->email === 'new@example.test');
         $this->assertTrue($user->fresh()->password_change_required);
-        $job = Queue::pushed(SendAccountCredential::class)->first()[0];
+        $job = Queue::pushed(SendAccountCredential::class)->first();
         $plain = (new \ReflectionProperty($job, 'password'))->getValue($job);
         $fresh = $user->fresh();
         $result = app(AccountActivationService::class)->changePassword($fresh->id, $fresh->temporary_password_issued_at->timestamp, $plain, 'Chosen replacement 2026!', request());

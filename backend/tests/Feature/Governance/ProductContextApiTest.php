@@ -48,6 +48,7 @@ class ProductContextApiTest extends TestCase
 
     private function subscribe(Application $application, Tenant $tenant, bool $withAccess = true): void
     {
+        $this->makeActiveApplicationSubscription($tenant, $application);
         $tenant->applications()->attach($application->id, ['id' => (string) Str::uuid(), 'status' => 'ACTIVE']);
         if ($withAccess) {
             $this->grantApplicationAccess($this->user, $tenant, $application);

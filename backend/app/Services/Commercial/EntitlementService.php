@@ -124,6 +124,9 @@ class EntitlementService
         $applicationId = $applicationCode ? Application::query()->where('application_code', $applicationCode)->value('id') : null;
 
         $query = Entitlement::query()->where('tenant_id', $tenant->id)->where('status', Entitlement::STATUS_ACTIVE)
+            ->where(fn ($q) => $q->whereNull('subscription_id')->orWhereHas('subscription', fn ($sub) => $sub
+                ->whereIn('status', Subscription::ACTIVE_LIKE_STATUSES)
+                ->where(fn ($period) => $period->whereNull('current_period_end')->orWhere('current_period_end', '>', now()))))
             ->where('effective_from', '<=', now())
             ->where(fn ($q) => $q->whereNull('effective_until')->orWhere('effective_until', '>', now()));
 

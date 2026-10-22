@@ -44,7 +44,8 @@ class SsoAccessResolver
                 ->where('applications.id', $application->id)
                 ->where('tenant_applications.status', 'ACTIVE'))
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->filter(fn (Tenant $tenant) => app(\App\Services\Commercial\SubscriptionAccess::class)->allowed($tenant, $application))->values();
     }
 
     public function canAccess(User $user, Application $application, Tenant $tenant): bool
@@ -90,7 +91,11 @@ class SsoAccessResolver
             ->where('applications.id', $application->id)
             ->where('tenant_applications.status', 'ACTIVE')->exists();
 
-        return $assigned ? null : 'application_not_assigned';
+        if (! $assigned) {
+            return 'application_not_assigned';
+        }
+
+        return app(\App\Services\Commercial\SubscriptionAccess::class)->allowed($tenant, $application) ? null : 'subscription_inactive';
     }
 
     /**
@@ -125,7 +130,8 @@ class SsoAccessResolver
             ->wherePivot('status', 'ACTIVE')
             ->whereIn('applications.id', $applicationIds)
             ->get()
-            ->filter(fn (Application $app) => $this->applicationIsLive($app))
+            ->filter(fn (Application $app) => $this->applicationIsLive($app)
+                && app(\App\Services\Commercial\SubscriptionAccess::class)->allowed($tenant, $app))
             ->map(fn (Application $app) => [
                 'code' => $app->application_code,
                 'name' => $app->name,

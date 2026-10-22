@@ -295,7 +295,7 @@ export interface Subscription {
   id: string; subscription_number: string; customer_id: string; tenant_id: string; product_id: string; plan_id: string;
   status: 'DRAFT' | 'PENDING' | 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'GRACE_PERIOD' | 'SUSPENDED' | 'EXPIRED' | 'CANCELLED' | 'TERMINATED';
   start_at: string | null; current_period_start: string | null; current_period_end: string | null;
-  trial_end_at: string | null; grace_end_at: string | null; cancel_at: string | null; cancelled_at: string | null;
+  grace_period_days?: number; trial_end_at: string | null; grace_end_at: string | null; cancel_at: string | null; cancelled_at: string | null;
   currency: string; billing_interval: string; auto_renew: boolean; metadata: Record<string, unknown> | null;
   items: SubscriptionItem[]; created_at: string; updated_at: string;
 }

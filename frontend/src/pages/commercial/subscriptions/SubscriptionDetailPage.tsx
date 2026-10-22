@@ -40,10 +40,8 @@ export function SubscriptionDetailPage() {
         actions={[
           { key: 'start-trial', label: 'Start Trial', allowedFrom: ['DRAFT'], permission: 'cgo.subscription.activate', action: () => subscriptionsApi.startTrial(subscription.id) },
           { key: 'activate', label: 'Activate', allowedFrom: ['DRAFT', 'TRIAL', 'SUSPENDED'], permission: 'cgo.subscription.activate', action: () => subscriptionsApi.activate(subscription.id) },
-          { key: 'renew', label: 'Renew', allowedFrom: ['ACTIVE', 'PAST_DUE', 'GRACE_PERIOD'], permission: 'cgo.subscription.renew', action: () => subscriptionsApi.renew(subscription.id) },
-          { key: 'suspend', label: 'Suspend', allowedFrom: ['ACTIVE', 'PAST_DUE', 'GRACE_PERIOD'], permission: 'cgo.subscription.suspend', action: () => subscriptionsApi.suspend(subscription.id) },
+          { key: 'renew', label: 'Renew', allowedFrom: ['EXPIRED'], permission: 'cgo.subscription.renew', action: () => subscriptionsApi.renew(subscription.id) },
           { key: 'reactivate', label: 'Reactivate', allowedFrom: ['SUSPENDED'], permission: 'cgo.subscription.reactivate', action: () => subscriptionsApi.reactivate(subscription.id) },
-          { key: 'expire', label: 'Expire', allowedFrom: ['TRIAL', 'ACTIVE', 'PAST_DUE', 'GRACE_PERIOD'], permission: 'cgo.subscription.terminate', action: () => subscriptionsApi.expire(subscription.id) },
           { key: 'cancel', label: 'Cancel', allowedFrom: ACTIVE_LIKE, permission: 'cgo.subscription.cancel', danger: true, action: () => subscriptionsApi.cancel(subscription.id) },
           { key: 'terminate', label: 'Terminate', allowedFrom: TERMINATE_FROM, permission: 'cgo.subscription.terminate', danger: true, action: () => subscriptionsApi.terminate(subscription.id) },
         ]}
@@ -63,6 +61,7 @@ export function SubscriptionDetailPage() {
             <dt>Start</dt><dd>{subscription.start_at ?? '—'}</dd>
             <dt>Current Period</dt><dd>{subscription.current_period_start ?? '—'} &rarr; {subscription.current_period_end ?? '—'}</dd>
             <dt>Trial End</dt><dd>{subscription.trial_end_at ?? '—'}</dd>
+            <dt>Grace Period (Days)</dt><dd>{subscription.grace_period_days ?? 0}</dd>
             <dt>Grace End</dt><dd>{subscription.grace_end_at ?? '—'}</dd>
             <dt>Cancel At</dt><dd>{subscription.cancel_at ?? '—'}</dd>
             <dt>Cancelled At</dt><dd>{subscription.cancelled_at ?? '—'}</dd>

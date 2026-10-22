@@ -30,6 +30,7 @@ class SubscriptionResource extends JsonResource
             'current_period_end' => $this->current_period_end,
             'trial_end_at' => $this->trial_end_at,
             'grace_end_at' => $this->grace_end_at,
+            'grace_period_days' => $this->grace_period_days,
             'cancel_at' => $this->cancel_at,
             'cancelled_at' => $this->cancelled_at,
             'currency' => $this->currency,

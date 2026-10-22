@@ -77,6 +77,9 @@ class EntitlementController extends Controller
         $application = $account->application;
         $limitSubscriptionIds = $application ? $tenant->subscriptions()
             ->whereHas('product.applications', fn ($query) => $query->where('applications.id', $application->id))->pluck('id')->all() : [];
+        $applicationSubscriptions = $application ? $tenant->subscriptions()->with(['plan', 'product', 'items'])
+            ->whereHas('product.applications', fn ($query) => $query->where('applications.id', $application->id))
+            ->orderByDesc('current_period_end')->orderByDesc('created_at')->orderBy('id')->get() : collect();
         $resourceLimits = $application ? $this->entitlements->effectiveEntitlements($tenant, $application->application_code, $limitSubscriptionIds)
             ->where('entitlement_type', Entitlement::TYPE_LIMIT)->pluck('value', 'entitlement_key') : collect();
 
@@ -87,6 +90,11 @@ class EntitlementController extends Controller
             'applications_enabled' => $effective->where('entitlement_type', Entitlement::TYPE_APPLICATION)->where('value', true)->pluck('entitlement_key')->values(),
             'effective_entitlements' => $effective->values(),
             'resource_limits' => (object) $resourceLimits->all(),
+            'application_code' => $application?->application_code,
+            'application_access' => $application && $tenant->isActive()
+                && $tenant->applications()->where('applications.id', $application->id)->wherePivot('status', 'ACTIVE')->exists()
+                && app(\App\Services\Commercial\SubscriptionAccess::class)->allowed($tenant, $application),
+            'application_subscriptions' => SubscriptionResource::collection($applicationSubscriptions),
         ]);
     }
 

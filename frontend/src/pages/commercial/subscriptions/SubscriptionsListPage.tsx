@@ -58,7 +58,7 @@ export function SubscriptionsListPage() {
 }
 
 export function CreateSubscriptionForm({ onCreated }: { onCreated: () => void }) {
-  const [form, setForm] = useState({ customer_id: '', tenant_id: '', idempotency_key: '', auto_renew: true });
+  const [form, setForm] = useState({ customer_id: '', tenant_id: '', idempotency_key: '', auto_renew: true, grace_period_days: '0' });
   const [priceItems, setPriceItems] = useState([{ price_id: '', quantity: '' }]);
   const prices = useApiResource(() => form.tenant_id ? subscriptionsApi.priceOptions(form.tenant_id) : Promise.resolve([]), [form.tenant_id]);
   const selectedPrices = priceItems.map((item) => (prices.data ?? []).find((price) => price.id === item.price_id));
@@ -88,6 +88,7 @@ export function CreateSubscriptionForm({ onCreated }: { onCreated: () => void })
         price_items: priceItems.map((item, index) => ({ price_id: item.price_id, quantity: selectedPrices[index]?.price_type === 'FLAT' ? 1 : Number(item.quantity) })),
         idempotency_key: form.idempotency_key || undefined,
         auto_renew: form.auto_renew,
+        grace_period_days: Number(form.grace_period_days),
       });
       onCreated();
     } catch (err) {
@@ -123,12 +124,13 @@ export function CreateSubscriptionForm({ onCreated }: { onCreated: () => void })
         </div>;
       })}
       <button type="button" className="btn btn-secondary" disabled={!form.tenant_id} onClick={() => setPriceItems([...priceItems, { price_id: '', quantity: '' }])}>Add Plan/Add-on</button>
+      <HelpLabel>Grace Period (Days)<HelpInput help="Days after Current Period End until suspension. Access requires an ACTIVE subscription throughout." type="number" min="0" max="3650" step="1" value={form.grace_period_days} onChange={(e) => setForm({ ...form, grace_period_days: e.target.value })} /></HelpLabel>
       <HelpLabel>Idempotency Key (optional)<HelpInput help="Optional: reuse the same key when retrying the same operation to prevent duplicate processing." value={form.idempotency_key} onChange={(e) => setForm({ ...form, idempotency_key: e.target.value })} /></HelpLabel>
       <HelpLabel>
         <HelpInput help="Enable automatic renewal at the end of each subscription billing period." type="checkbox" checked={form.auto_renew} onChange={(e) => setForm({ ...form, auto_renew: e.target.checked })} /> Auto Renew
       </HelpLabel>
       <div className="modal-actions">
-        <button className="btn btn-primary" onClick={handleSubmit} disabled={!validPrices || submitting || customers.loading || tenants.loading || !!customers.error || !!tenants.error || !tenantOptions.some((tenant) => tenant.id === form.tenant_id)}>Create</button>
+        <button className="btn btn-primary" onClick={handleSubmit} disabled={!/^\d+$/.test(form.grace_period_days) || Number(form.grace_period_days) > 3650 || !validPrices || submitting || customers.loading || tenants.loading || !!customers.error || !!tenants.error || !tenantOptions.some((tenant) => tenant.id === form.tenant_id)}>Create</button>
       </div>
     </div>
   );

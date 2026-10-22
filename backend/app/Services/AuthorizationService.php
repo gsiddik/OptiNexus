@@ -243,6 +243,18 @@ class AuthorizationService
             return 'APPLICATION_NOT_ACTIVE';
         }
 
+        if ($tenant && app(\App\Services\Commercial\SubscriptionAccess::class)->required($application)) {
+            if (! $tenant->applications()->where('applications.id', $application->id)->wherePivot('status', 'ACTIVE')->exists()) {
+                return 'APPLICATION_NOT_ASSIGNED';
+            }
+            if (! app(\App\Services\Commercial\SubscriptionAccess::class)->allowed($tenant, $application)) {
+                return 'SUBSCRIPTION_INACTIVE';
+            }
+            if (! $user->applicationAccess()->where('tenant_id', $tenant->id)->where('application_id', $application->id)->where('status', 'ACTIVE')->exists()) {
+                return 'APPLICATION_ACCESS_REVOKED';
+            }
+        }
+
         return null;
     }
 

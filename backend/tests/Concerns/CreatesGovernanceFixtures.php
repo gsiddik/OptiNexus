@@ -148,6 +148,20 @@ trait CreatesGovernanceFixtures
         }
     }
 
+    protected function makeActiveApplicationSubscription(Tenant $tenant, Application $application): \App\Models\Subscription
+    {
+        $product = \App\Models\Product::create(['product_code' => 'P-'.Str::random(12), 'name' => 'Subscribed product', 'status' => 'ACTIVE', 'currency' => 'IDR']);
+        $product->applications()->attach($application->id, ['id' => (string) Str::uuid()]);
+        $plan = \App\Models\Plan::create(['product_id' => $product->id, 'plan_code' => 'P-'.Str::random(12), 'name' => 'Subscribed plan', 'status' => 'ACTIVE', 'currency' => 'IDR', 'billing_interval' => 'MONTHLY']);
+
+        return \App\Models\Subscription::create([
+            'subscription_number' => 'SUB-'.Str::random(12), 'customer_id' => $tenant->customer_id, 'tenant_id' => $tenant->id,
+            'product_id' => $product->id, 'plan_id' => $plan->id, 'status' => 'ACTIVE', 'currency' => 'IDR', 'billing_interval' => 'MONTHLY',
+            'start_at' => now()->subDay(), 'current_period_start' => now()->subDay(), 'current_period_end' => now()->addMonth(),
+            'grace_end_at' => now()->addMonth()->addDays(7), 'grace_period_days' => 7,
+        ]);
+    }
+
     protected function grantApplicationAccess(User $user, Tenant $tenant, Application $application): void
     {
         if (! $tenant->applications()->where('applications.id', $application->id)->exists()) {

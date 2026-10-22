@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'subscription_number', 'customer_id', 'tenant_id', 'product_id', 'plan_id', 'status',
     'start_at', 'current_period_start', 'current_period_end', 'trial_end_at', 'grace_end_at',
     'cancel_at', 'cancelled_at', 'currency', 'billing_interval', 'auto_renew',
-    'idempotency_key', 'metadata',
+    'idempotency_key', 'metadata', 'grace_period_days',
 ])]
 class Subscription extends Model
 {
@@ -55,6 +55,7 @@ class Subscription extends Model
             'cancel_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'auto_renew' => 'boolean',
+            'grace_period_days' => 'integer',
             'metadata' => 'array',
         ];
     }

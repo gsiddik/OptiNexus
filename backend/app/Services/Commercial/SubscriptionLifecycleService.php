@@ -62,6 +62,7 @@ class SubscriptionLifecycleService
                 'currency' => $plan->currency,
                 'billing_interval' => $plan->billing_interval,
                 'auto_renew' => $options['auto_renew'] ?? true,
+                'grace_period_days' => $options['grace_period_days'] ?? 0,
                 'idempotency_key' => $options['idempotency_key'] ?? null,
                 'metadata' => $options['metadata'] ?? null,
             ]);
@@ -113,6 +114,7 @@ class SubscriptionLifecycleService
                 'trial_end_at' => now()->addDays($plan->trial_days),
                 'current_period_start' => now(),
                 'current_period_end' => now()->addDays($plan->trial_days),
+                'grace_end_at' => now()->addDays($plan->trial_days + $subscription->grace_period_days),
             ]);
 
             $this->entitlements->generateFromSubscription($subscription);
@@ -129,14 +131,15 @@ class SubscriptionLifecycleService
 
         DB::transaction(function () use ($subscription) {
             $wasSuspended = $subscription->status === Subscription::STATUS_SUSPENDED;
-            $periodEnd = $this->periodEnd(now(), $subscription->billing_interval);
+            $periodEnd = $wasSuspended ? $this->periodEnd(now(), $subscription->billing_interval)
+                : ($subscription->current_period_end ?? $this->periodEnd(now(), $subscription->billing_interval));
 
             $subscription->update([
                 'status' => Subscription::STATUS_ACTIVE,
                 'start_at' => $subscription->start_at ?? now(),
-                'current_period_start' => $subscription->current_period_start ?? now(),
-                'current_period_end' => $subscription->current_period_end ?? $periodEnd,
-                'grace_end_at' => null,
+                'current_period_start' => $wasSuspended ? now() : ($subscription->current_period_start ?? now()),
+                'current_period_end' => $periodEnd,
+                'grace_end_at' => $periodEnd->copy()->addDays($subscription->grace_period_days),
             ]);
 
             if ($wasSuspended) {
@@ -204,20 +207,43 @@ class SubscriptionLifecycleService
 
     public function renew(Subscription $subscription): ?string
     {
-        if (! in_array($subscription->status, [Subscription::STATUS_ACTIVE, Subscription::STATUS_PAST_DUE, Subscription::STATUS_GRACE_PERIOD], true)) {
-            return 'INVALID_SUBSCRIPTION_TRANSITION';
-        }
+        return DB::transaction(function () use ($subscription) {
+            $subscription = Subscription::query()->lockForUpdate()->findOrFail($subscription->id);
+            if (! in_array($subscription->status, [Subscription::STATUS_ACTIVE, Subscription::STATUS_PAST_DUE, Subscription::STATUS_GRACE_PERIOD, Subscription::STATUS_EXPIRED], true)) {
+                return 'INVALID_SUBSCRIPTION_TRANSITION';
+            }
+            // An expired period renews from today, never from its elapsed end date.
+            $newStart = $subscription->status === Subscription::STATUS_EXPIRED ? now() : ($subscription->current_period_end ?? now());
+            $newEnd = $this->periodEnd($newStart, $subscription->billing_interval);
+            $subscription->update([
+                'status' => Subscription::STATUS_ACTIVE,
+                'current_period_start' => $newStart,
+                'current_period_end' => $newEnd,
+                'grace_end_at' => $newEnd->copy()->addDays($subscription->grace_period_days),
+            ]);
+            $this->entitlements->generateFromSubscription($subscription);
 
-        $newStart = $subscription->current_period_end ?? now();
+            return null;
+        });
+    }
 
-        $subscription->update([
-            'status' => Subscription::STATUS_ACTIVE,
-            'current_period_start' => $newStart,
-            'current_period_end' => $this->periodEnd($newStart, $subscription->billing_interval),
-            'grace_end_at' => null,
-        ]);
-
-        return null;
+    /** Idempotent deadline processing, serialized against renewal on the same subscription. */
+    public function processDue(Subscription $subscription): void
+    {
+        DB::transaction(function () use ($subscription) {
+            $subscription = Subscription::query()->lockForUpdate()->findOrFail($subscription->id);
+            if (in_array($subscription->status, Subscription::ACTIVE_LIKE_STATUSES, true)
+                && $subscription->current_period_end?->lte(now())) {
+                $this->expire($subscription);
+                app(\App\Services\AuditService::class)->record('subscription.expired', tenantId: $subscription->tenant_id,
+                    resourceType: 'Subscription', resourceId: $subscription->id, source: 'scheduler');
+            }
+            if ($subscription->status === Subscription::STATUS_EXPIRED && $subscription->grace_end_at?->lte(now())) {
+                $this->suspend($subscription);
+                app(\App\Services\AuditService::class)->record('subscription.suspended', tenantId: $subscription->tenant_id,
+                    resourceType: 'Subscription', resourceId: $subscription->id, source: 'scheduler');
+            }
+        });
     }
 
     public function cancel(Subscription $subscription): ?string
@@ -229,6 +255,7 @@ class SubscriptionLifecycleService
         DB::transaction(function () use ($subscription) {
             $subscription->update(['status' => Subscription::STATUS_CANCELLED, 'cancelled_at' => now(), 'auto_renew' => false]);
             $this->entitlements->revokeSourcedEntitlements($subscription, 'subscription_cancelled');
+            $this->revokeLostAccess($subscription);
         });
 
         return null;
@@ -236,13 +263,14 @@ class SubscriptionLifecycleService
 
     public function suspend(Subscription $subscription): ?string
     {
-        if (! in_array($subscription->status, [Subscription::STATUS_ACTIVE, Subscription::STATUS_PAST_DUE, Subscription::STATUS_GRACE_PERIOD], true)) {
+        if (! in_array($subscription->status, [Subscription::STATUS_ACTIVE, Subscription::STATUS_PAST_DUE, Subscription::STATUS_GRACE_PERIOD, Subscription::STATUS_EXPIRED], true)) {
             return 'INVALID_SUBSCRIPTION_TRANSITION';
         }
 
         DB::transaction(function () use ($subscription) {
             $subscription->update(['status' => Subscription::STATUS_SUSPENDED]);
             $this->entitlements->suspendForSubscription($subscription);
+            $this->revokeLostAccess($subscription);
         });
 
         return null;
@@ -266,6 +294,7 @@ class SubscriptionLifecycleService
         DB::transaction(function () use ($subscription) {
             $subscription->update(['status' => Subscription::STATUS_EXPIRED]);
             $this->entitlements->expireForSubscription($subscription);
+            $this->revokeLostAccess($subscription);
         });
 
         return null;
@@ -280,9 +309,21 @@ class SubscriptionLifecycleService
         DB::transaction(function () use ($subscription) {
             $subscription->update(['status' => Subscription::STATUS_TERMINATED, 'auto_renew' => false]);
             $this->entitlements->revokeSourcedEntitlements($subscription, 'subscription_terminated');
+            $this->revokeLostAccess($subscription);
         });
 
         return null;
+    }
+
+    private function revokeLostAccess(Subscription $subscription): void
+    {
+        $access = app(SubscriptionAccess::class);
+        foreach ($subscription->product->applications as $application) {
+            if ($access->required($application) && ! $access->allowed($subscription->tenant, $application)) {
+                app(\App\Services\Oidc\SessionRevocationService::class)
+                    ->revokeTenant($subscription->tenant, 'subscription_inactive', $application);
+            }
+        }
     }
 
     private function snapshotPlanItem(Subscription $subscription, Plan $plan): void

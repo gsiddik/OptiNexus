@@ -98,7 +98,7 @@ class CommercialPortalController extends Controller
         $actor = $this->authorizePortal($request, $tenant, 'account.payment.submit');
         $data = $request->validate([
             'invoice_id' => ['required', 'uuid'], 'submission_key' => ['required', 'uuid'],
-            'payment_date' => ['required', 'date', 'before_or_equal:today'],
+            'payment_date' => ['required', 'date'],
             'amount' => ['required', 'decimal:0,2', 'gt:0', 'max:9999999999999999.99'],
             'payment_method' => ['required', 'string', 'max:50'], 'transaction_reference' => ['nullable', 'string', 'max:255'],
             'bank_name' => ['nullable', 'string', 'max:255'], 'account_name' => ['nullable', 'string', 'max:255'],
@@ -125,7 +125,7 @@ class CommercialPortalController extends Controller
         $proof = $this->payment($tenant, $payment)->proof;
         abort_unless($proof, 404);
 
-        return $this->ok(['content' => base64_encode(Storage::disk('local')->get($proof['path'])),
+        return $this->ok(['tenant_id' => $tenant->id, 'payment_id' => $payment, 'content' => base64_encode(Storage::disk('local')->get($proof['path'])),
             'filename' => $proof['original_filename'], 'mime_type' => $proof['mime_type'], 'id' => $proof['id']]);
     }
 

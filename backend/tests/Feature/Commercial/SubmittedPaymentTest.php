@@ -114,6 +114,7 @@ class SubmittedPaymentTest extends TestCase
         $base = "/api/v1/commercial-portal/tenants/$tenant->id";
         $this->getJson($base.'/invoices?acting_user_id='.$actor->id, $headers)->assertOk()->assertJsonPath('data.0.id', $invoice->id);
         $other = $this->makeTenant();
+        $this->attachUserToTenant($actor, $other);
         $this->getJson("/api/v1/commercial-portal/tenants/$other->id/invoices/$invoice->id?acting_user_id=$actor->id", $headers)->assertNotFound();
         $payload = [...$this->data($invoice), 'invoice_id' => $invoice->id, 'acting_user_id' => $actor->id];
         $this->postJson($base.'/payments', $payload, $headers)->assertCreated()->assertJsonPath('data.status', 'SUBMITTED');

@@ -36,6 +36,7 @@ class InvoicePaymentController extends Controller
         $payment = $payments->review($payment, $verify, $request->user()->id, $data['note'] ?? null);
         app(AuditService::class)->record($verify ? 'invoice.payment_verified' : 'invoice.payment_rejected', $request,
             tenantId: $payment->tenant_id, resourceType: 'InvoicePayment', resourceId: $payment->id);
+
         return $this->ok(new InvoicePaymentResource($payment));
     }
 
@@ -44,6 +45,7 @@ class InvoicePaymentController extends Controller
         abort_unless($payment->proof, 404);
         $proof = $payment->proof;
         $headers = ['Content-Type' => $proof['mime_type'], 'X-Content-Type-Options' => 'nosniff'];
+
         return $request->boolean('download')
             ? Storage::disk('local')->download($proof['path'], $proof['original_filename'], $headers)
             : Storage::disk('local')->response($proof['path'], $proof['original_filename'], $headers);

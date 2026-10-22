@@ -25,7 +25,7 @@ const DETAIL_OF = [
 ];
 for (const list of DETAIL_OF) META[`${list}/:id`] = { label: 'Details', labelKey: 'nav.details', parent: list };
 
-META['/invoice-payments/:id'] = { label: 'Payment Details', parent: '/invoices' };
+META['/invoice-payments/:id'] = { label: 'Details', labelKey: 'nav.details', parent: '/invoices' };
 
 // The entitlements page names its tenant parameter differently from the tenant detail page; this alias is a parent only.
 META['/tenants/:tenantId'] = { label: 'Details', labelKey: 'nav.details', parent: '/tenants' };

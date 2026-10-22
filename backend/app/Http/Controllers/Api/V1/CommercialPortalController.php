@@ -33,12 +33,14 @@ class CommercialPortalController extends Controller
         $user = User::findOrFail($data['acting_user_id']);
         $answer = app(AuthorizationService::class)->check($user, $tenant, $app, 'optifleet.'.$permission);
         abort_unless($answer['allowed'], 403, 'Central commercial permission denied.');
+
         return $user;
     }
 
     private function invoices(Tenant $tenant)
     {
         $application = request()->attributes->get('service_account')->application;
+
         return Invoice::query()->where('tenant_id', $tenant->id)
             ->whereHas('billing', fn ($q) => $q->where('status', 'FINALIZED'))
             ->whereHas('subscription.product.applications', fn ($q) => $q->where('applications.id', $application->id));
@@ -53,15 +55,21 @@ class CommercialPortalController extends Controller
     {
         $this->authorizePortal($request, $tenant, 'account.invoice.view');
         $q = $this->invoices($tenant);
-        if ($status = $request->query('status')) $q->where('status', $status);
-        if ($request->boolean('payable')) $q->whereIn('status', ['ISSUED', 'OVERDUE'])->where('balance_due', '>', 0)
-            ->whereDoesntHave('payments', fn ($q) => $q->where('status', 'SUBMITTED'));
+        if ($status = $request->query('status')) {
+            $q->where('status', $status);
+        }
+        if ($request->boolean('payable')) {
+            $q->whereIn('status', ['ISSUED', 'OVERDUE'])->where('balance_due', '>', 0)
+                ->whereDoesntHave('payments', fn ($q) => $q->where('status', 'SUBMITTED'));
+        }
+
         return $this->paginated($q->latest()->paginate(min(100, max(1, $request->integer('per_page', 20)))), InvoiceResource::class);
     }
 
     public function invoiceShow(Request $request, Tenant $tenant, string $invoice)
     {
         $this->authorizePortal($request, $tenant, 'account.invoice.view');
+
         return $this->ok(new InvoiceResource($this->invoices($tenant)->with(['items', 'payments'])->findOrFail($invoice)));
     }
 
@@ -69,13 +77,17 @@ class CommercialPortalController extends Controller
     {
         $this->authorizePortal($request, $tenant, 'account.payment.view');
         $q = InvoicePayment::query()->whereIn('invoice_id', $this->invoices($tenant)->select('id'));
-        if ($status = $request->query('status')) $q->where('status', $status);
+        if ($status = $request->query('status')) {
+            $q->where('status', $status);
+        }
+
         return $this->paginated($q->with('invoice')->latest()->paginate(min(100, max(1, $request->integer('per_page', 20)))), InvoicePaymentResource::class);
     }
 
     public function paymentShow(Request $request, Tenant $tenant, string $payment)
     {
         $this->authorizePortal($request, $tenant, 'account.payment.view');
+
         return $this->ok(new InvoicePaymentResource($this->payment($tenant, $payment)));
     }
 
@@ -93,6 +105,7 @@ class CommercialPortalController extends Controller
         $invoice = $this->invoices($tenant)->findOrFail($data['invoice_id']);
         $payment = $this->payments->submit($invoice, $data, $actor->id);
         app(AuditService::class)->record('invoice.payment_submitted', $request, actor: $actor, tenantId: $tenant->id, resourceType: 'InvoicePayment', resourceId: $payment->id);
+
         return $this->created(new InvoicePaymentResource($payment));
     }
 
@@ -100,6 +113,7 @@ class CommercialPortalController extends Controller
     {
         $this->authorizePortal($request, $tenant, 'account.payment.submit');
         $data = $request->validate($this->proofRules(true));
+
         return $this->ok(new InvoicePaymentResource($this->payments->attachProof($this->payment($tenant, $payment), $data['proof'])));
     }
 
@@ -108,6 +122,7 @@ class CommercialPortalController extends Controller
         $this->authorizePortal($request, $tenant, 'account.payment.view');
         $proof = $this->payment($tenant, $payment)->proof;
         abort_unless($proof, 404);
+
         return $this->ok(['content' => base64_encode(Storage::disk('local')->get($proof['path'])),
             'filename' => $proof['original_filename'], 'mime_type' => $proof['mime_type'], 'id' => $proof['id']]);
     }

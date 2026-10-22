@@ -105,7 +105,10 @@ class InvoiceService
             if ($invoice->payments()->where('status', 'SUBMITTED')->exists()) {
                 return [null, 'Review the submitted payment from its detail page.'];
             }
-            if (Money::compare($amount, '0.00') <= 0) return [null, 'Payment must be positive.'];
+            if (Money::compare($amount, '0.00') <= 0) {
+                return [null, 'Payment must be positive.'];
+            }
+
             return $this->recordConfirmedPayment($invoice, $amount, $method, $reference, $recordedBy);
         });
     }
@@ -147,13 +150,15 @@ class InvoiceService
 
     public function void(Invoice $invoice): ?string
     {
-        if (! in_array($invoice->status, [Invoice::STATUS_ISSUED, Invoice::STATUS_OVERDUE], true)) {
-            return 'INVALID_INVOICE_TRANSITION';
-        }
+        return DB::transaction(function () use ($invoice) {
+            $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
+            if (! in_array($invoice->status, [Invoice::STATUS_ISSUED, Invoice::STATUS_OVERDUE], true)) {
+                return 'INVALID_INVOICE_TRANSITION';
+            }
+            $invoice->update(['status' => Invoice::STATUS_VOID, 'cancelled_at' => now()]);
 
-        $invoice->update(['status' => Invoice::STATUS_VOID, 'cancelled_at' => now()]);
-
-        return null;
+            return null;
+        });
     }
 
     public function cancel(Invoice $invoice): ?string

@@ -20,6 +20,7 @@ class SubmittedPaymentService
             $existing = InvoicePayment::query()->where('submission_key', $data['submission_key'])->first();
             if ($existing) {
                 abort_unless($existing->invoice_id === $invoice->id && $existing->recorded_by === $actor && ($existing->metadata['request_hash'] ?? null) === $fingerprint, 409);
+
                 return $existing;
             }
             if (! in_array($invoice->status, ['ISSUED', 'OVERDUE'], true)
@@ -38,7 +39,9 @@ class SubmittedPaymentService
                     'submission_key' => $data['submission_key'], 'proof' => $proof, 'metadata' => ['request_hash' => $fingerprint],
                 ]);
             } catch (\Throwable $e) {
-                if ($proof) Storage::disk('local')->delete($proof['path']);
+                if ($proof) {
+                    Storage::disk('local')->delete($proof['path']);
+                }
                 throw $e;
             }
         });
@@ -57,6 +60,7 @@ class SubmittedPaymentService
             }
             $payment->update(['status' => $verify ? 'VERIFIED' : 'REJECTED', 'reviewed_by' => $actor,
                 'verified_at' => $verify ? now() : null, 'verification_note' => $note]);
+
             return $payment;
         });
     }
@@ -68,9 +72,16 @@ class SubmittedPaymentService
             abort_unless($payment->status === 'SUBMITTED', 409);
             $old = $payment->proof;
             $proof = $this->saveProof($data);
-            try { $payment->update(['proof' => $proof]); }
-            catch (\Throwable $e) { Storage::disk('local')->delete($proof['path']); throw $e; }
-            if ($old) DB::afterCommit(fn () => Storage::disk('local')->delete($old['path']));
+            try {
+                $payment->update(['proof' => $proof]);
+            } catch (\Throwable $e) {
+                Storage::disk('local')->delete($proof['path']);
+                throw $e;
+            }
+            if ($old) {
+                DB::afterCommit(fn () => Storage::disk('local')->delete($old['path']));
+            }
+
             return $payment;
         });
     }
@@ -83,7 +94,10 @@ class SubmittedPaymentService
             throw ValidationException::withMessages(['file' => ['Proof must be JPG, PNG, WEBP or PDF, up to 5 MB.']]);
         }
         $path = 'commercial-payment-proofs/'.Str::uuid();
-        if (! Storage::disk('local')->put($path, $bytes)) throw new \RuntimeException('Could not save proof.');
+        if (! Storage::disk('local')->put($path, $bytes)) {
+            throw new \RuntimeException('Could not save proof.');
+        }
+
         return ['id' => (string) Str::uuid(), 'path' => $path, 'original_filename' => basename($data['filename']), 'mime_type' => $mime, 'size' => strlen($bytes)];
     }
 }

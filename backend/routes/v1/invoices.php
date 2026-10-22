@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\V1\CommercialPortalController;
 use App\Http\Controllers\Api\V1\InvoiceController;
+use App\Http\Controllers\Api\V1\InvoicePaymentController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'ecosystem'])->group(function () {
@@ -17,14 +19,14 @@ Route::middleware(['auth:sanctum', 'ecosystem'])->group(function () {
 });
 
 Route::prefix('invoice-payments/{payment}')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {
-    Route::get('/', [\App\Http\Controllers\Api\V1\InvoicePaymentController::class, 'show'])->middleware('permission:cgo.invoice.view,payment');
-    Route::get('/proof', [\App\Http\Controllers\Api\V1\InvoicePaymentController::class, 'proof'])->middleware('permission:cgo.invoice.view,payment');
-    Route::post('/verify', [\App\Http\Controllers\Api\V1\InvoicePaymentController::class, 'verify'])->middleware('permission:cgo.invoice.payment.record,payment');
-    Route::post('/reject', [\App\Http\Controllers\Api\V1\InvoicePaymentController::class, 'reject'])->middleware('permission:cgo.invoice.payment.record,payment');
+    Route::get('/', [InvoicePaymentController::class, 'show'])->middleware('permission:cgo.invoice.view,payment');
+    Route::get('/proof', [InvoicePaymentController::class, 'proof'])->middleware('permission:cgo.invoice.view,payment');
+    Route::post('/verify', [InvoicePaymentController::class, 'verify'])->middleware('permission:cgo.invoice.payment.record,payment');
+    Route::post('/reject', [InvoicePaymentController::class, 'reject'])->middleware('permission:cgo.invoice.payment.record,payment');
 });
 
 Route::prefix('commercial-portal/tenants/{tenant}')->middleware('service_account:commercial.read')->group(function () {
-    $controller = \App\Http\Controllers\Api\V1\CommercialPortalController::class;
+    $controller = CommercialPortalController::class;
     Route::get('/invoices', [$controller, 'invoiceIndex']);
     Route::get('/invoices/{invoice}', [$controller, 'invoiceShow']);
     Route::get('/payments', [$controller, 'paymentIndex']);

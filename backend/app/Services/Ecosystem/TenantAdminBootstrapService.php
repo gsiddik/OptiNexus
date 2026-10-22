@@ -255,7 +255,7 @@ class TenantAdminBootstrapService
             }
             $oldEmail = $user->email;
             $user->update(['email' => $email]);
-            app(ManagedCredentialService::class)->restart($user);
+            app(ManagedCredentialService::class)->restart($user, verifyEmail: true);
             app(SessionRevocationService::class)->logoutEverywhere($user, 'email_changed', request());
             $this->audit->record('user.email_updated', request(), actor: $actor, resourceType: 'User', resourceId: $user->id,
                 oldValue: ['email' => $oldEmail], newValue: ['email' => $email], tenantId: $tenant->id);

@@ -229,7 +229,7 @@ function ChangeEmail({ user, onChanged }: { user: User; onChanged: () => void })
     finally { setBusy(false); }
   }
   return <div className="card"><h3>Change Email</h3><ErrorAlert message={error} />
-    <HelpLabel>Email<HelpInput type="email" help="For tenant accounts, this sends a temporary password to the new address and requires password replacement and email verification before application access." value={email} onChange={(e) => setEmail(e.target.value)} /></HelpLabel>
+    <HelpLabel>Email<HelpInput type="email" help="For tenant accounts, this sends a temporary password to the new address and requires password replacement before application access. Using the emailed credential verifies the new address." value={email} onChange={(e) => setEmail(e.target.value)} /></HelpLabel>
     <button className="btn btn-secondary" disabled={busy || !email.trim() || email === user.email} onClick={save}>Save Email</button>
   </div>;
 }

@@ -34,6 +34,8 @@ class User extends Authenticatable
 
     public const EMAIL_VERIFIED_BY_OPERATOR = 'OPERATOR_MANUAL';
 
+    public const EMAIL_VERIFIED_BY_CREDENTIAL = 'EMAIL_CREDENTIAL';
+
     /** Progress of an account an operator created through the first Admin Tenant flow (activationState()). */
     public const ACTIVATION_PASSWORD_CHANGE_REQUIRED = 'PASSWORD_CHANGE_REQUIRED';
 
@@ -64,6 +66,7 @@ class User extends Authenticatable
             'activation_started_at' => 'datetime',
             'activated_at' => 'datetime',
             'password_change_required' => 'boolean',
+            'verify_email_on_password_change' => 'boolean',
             'temporary_password_issued_at' => 'datetime',
             'temporary_password_expires_at' => 'datetime',
             'password_changed_at' => 'datetime',

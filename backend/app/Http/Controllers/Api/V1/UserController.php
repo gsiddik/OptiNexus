@@ -99,7 +99,7 @@ class UserController extends Controller
             }
             $user->update($request->validated());
             if ($changedEmail && $user->tenantMemberships()->exists()) {
-                app(ManagedCredentialService::class)->restart($user);
+                app(ManagedCredentialService::class)->restart($user, verifyEmail: true);
                 $this->revocation->logoutEverywhere($user, 'email_changed', $request);
             }
         });

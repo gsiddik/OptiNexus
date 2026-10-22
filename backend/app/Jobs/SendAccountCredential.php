@@ -29,7 +29,7 @@ class SendAccountCredential implements ShouldBeEncrypted, ShouldQueue
             || ! $activation->matchesTemporaryPassword($user, $this->password)) {
             return;
         }
-        if (! app()->environment('testing') && in_array(config('mail.default'), ['log', 'array'], true)) {
+        if (! app()->environment('testing') && ! in_array(config('mail.default'), ['smtp', 'postmark', 'ses', 'ses-v2', 'resend', 'mailgun'], true)) {
             throw new \RuntimeException('Configure a transactional mail provider before delivering account credentials.');
         }
         $body = "Your OptiNexus account has a new temporary password.\n\nEmail: {$this->email}\nTemporary password: {$this->password}\n\nSign in through OptiNexus from OptiFleet or OptiEntry and choose a new password before accessing the application. This password expires at ".$user->temporary_password_expires_at->format('d/m/Y, H:i:s T').".\nIf your email verification is pending, contact your OptiNexus administrator.\nNever share this password.";

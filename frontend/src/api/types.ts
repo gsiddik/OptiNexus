@@ -120,7 +120,7 @@ export interface AdminActivation {
   email: {
     verified: boolean;
     verified_at: string | null;
-    method: 'INVITATION' | 'OPERATOR_MANUAL' | null;
+    method: 'INVITATION' | 'OPERATOR_MANUAL' | 'EMAIL_CREDENTIAL' | null;
     verified_by: { id: string; name: string } | null;
   };
   password: {

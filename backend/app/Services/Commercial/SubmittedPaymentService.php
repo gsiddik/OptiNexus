@@ -16,9 +16,10 @@ class SubmittedPaymentService
     {
         return DB::transaction(function () use ($invoice, $data, $actor) {
             $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
+            $fingerprint = hash('sha256', json_encode($data, JSON_THROW_ON_ERROR));
             $existing = InvoicePayment::query()->where('submission_key', $data['submission_key'])->first();
             if ($existing) {
-                abort_unless($existing->invoice_id === $invoice->id && $existing->recorded_by === $actor, 409);
+                abort_unless($existing->invoice_id === $invoice->id && $existing->recorded_by === $actor && ($existing->metadata['request_hash'] ?? null) === $fingerprint, 409);
                 return $existing;
             }
             if (! in_array($invoice->status, ['ISSUED', 'OVERDUE'], true)
@@ -34,7 +35,7 @@ class SubmittedPaymentService
                     'method' => $data['payment_method'], 'reference' => $data['transaction_reference'] ?? null,
                     'bank_name' => $data['bank_name'] ?? null, 'account_name' => $data['account_name'] ?? null,
                     'note' => $data['note'] ?? null, 'recorded_by' => $actor, 'status' => 'SUBMITTED',
-                    'submission_key' => $data['submission_key'], 'proof' => $proof,
+                    'submission_key' => $data['submission_key'], 'proof' => $proof, 'metadata' => ['request_hash' => $fingerprint],
                 ]);
             } catch (\Throwable $e) {
                 if ($proof) Storage::disk('local')->delete($proof['path']);

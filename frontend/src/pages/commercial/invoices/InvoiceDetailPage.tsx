@@ -1,5 +1,5 @@
 import { HelpLabel, HelpInput } from '../../../components/FieldControls';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { invoicesApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
@@ -17,6 +17,8 @@ export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
   const { data: invoice, loading, error, reload } = useApiResource<Invoice>(() => invoicesApi.get(id!), [id]);
+
+  useEffect(() => { const timer = window.setInterval(reload, 30000); return () => window.clearInterval(timer); }, [reload]);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <ErrorAlert message={error} />;

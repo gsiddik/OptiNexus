@@ -128,7 +128,7 @@ class InvoiceController extends Controller
     {
         $error = $this->invoices->cancel($invoice);
         if ($error) {
-            return $this->errorResponse($error, 'Only a draft invoice can be cancelled.');
+            return $this->errorResponse($error, 'Only an unpaid draft, issued or overdue invoice without a pending payment can be cancelled.');
         }
 
         $invoice->refresh();

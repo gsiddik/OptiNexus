@@ -4,7 +4,6 @@ namespace Tests\Feature\Commercial;
 
 use App\Models\Billing;
 use App\Models\Invoice;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesCommercialFixtures;
 use Tests\Concerns\CreatesGovernanceFixtures;
@@ -102,7 +101,7 @@ class InvoiceTest extends TestCase
         $this->assertSame($totalAtIssuance, $invoice->total);
     }
 
-    public function test_only_a_draft_invoice_can_be_issued_or_cancelled(): void
+    public function test_only_drafts_can_be_issued_and_unpaid_issued_invoices_can_be_cancelled(): void
     {
         [, $billingId] = $this->finalizedBilling();
         $this->actingAsCommercialRole('BILLING_ADMIN');
@@ -115,8 +114,7 @@ class InvoiceTest extends TestCase
             ->assertJsonPath('error.code', 'INVALID_INVOICE_TRANSITION');
 
         $this->postJson("/api/v1/invoices/{$invoiceId}/cancel")
-            ->assertStatus(409)
-            ->assertJsonPath('error.code', 'INVALID_INVOICE_TRANSITION');
+            ->assertStatus(200)->assertJsonPath('data.status', 'CANCELLED');
     }
 
     public function test_billing_admin_cannot_void_an_invoice_but_billing_approver_can(): void
@@ -166,5 +164,38 @@ class InvoiceTest extends TestCase
 
         $this->postJson("/api/v1/invoices/{$invoiceId}/mark-partially-paid", ['amount' => (float) $total + 1000000])
             ->assertStatus(422);
+    }
+
+    public function test_cancelled_invoice_can_be_replaced_without_losing_its_number_or_issue_date(): void
+    {
+        [, $billingId] = $this->finalizedBilling();
+        $this->actingAsCommercialRole('BILLING_ADMIN');
+        $first = $this->postJson("/api/v1/invoices/generate-from-billing/$billingId")->assertCreated()->json('data');
+        $this->actingAsCommercialRole('BILLING_APPROVER');
+        $this->travelTo(now()->setDate(2026, 10, 20)->startOfDay());
+        $this->postJson("/api/v1/invoices/{$first['id']}/issue")->assertOk()->assertJsonPath('data.issue_date', '2026-10-20');
+        $this->travel(2)->days();
+        $this->postJson("/api/v1/invoices/{$first['id']}/cancel")->assertOk()->assertJsonPath('data.issue_date', '2026-10-20');
+        $this->actingAsCommercialRole('BILLING_ADMIN');
+        $next = $this->postJson("/api/v1/invoices/generate-from-billing/$billingId")->assertCreated()->json('data');
+        $this->assertNotSame($first['id'], $next['id']);
+        $this->assertNotSame($first['invoice_number'], $next['invoice_number']);
+        $this->postJson("/api/v1/invoices/generate-from-billing/$billingId")->assertStatus(409);
+        $this->actingAsCommercialRole('BILLING_APPROVER');
+        $this->postJson("/api/v1/invoices/{$next['id']}/issue")->assertOk()->assertJsonPath('data.issue_date', '2026-10-22');
+        $this->getJson("/api/v1/invoices/{$first['id']}")->assertOk()->assertJsonPath('data.status', 'CANCELLED')->assertJsonPath('data.invoice_number', $first['invoice_number']);
+        $this->assertSame(2, Invoice::where('billing_id', $billingId)->count());
+        $this->travelBack();
+    }
+
+    public function test_cancelled_draft_can_be_replaced_but_has_no_invented_issue_date(): void
+    {
+        [, $billingId] = $this->finalizedBilling();
+        $this->actingAsCommercialRole('BILLING_ADMIN');
+        $first = $this->postJson("/api/v1/invoices/generate-from-billing/$billingId")->assertCreated()->json('data.id');
+        $this->actingAsCommercialRole('BILLING_APPROVER');
+        $this->postJson("/api/v1/invoices/$first/cancel")->assertOk()->assertJsonPath('data.issue_date', null);
+        $this->actingAsCommercialRole('BILLING_ADMIN');
+        $this->postJson("/api/v1/invoices/generate-from-billing/$billingId")->assertCreated();
     }
 }

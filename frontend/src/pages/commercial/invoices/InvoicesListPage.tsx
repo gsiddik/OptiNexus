@@ -35,7 +35,7 @@ export function InvoicesListPage() {
               { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
               { key: 'total', header: 'Total', render: (r) => `${r.total} ${r.currency}` },
               { key: 'balance', header: 'Balance Due', render: (r) => `${r.balance_due} ${r.currency}` },
-              { key: 'due', header: 'Due Date', render: (r) => formatDateTime(r.due_date) },
+              { key: 'due', header: 'Due Date', render: (r) => formatDateTime(r.due_date?.slice(0, 10)) },
             ]}
           />
           <Pagination meta={meta} onPageChange={setPage} />

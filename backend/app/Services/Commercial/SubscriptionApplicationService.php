@@ -13,11 +13,11 @@ class SubscriptionApplicationService
 {
     public function applicationIds(Subscription $subscription): array
     {
-        $ids = $subscription->product->applications()->pluck('applications.id');
-        $ids = $ids->merge($subscription->plan->capabilities()->pluck('application_id'));
+        $ids = ($subscription->product?->applications()->pluck('applications.id') ?? collect());
+        $ids = $ids->merge(($subscription->plan?->capabilities()->pluck('application_id') ?? collect()));
         foreach ($subscription->items()->where('item_type', 'ADDON')->inForce()->with('addon.product.applications', 'addon.capabilities')->get() as $item) {
             if ($item->addon) {
-                $ids = $ids->merge($item->addon->product->applications->pluck('id'))->merge($item->addon->capabilities->pluck('application_id'));
+                $ids = $ids->merge(($item->addon->product?->applications->pluck('id') ?? collect()))->merge($item->addon->capabilities->pluck('application_id'));
             }
         }
         $ids = $ids->filter()->unique()->values()->all();

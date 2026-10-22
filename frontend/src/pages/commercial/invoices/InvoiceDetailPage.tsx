@@ -52,7 +52,7 @@ export function InvoiceDetailPage() {
             <dt>Tenant Name</dt><dd>{invoice.tenant_name ?? '—'}</dd>
             <dt>Subscription#</dt><dd>{invoice.subscription_number ?? '—'}</dd>
             <dt>Issue Date</dt><dd>{formatDateTime(invoice.issue_date)}</dd>
-            <dt>Due Date</dt><dd>{formatDateTime(invoice.due_date)}</dd>
+            <dt>Due Date</dt><dd>{formatDateTime(invoice.due_date?.slice(0, 10))}</dd>
             <dt>Currency</dt><dd>{invoice.currency}</dd>
             <dt>Subtotal</dt><dd>{invoice.subtotal}</dd>
             <dt>Discount Total</dt><dd>{invoice.discount_total}</dd>

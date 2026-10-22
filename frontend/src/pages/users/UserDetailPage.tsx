@@ -33,7 +33,7 @@ export function UserDetailPage() {
       </div>
       <p className="muted">{user.email}</p>
 
-      {hasPermission('cgo.user.update') && <ChangeEmail user={user} onChanged={reload} />}
+      {hasPermission('cgo.user.update') && <ChangeEmail key={`${user.id}:${user.email}`} user={user} onChanged={reload} />}
       <LifecycleActions
         status={user.status}
         hasPermission={hasPermission}

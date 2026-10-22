@@ -3,6 +3,7 @@
 namespace App\Http\Resources\V1;
 
 use App\Models\Subscription;
+use App\Services\Commercial\SubscriptionApplicationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -15,6 +16,7 @@ class SubscriptionResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'application_ids' => app(SubscriptionApplicationService::class)->applicationIds($this->resource),
             'customer_name' => $this->customer?->legal_name,
             'tenant_name' => $this->tenant?->name,
             'product_name' => $this->product?->name,

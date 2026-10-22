@@ -86,7 +86,7 @@ export function CreateSubscriptionForm({ onCreated }: { onCreated: () => void })
         customer_id: form.customer_id,
         tenant_id: form.tenant_id,
         plan_id: basePlan!.plan_id!,
-        application_ids: applicationIds.length ? applicationIds.filter((id) => availableApplications.some((app) => app.id === id)) : undefined,
+        application_ids: applicationIds.some((id) => availableApplications.some((app) => app.id === id)) ? applicationIds.filter((id) => availableApplications.some((app) => app.id === id)) : undefined,
         price_items: priceItems.map((item, index) => ({ price_id: item.price_id, quantity: selectedPrices[index]?.price_type === 'FLAT' ? 1 : Number(item.quantity) })),
         idempotency_key: form.idempotency_key || undefined,
         auto_renew: form.auto_renew,

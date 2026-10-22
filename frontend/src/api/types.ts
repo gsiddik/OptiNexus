@@ -288,6 +288,7 @@ export interface SubscriptionItem {
 }
 
 export interface Subscription {
+  application_ids?: string[];
   customer_name?: string | null;
   tenant_name?: string | null;
   product_name?: string | null;

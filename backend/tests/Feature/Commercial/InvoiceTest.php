@@ -15,8 +15,8 @@ class InvoiceTest extends TestCase
 
     public function test_named_download_route_requires_only_the_invoice_and_uses_user_authentication(): void
     {
-        $this->assertSame('/api/v1/invoices/review-invoice/download', route('invoices.download', ['invoice' => 'review-invoice'], false));
-        $route = app('router')->getRoutes()->getByName('invoices.download');
+        $this->assertSame('/api/v1/invoices/review-invoice/download', route('api.v1.invoices.download', ['invoice' => 'review-invoice'], false));
+        $route = app('router')->getRoutes()->getByName('api.v1.invoices.download');
         $this->assertContains('auth:sanctum', $route->gatherMiddleware());
         $this->assertContains('permission:cgo.invoice.view,invoice', $route->gatherMiddleware());
     }

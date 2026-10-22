@@ -99,6 +99,6 @@ class EcosystemPreflightTest extends TestCase
         $this->app['env'] = 'production';
         config(['oidc.issuer' => 'https://nexus.example.test', 'app.debug' => false, 'queue.default' => 'database', 'mail.default' => 'log', 'app.key' => 'base64:'.base64_encode(random_bytes(32))]);
 
-        $this->artisan('ecosystem:preflight')->assertSuccessful()->expectsOutputToContain('invitation e-mails will not reach anyone');
+        $this->artisan('ecosystem:preflight')->assertSuccessful()->expectsOutputToContain('invitation, credential and operational e-mails will not reach anyone');
     }
 }

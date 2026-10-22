@@ -43,7 +43,7 @@ export function CustomerDetailPage() {
       <div className="detail-grid">
         <div className="card">
           <h3>Details</h3>
-          {hasPermission('cgo.customer.update') && <ContactForm key={formatDateTime(customer.updated_at)} customer={customer} onSaved={reload} />}
+          {hasPermission('cgo.customer.update') && <ContactForm key={customer.updated_at} customer={customer} onSaved={reload} />}
           <dl className="definition-list">
             <dt>Customer Code</dt><dd>{customer.customer_code}</dd>
             <dt>Business Name</dt><dd>{customer.business_name ?? '—'}</dd>

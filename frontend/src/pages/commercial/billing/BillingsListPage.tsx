@@ -126,8 +126,8 @@ function RunBillingForm({ onRan }: { onRan: (results: Array<Billing | BillingRun
       <HelpLabel>Tenant ID<HelpSelect help="Select an active tenant to filter subscriptions. Changing tenant clears the subscription." value={form.tenant_id} disabled={tenants.loading || !!tenants.error} onChange={(e) => setForm({ ...form, tenant_id: e.target.value, subscription_id: '' })}>
         <option value="">Select a tenant...</option>{(tenants.data ?? []).filter((t) => t.status === 'ACTIVE').map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
       </HelpSelect></HelpLabel>
-      <HelpLabel>Period Start (optional)<HelpInput help="Optional billing period start date. Leave empty to use the subscription's current period." type="date" value={formatDateTime(form.period_start)} onChange={(e) => setForm({ ...form, period_start: e.target.value })} /></HelpLabel>
-      <HelpLabel>Period End (optional)<HelpInput help="Optional billing period end date. It must follow the start date." type="date" value={formatDateTime(form.period_end)} onChange={(e) => setForm({ ...form, period_end: e.target.value })} /></HelpLabel>
+      <HelpLabel>Period Start (optional)<HelpInput help="Optional billing period start date. Leave empty to use the subscription's current period." type="date" value={form.period_start} onChange={(e) => setForm({ ...form, period_start: e.target.value })} /></HelpLabel>
+      <HelpLabel>Period End (optional)<HelpInput help="Optional billing period end date. It must follow the start date." type="date" value={form.period_end} onChange={(e) => setForm({ ...form, period_end: e.target.value })} /></HelpLabel>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={submit} disabled={submitting || subscriptions.loading || tenants.loading || !!subscriptions.error || !!tenants.error || (!form.subscription_id && !form.tenant_id)}>Run</button>
       </div>

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Governance;
 
+use App\Jobs\SendAccountCredential;
 use App\Models\Application;
 use App\Models\AuditLog;
 use App\Models\OidcClient;
@@ -32,6 +33,8 @@ use Tests\TestCase;
 class AccountActivationFlowTest extends TestCase
 {
     use CreatesIntegrationFixtures, RefreshDatabase;
+
+    private bool $expectsCredentialMail = false;
 
     private const NEW_PASSWORD = 'My own long password 2026';
 
@@ -443,17 +446,27 @@ class AccountActivationFlowTest extends TestCase
 
     protected function tearDown(): void
     {
-        if ($this->app) {
-            Mail::assertNothingSent();
-            Mail::assertNothingQueued();
-            Notification::assertNothingSent();
-            Queue::assertNothingPushed();
+        try {
+            if ($this->app) {
+                Mail::assertNothingSent();
+                Mail::assertNothingQueued();
+                Notification::assertNothingSent();
+                if ($this->expectsCredentialMail) {
+                    Queue::assertPushed(SendAccountCredential::class, 1);
+                    Queue::assertCount(1);
+                } else {
+                    Queue::assertNothingPushed();
+                }
+            }
+        } finally {
+            // An assertion failure must never leave the database transaction open for the next test.
+            parent::tearDown();
         }
-        parent::tearDown();
     }
 
     public function test_reactivation_reuses_the_oidc_password_change_gate_before_any_code_is_issued(): void
     {
+        $this->expectsCredentialMail = true;
         $this->verifyEmail();
         $this->admin->forceFill(['status' => 'SUSPENDED', 'activated_at' => now(), 'password_change_required' => false])->save();
         $this->temporary = DB::transaction(fn () => app(ManagedCredentialService::class)->restart($this->admin));

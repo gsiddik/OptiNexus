@@ -1,5 +1,4 @@
-import { HelpLabel, HelpInput } from '../../../components/FieldControls';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { invoicesApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
@@ -7,9 +6,7 @@ import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import { ErrorAlert } from '../../../components/ErrorAlert';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { LifecycleActions } from '../../../components/LifecycleActions';
-import { PermissionGuard } from '../../../auth/PermissionGuard';
 import { useAuth } from '../../../auth/useAuth';
-import { unwrapError } from '../../../api/client';
 import type { Invoice } from '../../../api/types';
 
 export function InvoiceDetailPage() {
@@ -24,7 +21,6 @@ export function InvoiceDetailPage() {
   if (error) return <ErrorAlert message={error} />;
   if (!invoice) return null;
 
-  const hasBalance = Number(invoice.balance_due) > 0;
 
   return (
     <div>
@@ -40,7 +36,7 @@ export function InvoiceDetailPage() {
         actions={[
           { key: 'issue', label: 'Issue', allowedFrom: ['DRAFT'], permission: 'cgo.invoice.issue', action: () => invoicesApi.issue(invoice.id) },
           { key: 'void', label: 'Void', allowedFrom: ['ISSUED', 'OVERDUE'], permission: 'cgo.invoice.void', danger: true, action: () => invoicesApi.void(invoice.id) },
-          { key: 'cancel', label: 'Cancel', allowedFrom: ['DRAFT'], permission: 'cgo.invoice.cancel', danger: true, action: () => invoicesApi.cancel(invoice.id) },
+          { key: 'cancel', label: 'Cancel', allowedFrom: ['DRAFT', 'ISSUED', 'OVERDUE'], permission: 'cgo.invoice.cancel', danger: true, action: () => invoicesApi.cancel(invoice.id) },
         ]}
       />
 
@@ -48,10 +44,10 @@ export function InvoiceDetailPage() {
         <div className="card">
           <h3>Details</h3>
           <dl className="definition-list">
-            <dt>Billing ID</dt><dd>{invoice.billing_id}</dd>
-            <dt>Customer ID</dt><dd>{invoice.customer_id}</dd>
-            <dt>Tenant ID</dt><dd>{invoice.tenant_id}</dd>
-            <dt>Subscription ID</dt><dd>{invoice.subscription_id}</dd>
+            <dt>Billing#</dt><dd>{invoice.billing_number ?? '—'}</dd>
+            <dt>Customer</dt><dd>{invoice.customer_name ?? '—'}</dd>
+            <dt>Tenant Name</dt><dd>{invoice.tenant_name ?? '—'}</dd>
+            <dt>Subscription#</dt><dd>{invoice.subscription_number ?? '—'}</dd>
             <dt>Issue Date</dt><dd>{invoice.issue_date ?? '—'}</dd>
             <dt>Due Date</dt><dd>{invoice.due_date}</dd>
             <dt>Currency</dt><dd>{invoice.currency}</dd>
@@ -115,63 +111,8 @@ export function InvoiceDetailPage() {
             </table>
           )}
 
-          {hasBalance && !invoice.payments.some((p) => p.status === 'SUBMITTED') && (
-            <PermissionGuard permission="cgo.invoice.payment.record">
-              <RecordPaymentForm invoice={invoice} onRecorded={reload} />
-            </PermissionGuard>
-          )}
+
         </div>
-      </div>
-    </div>
-  );
-}
-
-function RecordPaymentForm({ invoice, onRecorded }: { invoice: Invoice; onRecorded: () => void }) {
-  const [form, setForm] = useState({ amount: '', method: '', reference: '' });
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  async function markFullyPaid() {
-    setSubmitting(true);
-    setError(null);
-    try {
-      await invoicesApi.markPaid(invoice.id, { method: form.method || undefined, reference: form.reference || undefined });
-      onRecorded();
-    } catch (err) {
-      setError(unwrapError(err).message);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function markPartial() {
-    setSubmitting(true);
-    setError(null);
-    try {
-      await invoicesApi.markPartiallyPaid(invoice.id, {
-        amount: form.amount,
-        method: form.method || undefined,
-        reference: form.reference || undefined,
-      });
-      setForm({ amount: '', method: '', reference: '' });
-      onRecorded();
-    } catch (err) {
-      setError(unwrapError(err).message);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <div className="form" style={{ marginTop: '1rem' }}>
-      <h4>Record Payment</h4>
-      <ErrorAlert message={error} />
-      <HelpLabel>Amount (for a partial payment)<HelpInput help="Enter the monetary amount using the currency and amount convention shown for this record." value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></HelpLabel>
-      <HelpLabel>Method<HelpInput help="Select the payment method used to settle this invoice." value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })} /></HelpLabel>
-      <HelpLabel>Reference<HelpInput help="Enter the bank or payment transaction reference for reconciliation." value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} /></HelpLabel>
-      <div className="modal-actions">
-        <button className="btn btn-secondary" onClick={markPartial} disabled={submitting || !form.amount}>Record Partial Payment</button>
-        <button className="btn btn-primary" onClick={markFullyPaid} disabled={submitting}>Mark Fully Paid</button>
       </div>
     </div>
   );

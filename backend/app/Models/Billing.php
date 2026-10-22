@@ -75,7 +75,7 @@ class Billing extends Model
 
     public function invoice(): HasOne
     {
-        return $this->hasOne(Invoice::class);
+        return $this->hasOne(Invoice::class)->latest('created_at')->latest('id');
     }
 
     public function isFinalized(): bool

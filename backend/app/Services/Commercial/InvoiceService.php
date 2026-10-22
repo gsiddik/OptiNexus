@@ -24,15 +24,14 @@ class InvoiceService
      */
     public function generateFromBilling(Billing $billing, int $netDays = 30): array
     {
-        if (! $billing->isFinalized()) {
-            return [null, 'BILLING_NOT_FINALIZED'];
-        }
-
-        if ($billing->invoice()->exists()) {
-            return [null, 'DUPLICATE_RESOURCE'];
-        }
-
-        $invoice = DB::transaction(function () use ($billing, $netDays) {
+        [$invoice, $error] = DB::transaction(function () use ($billing, $netDays) {
+            $billing = Billing::query()->lockForUpdate()->findOrFail($billing->id);
+            if (! $billing->isFinalized()) {
+                return [null, 'BILLING_NOT_FINALIZED'];
+            }
+            if (Invoice::query()->where('billing_id', $billing->id)->where('status', '!=', Invoice::STATUS_CANCELLED)->exists()) {
+                return [null, 'DUPLICATE_RESOURCE'];
+            }
             $invoice = Invoice::create([
                 'invoice_number' => $this->numbers->nextInvoiceNumber(),
                 'billing_id' => $billing->id,
@@ -77,25 +76,27 @@ class InvoiceService
                 ]);
             }
 
-            return $invoice;
+            return [$invoice, null];
         });
 
-        return [$invoice->fresh('items'), null];
+        return [$invoice?->fresh('items'), $error];
     }
 
     public function issue(Invoice $invoice): ?string
     {
-        if ($invoice->status !== Invoice::STATUS_DRAFT) {
-            return 'INVALID_INVOICE_TRANSITION';
-        }
+        return DB::transaction(function () use ($invoice) {
+            $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
+            if ($invoice->status !== Invoice::STATUS_DRAFT) {
+                return 'INVALID_INVOICE_TRANSITION';
+            }
+            $invoice->update([
+                'status' => Invoice::STATUS_ISSUED,
+                'issue_date' => now()->toDateString(),
+                'issued_at' => now(),
+            ]);
 
-        $invoice->update([
-            'status' => Invoice::STATUS_ISSUED,
-            'issue_date' => now()->toDateString(),
-            'issued_at' => now(),
-        ]);
-
-        return null;
+            return null;
+        });
     }
 
     public function recordPayment(Invoice $invoice, string $amount, ?string $method, ?string $reference, ?string $recordedBy): array
@@ -163,12 +164,18 @@ class InvoiceService
 
     public function cancel(Invoice $invoice): ?string
     {
-        if ($invoice->status !== Invoice::STATUS_DRAFT) {
-            return 'INVALID_INVOICE_TRANSITION';
-        }
+        return DB::transaction(function () use ($invoice) {
+            // Match generation's lock order: billing, then invoice.
+            Billing::query()->whereKey($invoice->billing_id)->lockForUpdate()->firstOrFail();
+            $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
+            if (! in_array($invoice->status, [Invoice::STATUS_DRAFT, Invoice::STATUS_ISSUED, Invoice::STATUS_OVERDUE], true)
+                || $invoice->payments()->whereIn('status', ['SUBMITTED', 'VERIFIED'])->exists()) {
+                return 'INVALID_INVOICE_TRANSITION';
+            }
+            // Preserve the original issue_date and issued_at on the historical invoice.
+            $invoice->update(['status' => Invoice::STATUS_CANCELLED, 'cancelled_at' => now()]);
 
-        $invoice->update(['status' => Invoice::STATUS_CANCELLED, 'cancelled_at' => now()]);
-
-        return null;
+            return null;
+        });
     }
 }

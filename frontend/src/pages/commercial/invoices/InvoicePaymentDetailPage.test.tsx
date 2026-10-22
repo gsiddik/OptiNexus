@@ -34,3 +34,16 @@ it('shows readable billing relations instead of identifiers', async () => {
   expect(screen.getByText('Tenant One')).toBeTruthy(); expect(screen.getByText('SUB-001')).toBeTruthy();
   expect(screen.queryByText('hidden-customer-id')).toBeNull();
 });
+
+it('invoice detail uses names and numbers, preserves cancelled issue date and omits manual payment entry', async () => {
+  const mock = installMockApi(({ url }) => {
+    if (url === '/auth/context') return ok(operatorContext(['cgo.ecosystem.access', 'cgo.invoice.view', 'cgo.invoice.payment.record']));
+    if (url === '/invoices/i1') return ok({ id: 'i1', invoice_number: 'INV-1', status: 'CANCELLED', billing_id: 'hidden-billing', billing_number: 'BILL-10', customer_id: 'hidden-customer', customer_name: 'Customer One', tenant_name: 'Tenant One', subscription_number: 'SUB-10', issue_date: '2026-10-20', balance_due: '100.00', items: [], payments: [] });
+    return ok([]);
+  }); restore = mock.restore;
+  renderApp('/invoices/i1');
+  expect(await screen.findByText('BILL-10')).toBeTruthy();
+  expect(screen.getByText('Customer One')).toBeTruthy(); expect(screen.getByText('Tenant One')).toBeTruthy(); expect(screen.getByText('SUB-10')).toBeTruthy(); expect(screen.getByText('2026-10-20')).toBeTruthy();
+  expect(screen.queryByText('hidden-billing')).toBeNull(); expect(screen.queryByText('hidden-customer')).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Mark Fully Paid' })).toBeNull(); expect(screen.queryByText('Record Payment')).toBeNull();
+});

@@ -355,6 +355,7 @@ export interface InvoicePayment {
 }
 
 export interface Invoice {
+  billing_number?: string | null; customer_name?: string | null; subscription_number?: string | null;
   tenant_name?: string | null;
 
   id: string; invoice_number: string; billing_id: string; customer_id: string; tenant_id: string; subscription_id: string;

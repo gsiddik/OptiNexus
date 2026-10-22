@@ -11,17 +11,20 @@ class InvoiceResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $this->resource->loadMissing(['tenant']);
+        $this->resource->loadMissing(['tenant', 'customer', 'billing', 'subscription']);
 
         return [
             'id' => $this->id,
+            'billing_number' => $this->billing?->billing_number,
+            'customer_name' => $this->customer?->business_name ?: $this->customer?->legal_name,
+            'subscription_number' => $this->subscription?->subscription_number,
             'tenant_name' => $this->tenant?->name,
             'invoice_number' => $this->invoice_number,
             'billing_id' => $this->billing_id,
             'customer_id' => $this->customer_id,
             'tenant_id' => $this->tenant_id,
             'subscription_id' => $this->subscription_id,
-            'issue_date' => $this->issue_date,
+            'issue_date' => ($this->issue_date ?? $this->issued_at)?->toDateString(),
             'due_date' => $this->due_date,
             'currency' => $this->currency,
             'subtotal' => $this->subtotal,

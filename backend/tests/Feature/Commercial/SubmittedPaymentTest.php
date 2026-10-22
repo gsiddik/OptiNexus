@@ -125,4 +125,16 @@ class SubmittedPaymentTest extends TestCase
         ServiceAccount::where('application_id', $app->id)->update(['tenant_id' => $other->id]);
         $this->getJson($base.'/invoices?acting_user_id='.$actor->id, $headers)->assertForbidden();
     }
+
+    public function test_cancellation_refuses_pending_and_verified_payments(): void
+    {
+        [$invoice, $actor] = $this->invoice();
+        $service = app(SubmittedPaymentService::class);
+        $payment = $service->submit($invoice, $this->data($invoice), $actor->id);
+        $this->actingAsCommercialRole('BILLING_APPROVER');
+        $this->postJson("/api/v1/invoices/$invoice->id/cancel")->assertStatus(409);
+        $service->review($payment, true, $actor->id, null);
+        $this->postJson("/api/v1/invoices/$invoice->id/cancel")->assertStatus(409);
+        $this->assertSame('PAID', $invoice->fresh()->status);
+    }
 }

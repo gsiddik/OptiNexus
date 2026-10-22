@@ -13,6 +13,14 @@ class InvoiceTest extends TestCase
 {
     use CreatesCommercialFixtures, CreatesGovernanceFixtures, RefreshDatabase;
 
+    public function test_named_download_route_requires_only_the_invoice_and_uses_user_authentication(): void
+    {
+        $this->assertSame('/api/v1/invoices/review-invoice/download', route('invoices.download', ['invoice' => 'review-invoice'], false));
+        $route = app('router')->getRoutes()->getByName('invoices.download');
+        $this->assertContains('auth:sanctum', $route->gatherMiddleware());
+        $this->assertContains('permission:cgo.invoice.view,invoice', $route->gatherMiddleware());
+    }
+
     private function finalizedBilling(): array
     {
         $this->actingAsCommercialRole('SUBSCRIPTION_ADMIN');

@@ -29,7 +29,6 @@ Route::prefix('invoice-payments/{payment}')->middleware(['auth:sanctum', 'ecosys
 Route::prefix('commercial-portal/tenants/{tenant}')->middleware('service_account:commercial.read')->group(function () {
     $controller = CommercialPortalController::class;
     Route::get('/invoices', [$controller, 'invoiceIndex']);
-    Route::get('/invoices/{invoice}/download', [InvoiceController::class, 'download'])->middleware('permission:cgo.invoice.view,invoice')->name('invoices.download');
     Route::get('/invoices/{invoice}', [$controller, 'invoiceShow']);
     Route::get('/payments', [$controller, 'paymentIndex']);
     Route::get('/payments/{payment}', [$controller, 'paymentShow']);

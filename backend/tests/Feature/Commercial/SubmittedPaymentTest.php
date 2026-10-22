@@ -24,6 +24,7 @@ class SubmittedPaymentTest extends TestCase
         $actor = $this->actingAsCommercialRole('SUBSCRIPTION_ADMIN');
         $customer = $this->makeCustomer();
         $tenant = $this->makeTenant($customer);
+        $this->attachUserToTenant($actor, $tenant);
         $product = $this->makeProduct();
         $plan = $this->makePlan($product);
         $this->makeFlatPrice($plan);

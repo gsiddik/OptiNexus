@@ -9,6 +9,7 @@ use App\Http\Resources\V1\InvoiceResource;
 use App\Models\Invoice;
 use App\Models\InvoicePayment;
 use App\Models\Tenant;
+use App\Models\TenantMembership;
 use App\Models\User;
 use App\Services\AuditService;
 use App\Services\AuthorizationService;
@@ -31,6 +32,7 @@ class CommercialPortalController extends Controller
         abort_if($account->tenant_id !== null && $account->tenant_id !== $tenant->id, 403);
         $data = $request->validate(['acting_user_id' => ['required', 'uuid']]);
         $user = User::findOrFail($data['acting_user_id']);
+        abort_unless(TenantMembership::query()->where('tenant_id', $tenant->id)->where('user_id', $user->id)->where('status', 'ACTIVE')->exists(), 403);
         $answer = app(AuthorizationService::class)->check($user, $tenant, $app, 'optifleet.'.$permission);
         abort_unless($answer['allowed'], 403, 'Central commercial permission denied.');
 
@@ -59,7 +61,7 @@ class CommercialPortalController extends Controller
             $q->where('status', $status);
         }
         if ($request->boolean('payable')) {
-            $q->whereIn('status', ['ISSUED', 'OVERDUE'])->where('balance_due', '>', 0)
+            $q->whereIn('status', ['ISSUED', 'PARTIALLY_PAID', 'OVERDUE'])->where('balance_due', '>', 0)
                 ->whereDoesntHave('payments', fn ($q) => $q->where('status', 'SUBMITTED'));
         }
 

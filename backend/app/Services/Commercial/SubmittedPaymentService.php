@@ -23,7 +23,7 @@ class SubmittedPaymentService
 
                 return $existing;
             }
-            if (! in_array($invoice->status, ['ISSUED', 'OVERDUE'], true)
+            if (! in_array($invoice->status, ['ISSUED', 'PARTIALLY_PAID', 'OVERDUE'], true)
                 || Money::compare((string) $data['amount'], $invoice->balance_due) !== 0
                 || Money::compare($invoice->balance_due, '0.00') <= 0
                 || $invoice->payments()->where('status', 'SUBMITTED')->exists()) {
@@ -54,7 +54,7 @@ class SubmittedPaymentService
             $payment = InvoicePayment::query()->lockForUpdate()->findOrFail($payment->id);
             abort_unless($payment->status === 'SUBMITTED', 409, 'Only submitted payments may be reviewed.');
             if ($verify) {
-                abort_unless(in_array($invoice->status, ['ISSUED', 'OVERDUE'], true)
+                abort_unless(in_array($invoice->status, ['ISSUED', 'PARTIALLY_PAID', 'OVERDUE'], true)
                     && Money::compare($payment->amount, $invoice->balance_due) === 0, 409, 'Invoice balance changed.');
                 $invoice->update(['balance_due' => '0.00', 'status' => 'PAID', 'paid_at' => now()]);
             }

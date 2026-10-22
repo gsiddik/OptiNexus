@@ -1,6 +1,6 @@
 import { HelpLabel, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { invoicesApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
@@ -13,6 +13,7 @@ import { unwrapError } from '../../../api/client';
 import type { Invoice } from '../../../api/types';
 
 export function InvoiceDetailPage() {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
   const { data: invoice, loading, error, reload } = useApiResource<Invoice>(() => invoicesApi.get(id!), [id]);
@@ -90,28 +91,29 @@ export function InvoiceDetailPage() {
         </div>
 
         <div className="card">
-          <h3>Payments</h3>
+          <h3>Payments</h3><h4>List Recorded Payments</h4>
           {invoice.payments.length === 0 ? (
             <p className="muted">No payments recorded.</p>
           ) : (
             <table className="data-table">
               <thead>
-                <tr><th>Amount</th><th>Paid At</th><th>Method</th><th>Reference</th></tr>
+                <tr><th>Payment Date</th><th>Amount</th><th>Payment Method</th><th>Transaction Reference</th><th>Status</th></tr>
               </thead>
               <tbody>
                 {invoice.payments.map((p) => (
-                  <tr key={p.id}>
+                  <tr key={p.id} onClick={() => navigate(`/invoice-payments/${p.id}`)} style={{ cursor: 'pointer' }}>
+                    <td><Link to={`/invoice-payments/${p.id}`}>{p.paid_at}</Link></td>
                     <td>{p.amount}</td>
-                    <td>{p.paid_at}</td>
                     <td>{p.method ?? '—'}</td>
                     <td>{p.reference ?? '—'}</td>
+                    <td><StatusBadge status={p.status ?? 'VERIFIED'} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
 
-          {hasBalance && (
+          {hasBalance && !invoice.payments.some((p) => p.status === 'SUBMITTED') && (
             <PermissionGuard permission="cgo.invoice.payment.record">
               <RecordPaymentForm invoice={invoice} onRecorded={reload} />
             </PermissionGuard>

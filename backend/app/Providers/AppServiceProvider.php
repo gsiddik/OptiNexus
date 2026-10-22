@@ -73,6 +73,7 @@ class AppServiceProvider extends ServiceProvider
             'audit.write' => 'Submit audit events on behalf of an integrated application',
             'introspect' => 'Validate CGO-issued tokens',
             'entitlement.check' => 'Evaluate entitlement decisions for a tenant via POST /entitlements/check',
+            'commercial.payment.submit' => 'Submit tenant invoice payments with an authorized acting user',
             'commercial.read' => "Read a tenant's commercial context (plan, status, entitlements, billing period)",
             'usage.write' => 'Submit metered usage events on behalf of an integrated application',
             'event.write' => 'Submit orchestration events (facts) on behalf of an integrated application',

@@ -20,7 +20,7 @@ class ServiceAccount extends Model
     /** What a product's own account may do by default; gateway (telematics) scopes are never part of it and must be named. */
     public const PRODUCT_SCOPES = [
         'authorization.check', 'governance.read', 'audit.write', 'introspect', 'entitlement.check',
-        'commercial.read', 'usage.write', 'event.write', 'tenant.delegate', 'access.evaluate',
+        'commercial.read', 'commercial.payment.submit', 'usage.write', 'event.write', 'tenant.delegate', 'access.evaluate',
     ];
 
     public function application(): BelongsTo

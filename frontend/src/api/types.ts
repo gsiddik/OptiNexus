@@ -330,6 +330,7 @@ export interface BillingAdjustment {
 }
 
 export interface Billing {
+  customer_name?: string | null;
   tenant_name?: string | null;
   subscription_number?: string | null;
 
@@ -347,6 +348,9 @@ export interface InvoiceItem {
 }
 
 export interface InvoicePayment {
+  status?: 'SUBMITTED' | 'VERIFIED' | 'REJECTED'; tenant_id?: string;
+  bank_name?: string | null; account_name?: string | null; note?: string | null; verification_note?: string | null;
+  proof?: { id: string; original_filename: string; mime_type: string; size: number } | null;
   id: string; invoice_id: string; amount: string; paid_at: string; method: string | null; reference: string | null; recorded_by: string | null;
 }
 

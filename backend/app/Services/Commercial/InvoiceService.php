@@ -100,6 +100,18 @@ class InvoiceService
 
     public function recordPayment(Invoice $invoice, string $amount, ?string $method, ?string $reference, ?string $recordedBy): array
     {
+        return DB::transaction(function () use ($invoice, $amount, $method, $reference, $recordedBy) {
+            $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
+            if ($invoice->payments()->where('status', 'SUBMITTED')->exists()) {
+                return [null, 'Review the submitted payment from its detail page.'];
+            }
+            if (Money::compare($amount, '0.00') <= 0) return [null, 'Payment must be positive.'];
+            return $this->recordConfirmedPayment($invoice, $amount, $method, $reference, $recordedBy);
+        });
+    }
+
+    private function recordConfirmedPayment(Invoice $invoice, string $amount, ?string $method, ?string $reference, ?string $recordedBy): array
+    {
         if (! in_array($invoice->status, [Invoice::STATUS_ISSUED, Invoice::STATUS_PARTIALLY_PAID, Invoice::STATUS_OVERDUE], true)) {
             return [null, 'INVALID_INVOICE_TRANSITION'];
         }

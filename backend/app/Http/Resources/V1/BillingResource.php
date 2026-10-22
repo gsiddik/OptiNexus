@@ -11,10 +11,11 @@ class BillingResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $this->resource->loadMissing(['tenant', 'subscription']);
+        $this->resource->loadMissing(['tenant', 'subscription', 'customer']);
 
         return [
             'id' => $this->id,
+            'customer_name' => $this->customer?->business_name ?? $this->customer?->legal_name,
             'tenant_name' => $this->tenant?->name,
             'subscription_number' => $this->subscription?->subscription_number,
             'billing_number' => $this->billing_number,

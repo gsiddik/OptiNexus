@@ -216,6 +216,8 @@ class InvoiceTest extends TestCase
         $this->postJson("/api/v1/invoices/{$new['id']}/mark-paid")->assertOk();
         $this->actingAsCommercialRole('BILLING_ADMIN');
         $this->postJson("/api/v1/invoices/generate-from-billing/$billingId")->assertStatus(409);
+        // A historical/import timestamp must not make the Void document replace the current Paid document.
+        Invoice::whereKey($old['id'])->update(['created_at' => now()->addDay()]);
         $this->getJson("/api/v1/billings/$billingId")->assertOk()->assertJsonPath('data.can_generate_invoice', false)->assertJsonPath('data.invoice.status', 'PAID');
         $download = $this->get("/api/v1/invoices/{$new['id']}/download")->assertOk();
         $this->assertStringContainsString($new['invoice_number'], $download->streamedContent());

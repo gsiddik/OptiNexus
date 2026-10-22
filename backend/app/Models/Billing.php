@@ -75,7 +75,9 @@ class Billing extends Model
 
     public function invoice(): HasOne
     {
-        return $this->hasOne(Invoice::class)->latest('created_at')->latest('id');
+        return $this->hasOne(Invoice::class)
+            ->orderByRaw("CASE WHEN status IN ('CANCELLED', 'VOID') THEN 1 ELSE 0 END")
+            ->latest('created_at')->latest('id');
     }
 
     public function isFinalized(): bool

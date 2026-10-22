@@ -127,7 +127,7 @@ export function CreateSubscriptionForm({ onCreated }: { onCreated: () => void })
       <HelpLabel>Grace Period (Days)<HelpInput help="Days after Current Period End until suspension. Access requires an ACTIVE subscription throughout." type="number" min="0" max="3650" step="1" value={form.grace_period_days} onChange={(e) => setForm({ ...form, grace_period_days: e.target.value })} /></HelpLabel>
       <HelpLabel>Idempotency Key (optional)<HelpInput help="Optional: reuse the same key when retrying the same operation to prevent duplicate processing." value={form.idempotency_key} onChange={(e) => setForm({ ...form, idempotency_key: e.target.value })} /></HelpLabel>
       <HelpLabel>
-        <HelpInput help="Enable automatic renewal at the end of each subscription billing period." type="checkbox" checked={form.auto_renew} onChange={(e) => setForm({ ...form, auto_renew: e.target.checked })} /> Auto Renew
+        <HelpInput help="Record the renewal preference. Expired subscriptions require the Renew action." type="checkbox" checked={form.auto_renew} onChange={(e) => setForm({ ...form, auto_renew: e.target.checked })} /> Auto Renew
       </HelpLabel>
       <div className="modal-actions">
         <button className="btn btn-primary" onClick={handleSubmit} disabled={!/^\d+$/.test(form.grace_period_days) || Number(form.grace_period_days) > 3650 || !validPrices || submitting || customers.loading || tenants.loading || !!customers.error || !!tenants.error || !tenantOptions.some((tenant) => tenant.id === form.tenant_id)}>Create</button>

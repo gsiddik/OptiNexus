@@ -99,6 +99,7 @@ class OidcProviderTest extends TestCase
         $fleet = $this->makeApplication(['application_code' => 'optifleet', 'name' => 'OptiFleet']);
         [$fleetClient] = $this->makeOidcClient($fleet);
         $this->grantApplicationAccess($user, $this->tenant, $fleet);
+        $this->makeActiveApplicationSubscription($this->tenant, $fleet);
 
         $this->codeFrom($this->signIn($radarClient, $user));
 

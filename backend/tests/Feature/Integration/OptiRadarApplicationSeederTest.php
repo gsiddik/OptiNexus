@@ -3,6 +3,7 @@
 namespace Tests\Feature\Integration;
 
 use App\Models\Application;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Models\UserApplicationAccess;
 use App\Services\Oidc\SsoAccessResolver;
@@ -50,13 +51,18 @@ class OptiRadarApplicationSeederTest extends TestCase
         $this->assertSame(0, UserApplicationAccess::query()->where('application_id', $radar->id)->count());
     }
 
-    public function test_the_default_seed_lets_the_demo_user_open_both_optifleet_and_optiradar(): void
+    public function test_demo_fleet_access_requires_an_active_subscription(): void
     {
         $this->seed(DatabaseSeeder::class);
         $this->seed(DatabaseSeeder::class);
 
         $user = User::query()->where('email', OptiRadarApplicationSeeder::DEMO_USER_EMAIL)->firstOrFail();
         $resolver = app(SsoAccessResolver::class);
+
+        $tenant = Tenant::where('tenant_code', 'ACME-SG')->firstOrFail();
+        $fleet = Application::where('application_code', 'optifleet')->firstOrFail();
+        $this->assertCount(0, $resolver->eligibleTenants($user, $fleet));
+        $this->makeActiveApplicationSubscription($tenant, $fleet);
 
         foreach (['optifleet', 'optiradar'] as $code) {
             $application = Application::query()->where('application_code', $code)->firstOrFail();

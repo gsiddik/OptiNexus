@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\Commercial;
 
+use App\Models\OidcSession;
 use App\Models\Subscription;
+use App\Services\AuthorizationService;
 use App\Services\Commercial\SubscriptionLifecycleService;
 use App\Services\Oidc\SsoAccessResolver;
-use App\Services\AuthorizationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\Concerns\CreatesCommercialFixtures;
 use Tests\Concerns\CreatesIntegrationFixtures;
 use Tests\TestCase;
@@ -78,6 +80,30 @@ class SubscriptionDeadlinesTest extends TestCase
         $other = $this->makeTenant();
         $this->makeActiveApplicationSubscription($other, $fleet);
         $this->assertFalse($access->canAccess($user, $fleet, $tenant));
+    }
+
+    public function test_expiry_revokes_only_the_affected_application_session(): void
+    {
+        Queue::fake();
+        $tenant = $this->makeTenant();
+        $fleet = $this->makeApplication(['application_code' => 'optifleet']);
+        $entry = $this->makeApplication(['application_code' => 'optiaccounting']);
+        $user = $this->makeSsoUser($tenant, $fleet);
+        $this->grantApplicationAccess($user, $tenant, $entry);
+        $this->makeActiveApplicationSubscription($tenant, $entry);
+        [$fleetClient] = $this->makeOidcClient($fleet);
+        [$entryClient] = $this->makeOidcClient($entry);
+        $sessions = [];
+        foreach ([$fleetClient, $entryClient] as $client) {
+            $sessions[] = OidcSession::create(['user_id' => $user->id, 'tenant_id' => $tenant->id, 'oidc_client_id' => $client->id, 'expires_at' => now()->addDays(40)]);
+        }
+        $sub = $tenant->subscriptions()->whereHas('product.applications', fn ($q) => $q->where('applications.id', $fleet->id))->firstOrFail();
+        $sub->update(['current_period_end' => now(), 'grace_end_at' => now()->addDays(7)]);
+        $this->artisan('subscriptions:process-deadlines')->assertSuccessful();
+        $this->assertNotNull($sessions[0]->fresh()->ended_at);
+        $this->assertNull($sessions[1]->fresh()->ended_at);
+        $this->assertSame('ACTIVE', $user->fresh()->status);
+        $this->assertSame('subscription_inactive', $sessions[0]->fresh()->end_reason);
     }
 
     public function test_cancelling_one_of_two_active_subscriptions_keeps_access_until_the_last_one_ends(): void

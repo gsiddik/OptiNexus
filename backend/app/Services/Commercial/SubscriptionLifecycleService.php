@@ -8,6 +8,8 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
 use App\Models\Tenant;
+use App\Services\AuditService;
+use App\Services\Oidc\SessionRevocationService;
 use App\Support\DocumentNumberService;
 use App\Support\Money;
 use Illuminate\Support\Carbon;
@@ -142,7 +144,7 @@ class SubscriptionLifecycleService
                 'grace_end_at' => $periodEnd->copy()->addDays($subscription->grace_period_days),
             ]);
 
-            if ($wasSuspended) {
+            if ($wasSuspended && ! $subscription->entitlements()->where('status', 'EXPIRED')->exists()) {
                 $this->entitlements->restoreForSubscription($subscription);
             } else {
                 $this->entitlements->generateFromSubscription($subscription);
@@ -209,6 +211,8 @@ class SubscriptionLifecycleService
     {
         return DB::transaction(function () use ($subscription) {
             $subscription = Subscription::query()->lockForUpdate()->findOrFail($subscription->id);
+            $this->processDue($subscription);
+            $subscription->refresh();
             if (! in_array($subscription->status, [Subscription::STATUS_ACTIVE, Subscription::STATUS_PAST_DUE, Subscription::STATUS_GRACE_PERIOD, Subscription::STATUS_EXPIRED], true)) {
                 return 'INVALID_SUBSCRIPTION_TRANSITION';
             }
@@ -235,12 +239,12 @@ class SubscriptionLifecycleService
             if (in_array($subscription->status, Subscription::ACTIVE_LIKE_STATUSES, true)
                 && $subscription->current_period_end?->lte(now())) {
                 $this->expire($subscription);
-                app(\App\Services\AuditService::class)->record('subscription.expired', tenantId: $subscription->tenant_id,
+                app(AuditService::class)->record('subscription.expired', tenantId: $subscription->tenant_id,
                     resourceType: 'Subscription', resourceId: $subscription->id, source: 'scheduler');
             }
             if ($subscription->status === Subscription::STATUS_EXPIRED && $subscription->grace_end_at?->lte(now())) {
                 $this->suspend($subscription);
-                app(\App\Services\AuditService::class)->record('subscription.suspended', tenantId: $subscription->tenant_id,
+                app(AuditService::class)->record('subscription.suspended', tenantId: $subscription->tenant_id,
                     resourceType: 'Subscription', resourceId: $subscription->id, source: 'scheduler');
             }
         });
@@ -248,7 +252,7 @@ class SubscriptionLifecycleService
 
     public function cancel(Subscription $subscription): ?string
     {
-        if (! $subscription->isActiveLike()) {
+        if (! in_array($subscription->status, [...Subscription::ACTIVE_LIKE_STATUSES, Subscription::STATUS_EXPIRED, Subscription::STATUS_SUSPENDED], true)) {
             return 'INVALID_SUBSCRIPTION_TRANSITION';
         }
 
@@ -320,7 +324,7 @@ class SubscriptionLifecycleService
         $access = app(SubscriptionAccess::class);
         foreach ($subscription->product->applications as $application) {
             if ($access->required($application) && ! $access->allowed($subscription->tenant, $application)) {
-                app(\App\Services\Oidc\SessionRevocationService::class)
+                app(SessionRevocationService::class)
                     ->revokeTenant($subscription->tenant, 'subscription_inactive', $application);
             }
         }

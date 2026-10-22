@@ -9,6 +9,7 @@ use Illuminate\Console\Command;
 class ProcessSubscriptionDeadlines extends Command
 {
     protected $signature = 'subscriptions:process-deadlines';
+
     protected $description = 'Expire elapsed subscription periods and suspend expired grace windows';
 
     public function handle(SubscriptionLifecycleService $lifecycle): int

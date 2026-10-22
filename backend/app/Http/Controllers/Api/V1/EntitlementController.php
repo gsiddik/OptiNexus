@@ -14,6 +14,7 @@ use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Services\AuditService;
 use App\Services\Commercial\EntitlementService;
+use App\Services\Commercial\SubscriptionAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -93,7 +94,7 @@ class EntitlementController extends Controller
             'application_code' => $application?->application_code,
             'application_access' => $application && $tenant->isActive()
                 && $tenant->applications()->where('applications.id', $application->id)->wherePivot('status', 'ACTIVE')->exists()
-                && app(\App\Services\Commercial\SubscriptionAccess::class)->allowed($tenant, $application),
+                && app(SubscriptionAccess::class)->allowed($tenant, $application),
             'application_subscriptions' => SubscriptionResource::collection($applicationSubscriptions),
         ]);
     }

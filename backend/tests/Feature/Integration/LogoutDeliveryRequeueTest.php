@@ -45,6 +45,7 @@ class LogoutDeliveryRequeueTest extends TestCase
         [$this->fleetClient] = $this->makeOidcClient($this->fleet, ['backchannel_logout_uri' => 'https://fleet.example.test/api/v1/auth/sso/backchannel-logout']);
         $this->user = $this->makeSsoUser($this->tenant, $this->radar);
         $this->grantApplicationAccess($this->user, $this->tenant, $this->fleet);
+        $this->makeActiveApplicationSubscription($this->tenant, $this->fleet);
 
         Queue::fake();
         Http::fake(fn () => Http::response('', 204));

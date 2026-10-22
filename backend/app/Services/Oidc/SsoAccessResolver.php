@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use App\Models\TenantMembership;
 use App\Models\User;
 use App\Models\UserApplicationAccess;
+use App\Services\Commercial\SubscriptionAccess;
 use Illuminate\Support\Collection;
 
 /**
@@ -45,7 +46,7 @@ class SsoAccessResolver
                 ->where('tenant_applications.status', 'ACTIVE'))
             ->orderBy('name')
             ->get()
-            ->filter(fn (Tenant $tenant) => app(\App\Services\Commercial\SubscriptionAccess::class)->allowed($tenant, $application))->values();
+            ->filter(fn (Tenant $tenant) => app(SubscriptionAccess::class)->allowed($tenant, $application))->values();
     }
 
     public function canAccess(User $user, Application $application, Tenant $tenant): bool
@@ -95,7 +96,7 @@ class SsoAccessResolver
             return 'application_not_assigned';
         }
 
-        return app(\App\Services\Commercial\SubscriptionAccess::class)->allowed($tenant, $application) ? null : 'subscription_inactive';
+        return app(SubscriptionAccess::class)->allowed($tenant, $application) ? null : 'subscription_inactive';
     }
 
     /**
@@ -131,7 +132,7 @@ class SsoAccessResolver
             ->whereIn('applications.id', $applicationIds)
             ->get()
             ->filter(fn (Application $app) => $this->applicationIsLive($app)
-                && app(\App\Services\Commercial\SubscriptionAccess::class)->allowed($tenant, $app))
+                && app(SubscriptionAccess::class)->allowed($tenant, $app))
             ->map(fn (Application $app) => [
                 'code' => $app->application_code,
                 'name' => $app->name,

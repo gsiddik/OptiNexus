@@ -25,7 +25,7 @@ use Illuminate\Support\Str;
  *
  * It composes what OptiNexus already has - identity, tenant membership with the Admin Tenant flag, application access, roles, audit,
  * the privilege-escalation guard - in one transaction, and adds two things: a manual e-mail verification the operator records after
- * checking the address outside the system, and a temporary password shown once. No e-mail is sent on any path here.
+ * checking the address outside the system, and a temporary password shown once. Initial bootstrap and out-of-band reissue send no email; changing an existing email uses managed emailed credentials.
  *
  * Nothing an operator could not already do step by step is allowed: every grant is checked against what THIS operator may grant in
  * THIS tenant. An existing identity is never found by e-mail and adopted; the operator names the account (its id) and repeats

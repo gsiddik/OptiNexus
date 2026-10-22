@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Governance;
 
+use App\Jobs\SendAccountCredential;
 use App\Models\Application;
 use App\Models\AuditLog;
 use App\Models\Permission;
@@ -141,17 +142,19 @@ class TenantAdminBootstrapApiTest extends TestCase
         $this->assertTrue(! is_file($log) || ! str_contains((string) file_get_contents($log), $canonical));
     }
 
-    public function test_no_mail_notification_or_queued_job_is_produced_on_any_path(): void
+    public function test_bootstrap_and_reissue_are_out_of_band_but_email_change_queues_its_credential(): void
     {
         [$user] = $this->created();
         $this->verify($user)->assertOk();
         $this->postJson($this->url("/{$user->id}/temporary-credential"))->assertOk();
+        Queue::assertNothingPushed();
         $this->putJson("/api/v1/users/{$user->id}", ['email' => 'moved@example.test'])->assertOk();
 
         Mail::assertNothingSent();
         Mail::assertNothingQueued();
         Notification::assertNothingSent();
-        Queue::assertNothingPushed();
+        Queue::assertPushed(SendAccountCredential::class, 1);
+        Queue::assertCount(1);
     }
 
     public function test_listing_shows_where_each_admin_stands(): void

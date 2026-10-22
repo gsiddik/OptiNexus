@@ -87,4 +87,19 @@ class LifecycleNotificationsTest extends TestCase
         $tenant->update(['status' => 'SUSPENDED']);
         $this->assertSame(1, Notification::where('recipient_user_id', $admin->id)->count());
     }
+
+    public function test_pricing_change_notifies_only_the_affected_registered_tenant_admin(): void
+    {
+        Queue::fake();
+        $this->seedCommercialBaseline();
+        $tenant = $this->makeTenant();
+        $other = $this->makeTenant();
+        $admin = User::factory()->create(['status' => 'ACTIVE']);
+        $admin->tenantMemberships()->create(['tenant_id' => $tenant->id, 'status' => 'ACTIVE', 'is_tenant_admin' => true]);
+        $subscription = $this->makeActiveApplicationSubscription($tenant, $this->makeApplication());
+        $this->makeFlatPrice($subscription->plan, ['tenant_id' => $other->id]);
+        $this->assertSame(0, Notification::where('recipient_user_id', $admin->id)->count());
+        $this->makeFlatPrice($subscription->plan, ['unit_amount' => '250000.00']);
+        $this->assertSame(1, Notification::where('recipient_user_id', $admin->id)->where('subject', 'Subscription pricing changed')->count());
+    }
 }

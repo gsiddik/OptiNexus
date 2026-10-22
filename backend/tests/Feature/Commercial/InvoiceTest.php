@@ -212,6 +212,7 @@ class InvoiceTest extends TestCase
         $this->assertNotSame($old['invoice_number'], $new['invoice_number']);
         $this->actingAsCommercialRole('BILLING_APPROVER');
         $this->postJson("/api/v1/invoices/{$new['id']}/issue")->assertOk();
+        $this->actingAsCommercialRole('BILLING_ADMIN');
         $this->postJson("/api/v1/invoices/{$new['id']}/mark-paid")->assertOk();
         $this->actingAsCommercialRole('BILLING_ADMIN');
         $this->postJson("/api/v1/invoices/generate-from-billing/$billingId")->assertStatus(409);

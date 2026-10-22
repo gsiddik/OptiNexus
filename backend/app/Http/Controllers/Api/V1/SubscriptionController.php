@@ -114,6 +114,9 @@ class SubscriptionController extends Controller
             'metadata' => ['nullable', 'array'],
         ]);
 
+        if (array_key_exists('metadata', $validated)) {
+            $validated['metadata'] = [...($validated['metadata'] ?? []), 'application_ids' => $subscription->metadata['application_ids'] ?? null];
+        }
         $old = $subscription->only(['auto_renew', 'metadata']);
         $subscription->update($validated);
 

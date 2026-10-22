@@ -263,6 +263,7 @@ export interface PricingTier {
 }
 
 export interface Price {
+  applications?: { id: string; name: string }[];
   plan_name?: string | null;
   addon_name?: string | null;
 

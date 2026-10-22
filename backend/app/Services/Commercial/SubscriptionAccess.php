@@ -20,7 +20,6 @@ class SubscriptionAccess
             ->where(fn ($q) => $q->whereNull('start_at')->orWhere('start_at', '<=', now()))
             ->where(fn ($q) => $q->whereNull('current_period_start')->orWhere('current_period_start', '<=', now()))
             ->where('current_period_end', '>', now())
-            ->whereHas('product.applications', fn ($q) => $q->where('applications.id', $application->id))
-            ->exists();
+            ->get()->contains(fn ($subscription) => in_array($application->id, app(SubscriptionApplicationService::class)->applicationIds($subscription), true));
     }
 }

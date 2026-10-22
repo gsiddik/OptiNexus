@@ -38,7 +38,7 @@ class EntitlementService
         }
 
         $applicationIds = app(SubscriptionApplicationService::class)->applicationIds($subscription);
-        foreach ($plan->product->applications->whereIn('id', $applicationIds) as $application) {
+        foreach (Application::whereIn('id', $applicationIds)->get() as $application) {
             $this->grant($subscription, Entitlement::TYPE_APPLICATION, $application->application_code, 'true', Entitlement::SOURCE_PLAN, $plan->id, $application->id, null);
         }
 

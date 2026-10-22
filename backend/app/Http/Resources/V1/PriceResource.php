@@ -11,10 +11,13 @@ class PriceResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $this->resource->loadMissing(['plan', 'addon']);
+        $this->resource->loadMissing(['plan.product.applications', 'plan.capabilities.application', 'addon.product.applications', 'addon.capabilities.application']);
 
         return [
             'id' => $this->id,
+            'applications' => ($this->plan?->product?->applications ?? $this->addon?->product?->applications ?? collect())
+                ->merge(($this->plan?->capabilities ?? $this->addon?->capabilities ?? collect())->pluck('application')->filter())
+                ->unique('id')->map(fn ($application) => ['id' => $application->id, 'name' => $application->name])->values(),
             'plan_name' => $this->plan?->name,
             'addon_name' => $this->addon?->name,
             'plan_id' => $this->plan_id,

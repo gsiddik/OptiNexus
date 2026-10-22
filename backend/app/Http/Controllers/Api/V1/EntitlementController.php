@@ -15,6 +15,7 @@ use App\Models\Tenant;
 use App\Services\AuditService;
 use App\Services\Commercial\EntitlementService;
 use App\Services\Commercial\SubscriptionAccess;
+use App\Services\Commercial\SubscriptionApplicationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -76,11 +77,10 @@ class EntitlementController extends Controller
             return $this->fail('TENANT_SCOPE_MISMATCH', 'The service account belongs to another tenant.', 403);
         }
         $application = $account->application;
-        $limitSubscriptionIds = $application ? $tenant->subscriptions()
-            ->whereHas('product.applications', fn ($query) => $query->where('applications.id', $application->id))->pluck('id')->all() : [];
         $applicationSubscriptions = $application ? $tenant->subscriptions()->with(['plan', 'product', 'items'])
-            ->whereHas('product.applications', fn ($query) => $query->where('applications.id', $application->id))
-            ->orderByDesc('current_period_end')->orderByDesc('created_at')->orderBy('id')->get() : collect();
+            ->orderByDesc('current_period_end')->orderByDesc('created_at')->orderBy('id')->get()
+            ->filter(fn ($subscription) => in_array($application->id, app(SubscriptionApplicationService::class)->applicationIds($subscription), true))->values() : collect();
+        $limitSubscriptionIds = $applicationSubscriptions->pluck('id')->all();
         $resourceLimits = $application ? $this->entitlements->effectiveEntitlements($tenant, $application->application_code, $limitSubscriptionIds)
             ->where('entitlement_type', Entitlement::TYPE_LIMIT)->pluck('value', 'entitlement_key') : collect();
 

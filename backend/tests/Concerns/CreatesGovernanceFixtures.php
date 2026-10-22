@@ -6,7 +6,10 @@ use App\Models\Application;
 use App\Models\Capability;
 use App\Models\Customer;
 use App\Models\Permission;
+use App\Models\Plan;
+use App\Models\Product;
 use App\Models\Role;
+use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\TenantMembership;
 use App\Models\User;
@@ -146,6 +149,20 @@ trait CreatesGovernanceFixtures
         if ($role) {
             $user->userRoles()->create(['role_id' => $role->id, 'tenant_id' => $tenant->id]);
         }
+    }
+
+    protected function makeActiveApplicationSubscription(Tenant $tenant, Application $application): Subscription
+    {
+        $product = Product::create(['product_code' => 'P-'.Str::random(12), 'name' => 'Subscribed product', 'status' => 'ACTIVE', 'currency' => 'IDR']);
+        $product->applications()->attach($application->id, ['id' => (string) Str::uuid()]);
+        $plan = Plan::create(['product_id' => $product->id, 'plan_code' => 'P-'.Str::random(12), 'name' => 'Subscribed plan', 'status' => 'ACTIVE', 'currency' => 'IDR', 'billing_interval' => 'MONTHLY']);
+
+        return Subscription::create([
+            'subscription_number' => 'SUB-'.Str::random(12), 'customer_id' => $tenant->customer_id, 'tenant_id' => $tenant->id,
+            'product_id' => $product->id, 'plan_id' => $plan->id, 'status' => 'ACTIVE', 'currency' => 'IDR', 'billing_interval' => 'MONTHLY',
+            'start_at' => now()->subDay(), 'current_period_start' => now()->subDay(), 'current_period_end' => now()->addMonth(),
+            'grace_end_at' => now()->addMonth()->addDays(7), 'grace_period_days' => 7,
+        ]);
     }
 
     protected function grantApplicationAccess(User $user, Tenant $tenant, Application $application): void

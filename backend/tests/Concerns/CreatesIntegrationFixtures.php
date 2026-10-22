@@ -41,6 +41,9 @@ trait CreatesIntegrationFixtures
 
         $this->attachUserToTenant($user, $tenant);
         $this->grantApplicationAccess($user, $tenant, $application);
+        if (in_array($application->application_code, ['optifleet', 'optiaccounting', 'optientry'], true)) {
+            $this->makeActiveApplicationSubscription($tenant, $application);
+        }
 
         return $user;
     }

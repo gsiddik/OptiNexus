@@ -22,6 +22,7 @@ class StoreSubscriptionRequest extends FormRequest
             'price_items.*.quantity' => ['nullable', 'integer', 'min:1', 'max:100000000'],
             'addon_ids' => ['nullable', 'array'],
             'addon_ids.*' => ['uuid', 'exists:addons,id'],
+            'grace_period_days' => ['sometimes', 'required', 'integer', 'min:0', 'max:3650'],
             'auto_renew' => ['nullable', 'boolean'],
             'idempotency_key' => ['nullable', 'string', 'max:100'],
             'metadata' => ['nullable', 'array'],

@@ -44,6 +44,7 @@ class CapabilityRoleAccessTest extends TestCase
         $user = User::factory()->create(['status' => 'ACTIVE']);
         $this->attachUserToTenant($user, $tenant, $role);
         $this->grantApplicationAccess($user, $tenant, $fleet);
+        $this->makeActiveApplicationSubscription($tenant, $fleet);
         $this->entitlement($tenant, $fleet->id, 'optifleet');
         $expected = [];
         foreach (['vehicle', 'inspection', 'maintenance', 'work_order', 'workshop', 'inventory', 'procurement', 'tire', 'component', 'partner', 'history', 'report', 'analytics', 'maintenance_intelligence'] as $module) {

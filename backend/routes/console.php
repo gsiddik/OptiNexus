@@ -14,6 +14,8 @@ Schedule::command('gateway:sync-optiradar')
     ->withoutOverlapping()
     ->when(fn () => config('gateway.optiradar.enabled'));
 
+Schedule::command('subscriptions:process-deadlines')->everyMinute()->withoutOverlapping();
+
 // Central logout safety net: access lost without a hook (expired subscription, direct database edit).
 Schedule::command('oidc:reconcile-access')
     ->everyMinute()

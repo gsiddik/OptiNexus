@@ -141,8 +141,11 @@ describe('catalog relation forms', () => {
       expect(within(dialog).queryByLabelText(/Number of|Maximum API/)).toBeNull();
     }
     expect(within(dialog).getByText('Unit Amount: IDR 12.35')).toBeTruthy();
+    const grace = within(dialog).getByLabelText('Grace Period (Days)');
+    await userEvent.clear(grace);
+    await userEvent.type(grace, '7');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
-    await waitFor(() => expect(calls.find((call) => call.method === 'POST' && call.url === '/subscriptions')?.body).toMatchObject({ plan_id: 'plan1', price_items: [{ price_id: 'price1', quantity: label ? 7 : 1 }] }));
+    await waitFor(() => expect(calls.find((call) => call.method === 'POST' && call.url === '/subscriptions')?.body).toMatchObject({ plan_id: 'plan1', grace_period_days: 7, price_items: [{ price_id: 'price1', quantity: label ? 7 : 1 }] }));
   });
 
   it('selects an add-on Pricing row and displays the saved item type and totals', async () => {
@@ -161,7 +164,7 @@ describe('catalog relation forms', () => {
     await userEvent.selectOptions(within(dialog).getByLabelText('Plan/Add-on', { exact: true }), 'price2');
     await userEvent.type(within(dialog).getByLabelText('Number of Vehicle(s)'), '3');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
-    await waitFor(() => expect(calls.find((call) => call.method === 'POST' && call.url === '/subscriptions')?.body).toMatchObject({ plan_id: 'plan1', price_items: [{ price_id: 'price1', quantity: 1 }, { price_id: 'price2', quantity: 3 }] }));
+    await waitFor(() => expect(calls.find((call) => call.method === 'POST' && call.url === '/subscriptions')?.body).toMatchObject({ plan_id: 'plan1', grace_period_days: 0, price_items: [{ price_id: 'price1', quantity: 1 }, { price_id: 'price2', quantity: 3 }] }));
     cleanup();
     renderApp('/subscriptions/sub1');
     expect(await screen.findByRole('columnheader', { name: 'Total Price' })).toBeTruthy();

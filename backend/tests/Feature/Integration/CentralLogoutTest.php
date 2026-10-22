@@ -56,6 +56,7 @@ class CentralLogoutTest extends TestCase
         [$this->fleetClient, $this->fleetSecret] = $this->makeOidcClient($this->fleet, ['backchannel_logout_uri' => 'https://fleet.example.test/api/v1/auth/sso/backchannel-logout']);
         $this->user = $this->makeSsoUser($this->tenant, $this->radar);
         $this->grantApplicationAccess($this->user, $this->tenant, $this->fleet);
+        $this->makeActiveApplicationSubscription($this->tenant, $this->fleet);
 
         Http::fake(function () {
             [$status, $body] = array_shift($this->answers) ?? [204, ''];

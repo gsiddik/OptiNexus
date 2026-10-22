@@ -41,6 +41,7 @@ class AuthorizationCheckApiTest extends TestCase
         $application = $this->makeApplication(['application_code' => 'optifleet']);
         $tenant = $this->makeTenant();
         $this->grantApplicationAccess(($user = User::factory()->create(['status' => User::STATUS_ACTIVE])), $tenant, $application);
+        $this->makeActiveApplicationSubscription($tenant, $application);
 
         $role = Role::create([
             'tenant_id' => $tenant->id, 'application_id' => $application->id, 'name' => 'App Admin', 'code' => 'APPADM1',

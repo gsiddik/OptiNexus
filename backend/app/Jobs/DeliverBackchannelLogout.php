@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\OidcLogoutDelivery;
 use App\Services\Oidc\OidcKeyService;
 use App\Services\Oidc\SessionRevocationService;
+use App\Services\Oidc\SsoAccessResolver;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
@@ -50,6 +51,15 @@ class DeliverBackchannelLogout implements ShouldQueue, ShouldQueueAfterCommit
         $client = $delivery->client;
         if (! $client || ! $client->isActive() || ! $client->backchannel_logout_uri || ! $delivery->user) {
             $delivery->update(['status' => OidcLogoutDelivery::STATUS_FAILED, 'last_error' => 'The application has no usable back-channel logout endpoint.']);
+
+            return;
+        }
+
+        // A queued expiry notification must not suspend a newly renewed account on a later retry.
+        if ($delivery->type === OidcLogoutDelivery::TYPE_ACCESS_REVOKED && $delivery->reason === 'subscription_inactive'
+            && $delivery->tenant && $client->application
+            && app(SsoAccessResolver::class)->denialReason($delivery->user, $client->application, $delivery->tenant) === null) {
+            $delivery->update(['status' => OidcLogoutDelivery::STATUS_SUPERSEDED, 'last_error' => 'Subscription access was restored before delivery.']);
 
             return;
         }

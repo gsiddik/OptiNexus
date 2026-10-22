@@ -18,7 +18,7 @@ it.each(['ACTIVE', 'EXPIRED', 'SUSPENDED'])('offers renewal only for EXPIRED and
   restore = mock.restore;
   renderApp('/subscriptions/s1');
   await screen.findByRole('heading', { name: 'SUB-1' });
-  expect(screen.queryByRole('button', { name: 'Suspend', exact: true })).toBeNull();
-  expect(screen.queryByRole('button', { name: 'Expire', exact: true })).toBeNull();
-  expect(!!screen.queryByRole('button', { name: 'Renew', exact: true })).toBe(status === 'EXPIRED');
+  expect(screen.queryByRole('button', { name: 'Suspend' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Expire' })).toBeNull();
+  expect(!!screen.queryByRole('button', { name: 'Renew' })).toBe(status === 'EXPIRED');
 });

@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../i18n';
 import { HelpInput, HelpSelect } from '../../../components/FieldControls';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { workflowInstancesApi } from '../../../api/endpoints';
@@ -47,7 +48,7 @@ export function WorkflowInstancesListPage() {
               { key: 'trigger', header: 'Trigger', render: (r) => r.trigger_type },
               { key: 'correlation', header: 'Correlation', render: (r) => r.correlation_id ? <code>{r.correlation_id.slice(0, 8)}</code> : '—' },
               { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
-              { key: 'started', header: 'Started', render: (r) => new Date(r.started_at).toLocaleString() },
+              { key: 'started', header: 'Started', render: (r) => formatDateTime(r.started_at) },
             ]}
           />
           <Pagination meta={meta} onPageChange={setPage} />

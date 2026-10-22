@@ -89,12 +89,13 @@ export function useI18n() {
 
 const INTL_LOCALE: Record<Locale, string> = { en: 'en-GB', id: 'id-ID' };
 
-/** A timestamp in the language of the screen; "—" for a missing or unreadable value. */
+/** Display in the browser timezone, consistently in both interface languages. Date-only values stay on their calendar day. */
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(INTL_LOCALE[current], { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00`) : new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}, ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
 /** "5 minutes ago" / "5 menit lalu" in the language of the screen. */

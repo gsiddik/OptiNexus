@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { TOKEN_STORAGE_KEY, unwrapError } from '../../api/client';
 import { setLocale } from '../../i18n';
 import { installMockApi, ok, operatorContext } from '../../test/mockApi';
-import userEvent from '@testing-library/user-event';
 import { renderApp } from '../../test/renderApp';
 
 const tenant = { id: 't-1', tenant_code: 'ACME', customer_id: 'c', name: 'Acme Logistics', status: 'ACTIVE', region: null, timezone: null, currency: null, language: null };
@@ -54,23 +53,12 @@ describe('seats on the tenant page', () => {
     expect(fleet).toEqual(['optifleet', 'Seats not controlled', '—', '2', '0', '—']);
   });
 
-  it('refreshes seats immediately after assigning an application without a page refresh', async () => {
-    restore();
-    let assigned = false;
-    restore = installMockApi((call) => {
-      if (call.url === '/auth/context') return ok(operatorContext(['cgo.tenant.view']));
-      if (call.url === '/tenants/t-1') return ok(tenant);
-      if (call.url === '/tenants/t-1/applications/a1' && call.method === 'POST') { assigned = true; return ok(null); }
-      if (call.url === '/tenants/t-1/applications') return ok(assigned ? [{ id: 'a1', name: 'OptiFleet' }] : []);
-      if (call.url === '/tenants/t-1/seats') return ok(assigned ? [seat({ application_code: 'optifleet' })] : []);
-      if (call.url === '/applications') return ok([{ id: 'a1', name: 'OptiFleet' }]);
-      return undefined;
-    }).restore;
+  it('shows assigned applications read-only alongside their seats', async () => {
     await openSeats();
-    expect(screen.queryByText('optifleet')).toBeNull();
-    await userEvent.selectOptions((await screen.findByRole('option', { name: 'OptiFleet' })).closest('select')!, 'a1');
-    await userEvent.click(screen.getByRole('button', { name: 'Assign' }));
-    expect(await screen.findByText('optifleet')).toBeTruthy();
+    expect(await screen.findByText('Assigned Application')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Assign' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Remove OptiEntry' })).toBeNull();
+    expect(screen.getByText('OptiEntry')).toBeTruthy();
   });
 
   it('marks over-limit beside the numbers and never shows a negative availability', async () => {

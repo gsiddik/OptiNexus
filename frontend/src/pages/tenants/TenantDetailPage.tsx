@@ -1,7 +1,7 @@
-import { HelpSelect, HelpInput } from '../../components/FieldControls';
+import { HelpInput } from '../../components/FieldControls';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { applicationsApi, tenantsApi } from '../../api/endpoints';
+import { tenantsApi } from '../../api/endpoints';
 import { useApiResource } from '../../api/useApi';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { ErrorAlert } from '../../components/ErrorAlert';
@@ -23,7 +23,6 @@ export function TenantDetailPage({ initialTab = 'details' }: { initialTab?: Tab 
   const { hasPermission } = useAuth();
   const { t } = useI18n();
   const { data: tenant, loading, error, reload } = useApiResource<Tenant>(() => tenantsApi.get(id!), [id]);
-  const [assignmentRevision, setAssignmentRevision] = useState(0);
   const [tab, setTab] = useState<Tab>(initialTab);
 
   if (loading) return <LoadingSpinner />;
@@ -76,8 +75,8 @@ export function TenantDetailPage({ initialTab = 'details' }: { initialTab?: Tab 
       )}
       {tab === 'applications' && (
         <>
-          <TenantApplications tenant={tenant} onChanged={() => { setAssignmentRevision((value) => value + 1); reload(); }} />
-          <TenantSeats tenant={tenant} revision={assignmentRevision} />
+          <TenantApplications tenant={tenant} />
+          <TenantSeats tenant={tenant} revision={0} />
         </>
       )}
       {tab === 'admins' && <TenantAdmins tenant={tenant} />}
@@ -85,59 +84,18 @@ export function TenantDetailPage({ initialTab = 'details' }: { initialTab?: Tab 
   );
 }
 
-function TenantApplications({ tenant, onChanged }: { tenant: Tenant; onChanged: () => void }) {
-  const { data: apps, loading, error, reload } = useApiResource<Application[]>(() => tenantsApi.applications(tenant.id), [tenant.id]);
-  const { data: allApps } = useApiResource(() => applicationsApi.list({ per_page: 100 }).then((e) => e.data), []);
-  const [selected, setSelected] = useState('');
-  const [actionError, setActionError] = useState<string | null>(null);
-
-  async function attach() {
-    if (!selected) return;
-    setActionError(null);
-    try {
-      await tenantsApi.attachApplication(tenant.id, selected);
-      setSelected('');
-      reload();
-      onChanged();
-    } catch (err) {
-      setActionError(unwrapError(err).message);
-    }
-  }
-
-  async function detach(applicationId: string) {
-    try {
-      await tenantsApi.detachApplication(tenant.id, applicationId);
-      reload();
-      onChanged();
-    } catch (err) {
-      setActionError(unwrapError(err).message);
-    }
-  }
-
+function TenantApplications({ tenant }: { tenant: Tenant }) {
+  const { data: apps, loading, error } = useApiResource<Application[]>(() => tenantsApi.applications(tenant.id), [tenant.id]);
   if (loading) return <LoadingSpinner />;
-  return (
-    <div className="card">
-      <ErrorAlert message={error ?? actionError} />
-      <div className="toolbar">
-        <HelpSelect help="Select the registered application to which this configuration applies." value={selected} onChange={(e) => setSelected(e.target.value)}>
-          <option value="">Assign an application...</option>
-          {(allApps as Application[] | null)?.map((a) => (
-            <option key={a.id} value={a.id}>{a.name}</option>
-          ))}
-        </HelpSelect>
-        <button className="btn btn-secondary" onClick={attach} disabled={!selected}>Assign</button>
-      </div>
-      <ul className="chip-list">
-        {apps?.map((a) => (
-          <li key={a.id} className="chip removable">
-            {a.name}
-            <button onClick={() => detach(a.id)} aria-label={`Remove ${a.name}`}>×</button>
-          </li>
-        ))}
-        {!apps?.length && <span className="muted">No applications assigned yet.</span>}
-      </ul>
-    </div>
-  );
+  return <div className="card">
+    <h3>Assigned Application</h3>
+    <ErrorAlert message={error} />
+    <p className="muted">Applications follow this tenant's subscription plan and add-ons.</p>
+    <ul className="chip-list">
+      {apps?.map((a) => <li key={a.id} className="chip">{a.name}</li>)}
+      {!apps?.length && <span className="muted">No applications assigned yet. Create a subscription first.</span>}
+    </ul>
+  </div>;
 }
 
 function TenantAdmins({ tenant }: { tenant: Tenant }) {

@@ -120,7 +120,7 @@ export interface AdminActivation {
   email: {
     verified: boolean;
     verified_at: string | null;
-    method: 'INVITATION' | 'OPERATOR_MANUAL' | null;
+    method: 'INVITATION' | 'OPERATOR_MANUAL' | 'EMAIL_CREDENTIAL' | null;
     verified_by: { id: string; name: string } | null;
   };
   password: {
@@ -263,6 +263,7 @@ export interface PricingTier {
 }
 
 export interface Price {
+  applications?: { id: string; name: string }[];
   plan_name?: string | null;
   addon_name?: string | null;
 
@@ -287,6 +288,7 @@ export interface SubscriptionItem {
 }
 
 export interface Subscription {
+  application_ids?: string[];
   customer_name?: string | null;
   tenant_name?: string | null;
   product_name?: string | null;
@@ -330,6 +332,8 @@ export interface BillingAdjustment {
 }
 
 export interface Billing {
+  invoice?: { id: string; invoice_number: string; status: string } | null;
+  can_generate_invoice?: boolean;
   customer_name?: string | null;
   tenant_name?: string | null;
   subscription_number?: string | null;

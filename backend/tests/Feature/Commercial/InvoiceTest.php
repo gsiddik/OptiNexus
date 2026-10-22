@@ -13,6 +13,14 @@ class InvoiceTest extends TestCase
 {
     use CreatesCommercialFixtures, CreatesGovernanceFixtures, RefreshDatabase;
 
+    public function test_named_download_route_requires_only_the_invoice_and_uses_user_authentication(): void
+    {
+        $this->assertSame('/api/v1/invoices/review-invoice/download', route('api.v1.invoices.download', ['invoice' => 'review-invoice'], false));
+        $route = app('router')->getRoutes()->getByName('api.v1.invoices.download');
+        $this->assertContains('auth:sanctum', $route->gatherMiddleware());
+        $this->assertContains('permission:cgo.invoice.view,invoice', $route->gatherMiddleware());
+    }
+
     private function finalizedBilling(): array
     {
         $this->actingAsCommercialRole('SUBSCRIPTION_ADMIN');
@@ -197,5 +205,30 @@ class InvoiceTest extends TestCase
         $this->postJson("/api/v1/invoices/$first/cancel")->assertOk()->assertJsonPath('data.issue_date', null);
         $this->actingAsCommercialRole('BILLING_ADMIN');
         $this->postJson("/api/v1/invoices/generate-from-billing/$billingId")->assertCreated();
+    }
+
+    public function test_void_invoice_can_be_replaced_but_paid_invoice_cannot_and_remains_downloadable(): void
+    {
+        [, $billingId] = $this->finalizedBilling();
+        $this->actingAsCommercialRole('BILLING_ADMIN');
+        $old = $this->postJson("/api/v1/invoices/generate-from-billing/$billingId")->assertCreated()->json('data');
+        $this->actingAsCommercialRole('BILLING_APPROVER');
+        $this->postJson("/api/v1/invoices/{$old['id']}/issue")->assertOk();
+        $this->postJson("/api/v1/invoices/{$old['id']}/void")->assertOk();
+        $this->actingAsCommercialRole('BILLING_ADMIN');
+        $new = $this->postJson("/api/v1/invoices/generate-from-billing/$billingId")->assertCreated()->json('data');
+        $this->assertNotSame($old['invoice_number'], $new['invoice_number']);
+        $this->actingAsCommercialRole('BILLING_APPROVER');
+        $this->postJson("/api/v1/invoices/{$new['id']}/issue")->assertOk();
+        $this->actingAsCommercialRole('BILLING_ADMIN');
+        $this->postJson("/api/v1/invoices/{$new['id']}/mark-paid")->assertOk();
+        $this->actingAsCommercialRole('BILLING_ADMIN');
+        $this->postJson("/api/v1/invoices/generate-from-billing/$billingId")->assertStatus(409);
+        // A historical/import timestamp must not make the Void document replace the current Paid document.
+        Invoice::whereKey($old['id'])->update(['created_at' => now()->addDay()]);
+        $this->getJson("/api/v1/billings/$billingId")->assertOk()->assertJsonPath('data.can_generate_invoice', false)->assertJsonPath('data.invoice.status', 'PAID');
+        $download = $this->get("/api/v1/invoices/{$new['id']}/download")->assertOk();
+        $this->assertStringContainsString($new['invoice_number'], $download->streamedContent());
+        $this->assertSame(2, Invoice::where('billing_id', $billingId)->count());
     }
 }

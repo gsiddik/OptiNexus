@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../i18n';
 import { HelpLabel, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -78,7 +79,7 @@ export function ApprovalRequestDetailPage() {
             <dt>Current Level</dt><dd>{request.current_level}</dd>
             <dt>Correlation ID</dt><dd><code>{request.correlation_id ?? '—'}</code></dd>
             <dt>Workflow Instance</dt><dd>{request.workflow_instance_id ?? '—'}</dd>
-            <dt>Expires At</dt><dd>{request.expires_at ? new Date(request.expires_at).toLocaleString() : 'Never'}</dd>
+            <dt>Expires At</dt><dd>{request.expires_at ? formatDateTime(request.expires_at) : 'Never'}</dd>
           </dl>
         </div>
 
@@ -92,7 +93,7 @@ export function ApprovalRequestDetailPage() {
                   <td>{s.level_order}</td>
                   <td><StatusBadge status={s.status} /></td>
                   <td>{s.decision?.decision ?? '—'}{s.decision?.comment ? `: ${s.decision.comment}` : ''}</td>
-                  <td>{s.decision?.decided_at ? new Date(s.decision.decided_at).toLocaleString() : '—'}</td>
+                  <td>{s.decision?.decided_at ? formatDateTime(s.decision.decided_at) : '—'}</td>
                 </tr>
               ))}
             </tbody>

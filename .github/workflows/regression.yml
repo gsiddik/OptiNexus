@@ -47,7 +47,9 @@ jobs:
           php artisan key:generate --no-interaction
           php artisan passport:keys --force --no-interaction
       - name: Central invoice payment regression first
-        run: vendor/bin/phpunit --filter SubmittedPaymentTest
+        env:
+          PGOPTIONS: '-c lock_timeout=10000 -c statement_timeout=60000'
+        run: vendor/bin/phpunit --enforce-time-limit --default-time-limit 120 --debug --filter 'SubmittedPaymentTest|LifecycleNotificationsTest|InvoiceTest|AccountActivationFlowTest|EcosystemPreflightTest'
       - name: Backend regression
         run: vendor/bin/phpunit --no-progress --log-junit "$RUNNER_TEMP/nexus-tests.xml"
       - name: Format changed PHP files

@@ -21,6 +21,7 @@ use App\Models\User;
 use App\Models\UserApplicationAccess;
 use App\Services\AuditService;
 use App\Services\AuthorizationService;
+use App\Services\Ecosystem\ManagedCredentialService;
 use App\Services\Oidc\SessionRevocationService;
 use App\Services\PrivilegeEscalationGuard;
 use App\Services\Seats\SeatService;
@@ -90,7 +91,18 @@ class UserController extends Controller
     {
         $old = $user->only(['name', 'email']);
         $wasVerified = $user->email_verified_at !== null;
-        $user->update($request->validated());
+        DB::transaction(function () use ($request, $user): void {
+            $user->setRawAttributes(User::whereKey($user->id)->lockForUpdate()->firstOrFail()->getAttributes(), true);
+            $changedEmail = isset($request->validated()['email']) && strcasecmp($request->validated()['email'], $user->email) !== 0;
+            if ($changedEmail && $user->tenantMemberships()->exists() && ! in_array($user->status, [User::STATUS_ACTIVE, User::STATUS_INVITED], true)) {
+                abort(409, 'Reactivate this tenant account before changing its email.');
+            }
+            $user->update($request->validated());
+            if ($changedEmail && $user->tenantMemberships()->exists()) {
+                app(ManagedCredentialService::class)->restart($user, verifyEmail: true);
+                $this->revocation->logoutEverywhere($user, 'email_changed', $request);
+            }
+        });
 
         $this->audit->record('user.updated', $request, resourceType: 'User', resourceId: $user->id, oldValue: $old, newValue: $user->only(['name', 'email']));
 
@@ -107,17 +119,26 @@ class UserController extends Controller
     public function activate(Request $request, User $user): JsonResponse
     {
         // An account in the first Admin Tenant flow becomes active only when its e-mail was verified AND its holder chose a password.
-        if ($user->isInManagedActivation()) {
+        if ($user->status === User::STATUS_INVITED && $user->isInManagedActivation()) {
             return $this->fail('ACTIVATION_NOT_COMPLETE', 'This account activates itself when its e-mail address is verified and its holder has chosen a password. It cannot be activated by hand.', 409, ['state' => $user->activationState()]);
         }
 
         if ($response = $this->guardTransition($user, User::STATUS_ACTIVE, [User::STATUS_INVITED, User::STATUS_SUSPENDED])) {
             return $response;
         }
-        $password = Str::password(20);
-        DB::transaction(function () use ($user, $password, $request): void {
-            $user->update(['password' => $password, 'status' => User::STATUS_ACTIVE]);
-            $this->audit->record('user.activated', $request, resourceType: 'User', resourceId: $user->id, newValue: ['status' => User::STATUS_ACTIVE, 'password_generated' => true]);
+        $password = DB::transaction(function () use ($user, $request): string {
+            $locked = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            abort_unless(in_array($locked->status, [User::STATUS_INVITED, User::STATUS_SUSPENDED], true), 409);
+            if ($locked->tenantMemberships()->exists()) {
+                $plain = app(ManagedCredentialService::class)->restart($locked);
+            } else {
+                $plain = Str::password(20);
+                $locked->update(['password' => $plain, 'status' => User::STATUS_ACTIVE]);
+            }
+            $user->refresh();
+            $this->audit->record('user.activated', $request, resourceType: 'User', resourceId: $user->id, newValue: ['status' => $user->status, 'password_generated' => true]);
+
+            return $plain;
         });
         $this->revocation->logoutEverywhere($user, 'password_generated', $request);
 

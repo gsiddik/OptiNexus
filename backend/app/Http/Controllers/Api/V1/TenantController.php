@@ -162,26 +162,12 @@ class TenantController extends Controller
 
     public function attachApplication(Request $request, Tenant $tenant, Application $application): JsonResponse
     {
-        if ($tenant->applications()->where('applications.id', $application->id)->exists()) {
-            return $this->fail('DUPLICATE_RESOURCE', 'This application is already assigned to the tenant.', 409);
-        }
-
-        $tenant->applications()->attach($application->id, ['id' => (string) Str::uuid(), 'status' => 'ACTIVE']);
-
-        $this->audit->record('tenant.application_assigned', $request, resourceType: 'Tenant', resourceId: $tenant->id, newValue: ['application_id' => $application->id], tenantId: $tenant->id, applicationId: $application->id);
-
-        return $this->created(ApplicationResource::collection($tenant->applications()->get()));
+        return $this->fail('SUBSCRIPTION_MANAGED_APPLICATION', 'Applications are assigned by the tenant subscription. Update its plan or add-ons instead.', 409);
     }
 
     public function detachApplication(Request $request, Tenant $tenant, Application $application): JsonResponse
     {
-        $this->revocation->revokeTenant($tenant, 'application_not_assigned', $application, $request);
-
-        $tenant->applications()->detach($application->id);
-
-        $this->audit->record('tenant.application_removed', $request, resourceType: 'Tenant', resourceId: $tenant->id, oldValue: ['application_id' => $application->id], tenantId: $tenant->id, applicationId: $application->id);
-
-        return $this->ok(null);
+        return $this->fail('SUBSCRIPTION_MANAGED_APPLICATION', 'Applications are assigned by the tenant subscription. Update its plan or add-ons instead.', 409);
     }
 
     public function admins(Tenant $tenant): JsonResponse

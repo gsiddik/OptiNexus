@@ -46,6 +46,7 @@ class AccountActivationService
         $user->forceFill([
             'password' => $plain,
             'password_change_required' => true,
+            'verify_email_on_password_change' => false,
             'temporary_password_issued_at' => now(),
             'temporary_password_expires_at' => now()->addHours((int) config('activation.temporary_password_ttl_hours')),
         ])->save();
@@ -166,9 +167,16 @@ class AccountActivationService
             throw new ActivationException(ActivationException::SAME_PASSWORD, 422);
         }
 
+        // This flag is issued only for an email-change credential that is not returned to the operator.
+        // Possession of that secret proves control of the new mailbox; an out-of-band reissue clears the flag.
+        if ($user->verify_email_on_password_change && $user->email_verified_at === null) {
+            $user->forceFill(['email_verified_at' => now(), 'email_verification_method' => User::EMAIL_VERIFIED_BY_CREDENTIAL, 'email_verified_by' => null]);
+        }
+
         $user->forceFill([
             'password' => $newPassword,
             'password_change_required' => false,
+            'verify_email_on_password_change' => false,
             'temporary_password_expires_at' => null,
             'password_changed_at' => now(),
         ])->save();

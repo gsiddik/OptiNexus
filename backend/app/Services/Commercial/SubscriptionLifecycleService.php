@@ -66,7 +66,7 @@ class SubscriptionLifecycleService
                 'auto_renew' => $options['auto_renew'] ?? true,
                 'grace_period_days' => $options['grace_period_days'] ?? 0,
                 'idempotency_key' => $options['idempotency_key'] ?? null,
-                'metadata' => $options['metadata'] ?? null,
+                'metadata' => [...($options['metadata'] ?? []), 'application_ids' => $options['application_ids'] ?? null],
             ]);
 
             if ($selected !== null) {
@@ -91,6 +91,14 @@ class SubscriptionLifecycleService
                     $this->snapshotAddonItem($subscription, $addon);
                 }
             }
+
+            if (isset($options['application_ids'])) {
+                $available = app(SubscriptionApplicationService::class)->applicationIds($subscription->fresh());
+                if (array_diff($options['application_ids'], $available)) {
+                    throw ValidationException::withMessages(['application_ids' => 'Select applications included in this plan or its add-ons.']);
+                }
+            }
+            app(SubscriptionApplicationService::class)->sync($tenant);
 
             return $subscription;
         });
@@ -202,6 +210,7 @@ class SubscriptionLifecycleService
             }
 
             $this->entitlements->generateFromSubscription($subscription->refresh());
+            app(SubscriptionApplicationService::class)->sync($subscription->tenant);
         });
 
         return null;
@@ -259,6 +268,7 @@ class SubscriptionLifecycleService
         DB::transaction(function () use ($subscription) {
             $subscription->update(['status' => Subscription::STATUS_CANCELLED, 'cancelled_at' => now(), 'auto_renew' => false]);
             $this->entitlements->revokeSourcedEntitlements($subscription, 'subscription_cancelled');
+            app(SubscriptionApplicationService::class)->sync($subscription->tenant);
             $this->revokeLostAccess($subscription);
         });
 
@@ -313,6 +323,7 @@ class SubscriptionLifecycleService
         DB::transaction(function () use ($subscription) {
             $subscription->update(['status' => Subscription::STATUS_TERMINATED, 'auto_renew' => false]);
             $this->entitlements->revokeSourcedEntitlements($subscription, 'subscription_terminated');
+            app(SubscriptionApplicationService::class)->sync($subscription->tenant);
             $this->revokeLostAccess($subscription);
         });
 

@@ -56,7 +56,7 @@ class EcosystemPreflight extends Command
         // installation still works, but no invitee will ever receive a link. A local mail sink (smtp to a sandbox host) is fine.
         $mailer = (string) config('mail.default');
         if (in_array($mailer, ['log', 'array', 'null'], true)) {
-            $results[] = ['Mail', $production ? 'WARN' : 'OK', "MAIL_MAILER='{$mailer}' does not deliver: invitation e-mails will not reach anyone (set MAIL_MAILER=smtp and the MAIL_* settings at runtime)"];
+            $results[] = ['Mail', $production ? 'WARN' : 'OK', "MAIL_MAILER='{$mailer}' does not deliver: invitation, credential and operational e-mails will not reach anyone (set MAIL_MAILER=smtp and the MAIL_* settings at runtime)"];
         } elseif ($production && in_array((string) config('mail.from.address'), ['', 'hello@example.com'], true)) {
             $results[] = ['Mail', 'WARN', 'MAIL_FROM_ADDRESS is not set to a real sender address'];
         } else {

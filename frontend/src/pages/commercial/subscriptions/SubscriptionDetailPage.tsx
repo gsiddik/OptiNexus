@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../i18n';
 import { ActiveSelect } from '../../../components/ActiveSelect';
 import { HelpLabel } from '../../../components/FieldControls';
 import { useState } from 'react';
@@ -58,13 +59,13 @@ export function SubscriptionDetailPage() {
             <dt>Currency</dt><dd>{subscription.currency}</dd>
             <dt>Billing Interval</dt><dd>{subscription.billing_interval}</dd>
             <dt>Auto Renew</dt><dd>{subscription.auto_renew ? 'Yes' : 'No'}</dd>
-            <dt>Start</dt><dd>{subscription.start_at ?? '—'}</dd>
-            <dt>Current Period</dt><dd>{subscription.current_period_start ?? '—'} &rarr; {subscription.current_period_end ?? '—'}</dd>
-            <dt>Trial End</dt><dd>{subscription.trial_end_at ?? '—'}</dd>
+            <dt>Start</dt><dd>{formatDateTime(subscription.start_at)}</dd>
+            <dt>Current Period</dt><dd>{formatDateTime(subscription.current_period_start)} &rarr; {formatDateTime(subscription.current_period_end)}</dd>
+            <dt>Trial End</dt><dd>{formatDateTime(subscription.trial_end_at)}</dd>
             <dt>Grace Period (Days)</dt><dd>{subscription.grace_period_days ?? 0}</dd>
-            <dt>Grace End</dt><dd>{subscription.grace_end_at ?? '—'}</dd>
-            <dt>Cancel At</dt><dd>{subscription.cancel_at ?? '—'}</dd>
-            <dt>Cancelled At</dt><dd>{subscription.cancelled_at ?? '—'}</dd>
+            <dt>Grace End</dt><dd>{formatDateTime(subscription.grace_end_at)}</dd>
+            <dt>Cancel At</dt><dd>{formatDateTime(subscription.cancel_at)}</dd>
+            <dt>Cancelled At</dt><dd>{formatDateTime(subscription.cancelled_at)}</dd>
           </dl>
         </div>
 

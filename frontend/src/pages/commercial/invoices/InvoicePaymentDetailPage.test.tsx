@@ -43,7 +43,19 @@ it('invoice detail uses names and numbers, preserves cancelled issue date and om
   }); restore = mock.restore;
   renderApp('/invoices/i1');
   expect(await screen.findByText('BILL-10')).toBeTruthy();
-  expect(screen.getByText('Customer One')).toBeTruthy(); expect(screen.getByText('Tenant One')).toBeTruthy(); expect(screen.getByText('SUB-10')).toBeTruthy(); expect(screen.getByText('2026-10-20')).toBeTruthy();
+  expect(screen.getByText('Customer One')).toBeTruthy(); expect(screen.getByText('Tenant One')).toBeTruthy(); expect(screen.getByText('SUB-10')).toBeTruthy(); expect(screen.getByText('20/10/2026, 00:00:00')).toBeTruthy();
   expect(screen.queryByText('hidden-billing')).toBeNull(); expect(screen.queryByText('hidden-customer')).toBeNull();
   expect(screen.queryByRole('button', { name: 'Mark Fully Paid' })).toBeNull(); expect(screen.queryByText('Record Payment')).toBeNull();
+});
+
+
+it('paid billing offers the existing invoice download and cannot generate another invoice', async () => {
+  const mock = installMockApi(({ url }) => {
+    if (url === '/auth/context') return ok(operatorContext(['cgo.ecosystem.access', 'cgo.billing.view', 'cgo.invoice.view', 'cgo.invoice.create']));
+    if (url === '/billings/b1') return ok({ id: 'b1', billing_number: 'BILL-1', status: 'FINALIZED', can_generate_invoice: false, invoice: { id: 'i1', invoice_number: 'INV-PAID', status: 'PAID' }, items: [], adjustments: [] });
+    return ok([]);
+  }); restore = mock.restore; renderApp('/billings/b1');
+  expect(await screen.findByText('INV-PAID')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Download Invoice' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Generate Invoice' })).toBeNull();
 });

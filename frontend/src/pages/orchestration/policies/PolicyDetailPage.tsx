@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../i18n';
 import { HelpLabel, HelpTextarea } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -50,8 +51,8 @@ export function PolicyDetailPage() {
             <dt>Version</dt><dd>{policy.version}</dd>
             <dt>Tenant</dt><dd>{policy.tenant_id ?? 'Global'}</dd>
             <dt>Application</dt><dd>{policy.application_id ?? 'All applications'}</dd>
-            <dt>Effective From</dt><dd>{policy.effective_from ? new Date(policy.effective_from).toLocaleString() : '—'}</dd>
-            <dt>Effective Until</dt><dd>{policy.effective_until ? new Date(policy.effective_until).toLocaleString() : '—'}</dd>
+            <dt>Effective From</dt><dd>{policy.effective_from ? formatDateTime(policy.effective_from) : '—'}</dd>
+            <dt>Effective Until</dt><dd>{policy.effective_until ? formatDateTime(policy.effective_until) : '—'}</dd>
           </dl>
         </div>
 

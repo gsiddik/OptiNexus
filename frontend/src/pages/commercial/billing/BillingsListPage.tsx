@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../i18n';
 import { HelpLabel, HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -70,7 +71,7 @@ export function BillingsListPage() {
               { key: 'subscription', header: 'Subscription', render: (r) => r.subscription_number ?? '—' },
               { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
               { key: 'total', header: 'Total', render: (r) => `${r.total} ${r.currency}` },
-              { key: 'period', header: 'Period', render: (r) => `${r.period_start} → ${r.period_end}` },
+              { key: 'period', header: 'Period', render: (r) => `${formatDateTime(r.period_start)} → ${formatDateTime(r.period_end)}` },
             ]}
           />
           <Pagination meta={meta} onPageChange={setPage} />

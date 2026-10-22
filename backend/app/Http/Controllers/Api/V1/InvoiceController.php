@@ -42,6 +42,16 @@ class InvoiceController extends Controller
         return $this->paginated($paginator, InvoiceResource::class);
     }
 
+    public function download(Invoice $invoice)
+    {
+        $invoice->load(['items', 'billing', 'customer', 'tenant', 'subscription']);
+        $filename = preg_replace('/[^A-Za-z0-9_-]/', '-', $invoice->invoice_number).'.html';
+
+        return response()->streamDownload(function () use ($invoice): void {
+            echo view('commercial.invoice-download', compact('invoice'))->render();
+        }, $filename, ['Content-Type' => 'text/html; charset=UTF-8', 'Cache-Control' => 'no-store, private', 'X-Content-Type-Options' => 'nosniff']);
+    }
+
     public function show(Invoice $invoice): JsonResponse
     {
         return $this->ok(new InvoiceResource($invoice->load(['items', 'payments'])));

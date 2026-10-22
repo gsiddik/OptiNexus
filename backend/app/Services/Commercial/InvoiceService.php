@@ -29,7 +29,7 @@ class InvoiceService
             if (! $billing->isFinalized()) {
                 return [null, 'BILLING_NOT_FINALIZED'];
             }
-            if (Invoice::query()->where('billing_id', $billing->id)->where('status', '!=', Invoice::STATUS_CANCELLED)->exists()) {
+            if (Invoice::query()->where('billing_id', $billing->id)->whereNotIn('status', [Invoice::STATUS_CANCELLED, Invoice::STATUS_VOID])->exists()) {
                 return [null, 'DUPLICATE_RESOURCE'];
             }
             $invoice = Invoice::create([
@@ -153,7 +153,8 @@ class InvoiceService
     {
         return DB::transaction(function () use ($invoice) {
             $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
-            if (! in_array($invoice->status, [Invoice::STATUS_ISSUED, Invoice::STATUS_OVERDUE], true)) {
+            if (! in_array($invoice->status, [Invoice::STATUS_ISSUED, Invoice::STATUS_OVERDUE], true)
+                || $invoice->payments()->whereIn('status', ['SUBMITTED', 'VERIFIED'])->exists()) {
                 return 'INVALID_INVOICE_TRANSITION';
             }
             $invoice->update(['status' => Invoice::STATUS_VOID, 'cancelled_at' => now()]);

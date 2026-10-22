@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../i18n';
 import { HelpSelect } from '../../../components/FieldControls';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { approvalRequestsApi } from '../../../api/endpoints';
@@ -44,7 +45,7 @@ export function ApprovalRequestsListPage() {
               { key: 'level', header: 'Current Level', render: (r) => r.current_level },
               { key: 'correlation', header: 'Correlation', render: (r) => r.correlation_id ? <code>{r.correlation_id.slice(0, 8)}</code> : '—' },
               { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
-              { key: 'created', header: 'Created', render: (r) => new Date(r.created_at).toLocaleString() },
+              { key: 'created', header: 'Created', render: (r) => formatDateTime(r.created_at) },
             ]}
           />
           <Pagination meta={meta} onPageChange={setPage} />

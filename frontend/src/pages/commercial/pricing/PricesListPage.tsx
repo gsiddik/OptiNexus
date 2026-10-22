@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../i18n';
 import { HelpLabel, HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -45,7 +46,7 @@ export function PricesListPage() {
               { key: 'amount', header: 'Unit Amount', render: (r) => r.unit_amount ?? '—' },
               { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
               { key: 'approval', header: 'Approval', render: (r) => <StatusBadge status={r.approval_status} /> },
-              { key: 'effective', header: 'Effective From', render: (r) => r.effective_from },
+              { key: 'effective', header: 'Effective From', render: (r) => formatDateTime(r.effective_from) },
             ]}
           />
           <Pagination meta={meta} onPageChange={setPage} />

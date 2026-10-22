@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../i18n';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiClient, unwrapError } from '../../../api/client';
@@ -39,7 +40,7 @@ export function InvoicePaymentDetailPage() {
     <h1>Payment Details</h1><StatusBadge status={payment.status ?? 'VERIFIED'} />
     <ErrorAlert message={actionError} />
     <div className="card"><dl className="definition-list">
-      <dt>Payment Date</dt><dd>{payment.paid_at}</dd><dt>Amount</dt><dd>{payment.amount}</dd>
+      <dt>Payment Date</dt><dd>{formatDateTime(payment.paid_at)}</dd><dt>Amount</dt><dd>{payment.amount}</dd>
       <dt>Payment Method</dt><dd>{payment.method ?? '—'}</dd><dt>Bank Name</dt><dd>{payment.bank_name ?? '—'}</dd>
       <dt>Account Name</dt><dd>{payment.account_name ?? '—'}</dd><dt>Transaction Reference</dt><dd>{payment.reference ?? '—'}</dd>
       <dt>Note</dt><dd>{payment.note ?? '—'}</dd><dt>Review Note</dt><dd>{payment.verification_note ?? '—'}</dd>

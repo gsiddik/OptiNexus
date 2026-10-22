@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../i18n';
 import { HelpLabel, HelpInput, HelpSelect } from '../../components/FieldControls';
 import { useState } from 'react';
 import { applicationsApi, serviceAccountsApi } from '../../api/endpoints';
@@ -59,7 +60,7 @@ export function ServiceAccountsPage() {
               { key: 'name', header: 'Name', render: (r) => r.name },
               { key: 'client', header: 'Client ID', render: (r) => <code>{r.client_id}</code> },
               { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
-              { key: 'last_used', header: 'Last Used', render: (r) => (r.last_used_at ? new Date(r.last_used_at).toLocaleString() : 'Never') },
+              { key: 'last_used', header: 'Last Used', render: (r) => (r.last_used_at ? formatDateTime(r.last_used_at) : 'Never') },
               {
                 key: 'actions', header: '', render: (r) => r.status === 'ACTIVE' && (
                   <PermissionGuard permission="cgo.service_account.manage">

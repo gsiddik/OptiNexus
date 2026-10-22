@@ -1,4 +1,4 @@
-import { useI18n } from '../../../i18n';
+import { formatDateTime } from '../../../i18n';
 import { HelpLabel, HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -16,7 +16,6 @@ import type { Subscription, PriceType } from '../../../api/types';
 
 export function SubscriptionsListPage() {
   const navigate = useNavigate();
-  const { locale } = useI18n();
   const { rows, meta, setPage, loading, error, reload } = useApiList<Subscription>((p) => subscriptionsApi.list({ page: p }));
   const [showCreate, setShowCreate] = useState(false);
 
@@ -43,7 +42,7 @@ export function SubscriptionsListPage() {
               { key: 'tenant', header: 'Tenant', render: (r) => r.tenant_name ?? '—' },
               { key: 'plan', header: 'Plan', render: (r) => r.plan_name ?? '—' },
               { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
-              { key: 'period_end', header: 'Current Period End', render: (r) => r.current_period_end ? new Date(r.current_period_end).toLocaleString(locale === 'id' ? 'id-ID' : 'en-US') : '—' },
+              { key: 'period_end', header: 'Current Period End', render: (r) => r.current_period_end ? formatDateTime(r.current_period_end) : '—' },
             ]}
           />
           <Pagination meta={meta} onPageChange={setPage} />
@@ -59,9 +58,11 @@ export function SubscriptionsListPage() {
 
 export function CreateSubscriptionForm({ onCreated }: { onCreated: () => void }) {
   const [form, setForm] = useState({ customer_id: '', tenant_id: '', idempotency_key: '', auto_renew: true, grace_period_days: '0' });
+  const [applicationIds, setApplicationIds] = useState<string[]>([]);
   const [priceItems, setPriceItems] = useState([{ price_id: '', quantity: '' }]);
   const prices = useApiResource(() => form.tenant_id ? subscriptionsApi.priceOptions(form.tenant_id) : Promise.resolve([]), [form.tenant_id]);
   const selectedPrices = priceItems.map((item) => (prices.data ?? []).find((price) => price.id === item.price_id));
+  const availableApplications = [...new Map(selectedPrices.flatMap((price) => price?.applications ?? []).map((app) => [app.id, app])).values()];
   const basePlan = selectedPrices.find((price) => price?.plan_id);
   const quantityLabels: Partial<Record<PriceType, string>> = {
     PER_USER: 'Number of User(s)', PER_DEVICE: 'Number of Device(s)', PER_VEHICLE: 'Number of Vehicle(s)',
@@ -85,6 +86,7 @@ export function CreateSubscriptionForm({ onCreated }: { onCreated: () => void })
         customer_id: form.customer_id,
         tenant_id: form.tenant_id,
         plan_id: basePlan!.plan_id!,
+        application_ids: applicationIds.some((id) => availableApplications.some((app) => app.id === id)) ? applicationIds.filter((id) => availableApplications.some((app) => app.id === id)) : undefined,
         price_items: priceItems.map((item, index) => ({ price_id: item.price_id, quantity: selectedPrices[index]?.price_type === 'FLAT' ? 1 : Number(item.quantity) })),
         idempotency_key: form.idempotency_key || undefined,
         auto_renew: form.auto_renew,
@@ -124,6 +126,10 @@ export function CreateSubscriptionForm({ onCreated }: { onCreated: () => void })
         </div>;
       })}
       <button type="button" className="btn btn-secondary" disabled={!form.tenant_id} onClick={() => setPriceItems([...priceItems, { price_id: '', quantity: '' }])}>Add Plan/Add-on</button>
+      {!!availableApplications.length && <fieldset><legend>Assigned Application</legend>
+        <p className="muted">Leave all unchecked to include every application supplied by the selected plan and add-ons.</p>
+        {availableApplications.map((app) => <label key={app.id}><input type="checkbox" checked={applicationIds.includes(app.id)} onChange={(e) => setApplicationIds(e.target.checked ? [...applicationIds, app.id] : applicationIds.filter((id) => id !== app.id))} /> {app.name}</label>)}
+      </fieldset>}
       <HelpLabel>Grace Period (Days)<HelpInput help="Days after Current Period End until suspension. Access requires an ACTIVE subscription throughout." type="number" min="0" max="3650" step="1" value={form.grace_period_days} onChange={(e) => setForm({ ...form, grace_period_days: e.target.value })} /></HelpLabel>
       <HelpLabel>Idempotency Key (optional)<HelpInput help="Optional: reuse the same key when retrying the same operation to prevent duplicate processing." value={form.idempotency_key} onChange={(e) => setForm({ ...form, idempotency_key: e.target.value })} /></HelpLabel>
       <HelpLabel>

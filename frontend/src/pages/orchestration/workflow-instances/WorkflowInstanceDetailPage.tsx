@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../i18n';
 import { useParams } from 'react-router-dom';
 import { workflowInstancesApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
@@ -42,8 +43,8 @@ export function WorkflowInstanceDetailPage() {
             <dt>Causation ID</dt><dd><code>{instance.causation_id ?? '—'}</code></dd>
             <dt>Trigger Type</dt><dd>{instance.trigger_type}</dd>
             <dt>Trigger Event</dt><dd>{instance.trigger_event_id ?? '—'}</dd>
-            <dt>Started</dt><dd>{new Date(instance.started_at).toLocaleString()}</dd>
-            <dt>Completed</dt><dd>{instance.completed_at ? new Date(instance.completed_at).toLocaleString() : '—'}</dd>
+            <dt>Started</dt><dd>{formatDateTime(instance.started_at)}</dd>
+            <dt>Completed</dt><dd>{instance.completed_at ? formatDateTime(instance.completed_at) : '—'}</dd>
             {instance.last_error_code && <><dt>Last Error</dt><dd>{instance.last_error_code}: {instance.last_error_message}</dd></>}
           </dl>
         </div>
@@ -58,7 +59,7 @@ export function WorkflowInstanceDetailPage() {
                   <td><StatusBadge status={s.status} /></td>
                   <td>{s.attempt_count}</td>
                   <td><code>{s.output ? JSON.stringify(s.output) : s.last_error_message ?? '—'}</code></td>
-                  <td>{s.started_at ? new Date(s.started_at).toLocaleString() : '—'}</td>
+                  <td>{s.started_at ? formatDateTime(s.started_at) : '—'}</td>
                 </tr>
               ))}
             </tbody>

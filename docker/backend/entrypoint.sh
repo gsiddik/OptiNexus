@@ -49,6 +49,7 @@ if [ "${1:-}" = "bootstrap" ]; then
 
   echo "[bootstrap] migrating"
   php artisan migrate --force --no-interaction
+  php artisan subscriptions:sync-applications --no-interaction
 
   case "${NEXUS_SEED:-catalog}" in
     catalog) php artisan db:seed --class=ProductionSeeder --force --no-interaction ;;

@@ -1,6 +1,8 @@
+import { DownloadInvoice } from '../../../components/DownloadInvoice';
+import { formatDateTime } from '../../../i18n';
 import { HelpLabel, HelpSelect, HelpInput } from '../../../components/FieldControls';
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { billingApi, invoicesApi } from '../../../api/endpoints';
 import { useApiResource } from '../../../api/useApi';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
@@ -58,7 +60,7 @@ export function BillingDetailPage() {
         ]}
       />
 
-      {billing.status === 'FINALIZED' && (
+      {billing.status === 'FINALIZED' && (billing.can_generate_invoice ?? true) && (
         <PermissionGuard permission="cgo.invoice.create">
           <div className="card" style={{ marginBottom: '1rem' }}>
             <ErrorAlert message={genError} />
@@ -67,6 +69,11 @@ export function BillingDetailPage() {
         </PermissionGuard>
       )}
 
+      {billing.invoice && <div className="card" style={{ marginBottom: '1rem' }}>
+        <Link to={`/invoices/${billing.invoice.id}`}>{billing.invoice.invoice_number}</Link> — {billing.invoice.status}
+        <PermissionGuard permission="cgo.invoice.view"><DownloadInvoice id={billing.invoice.id} number={billing.invoice.invoice_number} /></PermissionGuard>
+      </div>}
+
       <div className="detail-grid">
         <div className="card">
           <h3>Details</h3>
@@ -74,15 +81,15 @@ export function BillingDetailPage() {
             <dt>Customer</dt><dd>{billing.customer_name ?? '—'}</dd>
             <dt>Tenant</dt><dd>{billing.tenant_name ?? '—'}</dd>
             <dt>Subscription#</dt><dd>{billing.subscription_number ?? '—'}</dd>
-            <dt>Period</dt><dd>{billing.period_start} → {billing.period_end}</dd>
+            <dt>Period</dt><dd>{formatDateTime(billing.period_start)} → {formatDateTime(billing.period_end)}</dd>
             <dt>Currency</dt><dd>{billing.currency}</dd>
             <dt>Subtotal</dt><dd>{billing.subtotal}</dd>
             <dt>Discount Total</dt><dd>{billing.discount_total}</dd>
             <dt>Tax Total</dt><dd>{billing.tax_total}</dd>
             <dt>Adjustment Total</dt><dd>{billing.adjustment_total}</dd>
             <dt>Total</dt><dd><strong>{billing.total}</strong></dd>
-            <dt>Calculated At</dt><dd>{billing.calculated_at ?? '—'}</dd>
-            <dt>Finalized At</dt><dd>{billing.finalized_at ?? '—'}</dd>
+            <dt>Calculated At</dt><dd>{formatDateTime(billing.calculated_at)}</dd>
+            <dt>Finalized At</dt><dd>{formatDateTime(billing.finalized_at)}</dd>
           </dl>
         </div>
 

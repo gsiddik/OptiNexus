@@ -2,6 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\Customer;
+use App\Models\Invoice;
+use App\Models\Price;
+use App\Models\Tenant;
+use App\Models\User;
+use App\Observers\OperationalMailObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -38,6 +44,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        foreach ([Customer::class, Tenant::class, User::class, Invoice::class, Price::class] as $model) {
+            $model::observe(OperationalMailObserver::class);
+        }
         // Human (interactive) API routes: 120/min per user, or per address when not signed in. Machine-to-machine routes
         // (`service_account:` middleware) are throttled per authenticated OAuth client inside that middleware instead
         // (config/m2m.php): a shared proxy address must not pool every product's server-to-server traffic into one bucket.

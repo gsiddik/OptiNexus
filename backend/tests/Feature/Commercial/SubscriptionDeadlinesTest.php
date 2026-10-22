@@ -2,10 +2,13 @@
 
 namespace Tests\Feature\Commercial;
 
+use App\Jobs\DeliverBackchannelLogout;
+use App\Models\OidcLogoutDelivery;
 use App\Models\OidcSession;
 use App\Models\Subscription;
 use App\Services\AuthorizationService;
 use App\Services\Commercial\SubscriptionLifecycleService;
+use App\Services\Oidc\OidcKeyService;
 use App\Services\Oidc\SsoAccessResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -104,6 +107,22 @@ class SubscriptionDeadlinesTest extends TestCase
         $this->assertNull($sessions[1]->fresh()->ended_at);
         $this->assertSame('ACTIVE', $user->fresh()->status);
         $this->assertSame('subscription_inactive', $sessions[0]->fresh()->end_reason);
+    }
+
+    public function test_a_delayed_expiry_notification_cannot_suspend_a_renewed_account(): void
+    {
+        Queue::fake();
+        $tenant = $this->makeTenant();
+        $fleet = $this->makeApplication(['application_code' => 'optifleet']);
+        $this->makeSsoUser($tenant, $fleet);
+        $this->makeOidcClient($fleet, ['backchannel_logout_uri' => 'https://fleet.test/logout']);
+        $sub = $tenant->subscriptions()->firstOrFail();
+        $sub->update(['current_period_end' => now(), 'grace_end_at' => now()->addDays(7)]);
+        $this->artisan('subscriptions:process-deadlines')->assertSuccessful();
+        $delivery = OidcLogoutDelivery::where('reason', 'subscription_inactive')->firstOrFail();
+        $this->assertNull(app(SubscriptionLifecycleService::class)->renew($sub->fresh()));
+        (new DeliverBackchannelLogout($delivery->id))->handle(app(OidcKeyService::class));
+        $this->assertSame('SUPERSEDED', $delivery->fresh()->status);
     }
 
     public function test_cancelling_one_of_two_active_subscriptions_keeps_access_until_the_last_one_ends(): void

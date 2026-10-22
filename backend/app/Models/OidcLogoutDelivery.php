@@ -24,6 +24,8 @@ class OidcLogoutDelivery extends Model
 
     public const STATUS_FAILED = 'FAILED';
 
+    public const STATUS_SUPERSEDED = 'SUPERSEDED';
+
     protected function casts(): array
     {
         return ['delivered_at' => 'datetime', 'session_ids' => 'array'];

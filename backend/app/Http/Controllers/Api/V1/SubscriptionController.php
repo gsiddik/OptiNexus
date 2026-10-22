@@ -16,6 +16,7 @@ use App\Services\Commercial\SubscriptionLifecycleService;
 use App\Services\Commercial\SubscriptionPriceSelection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class SubscriptionController extends Controller
 {
@@ -174,7 +175,12 @@ class SubscriptionController extends Controller
     private function applyTransition(Request $request, Subscription $subscription, string $method, string $auditAction): JsonResponse
     {
         $old = $subscription->status;
-        $error = $this->lifecycle->{$method}($subscription);
+        $error = DB::transaction(function () use ($subscription, $method) {
+            Subscription::query()->whereKey($subscription->id)->lockForUpdate()->firstOrFail();
+            $subscription->refresh();
+
+            return $this->lifecycle->{$method}($subscription);
+        });
 
         if ($error) {
             return $this->errorResponse($error);
@@ -193,7 +199,12 @@ class SubscriptionController extends Controller
         $newPlan = Plan::findOrFail($validated['plan_id']);
         $oldPlanId = $subscription->plan_id;
 
-        $error = $this->lifecycle->changePlan($subscription, $newPlan);
+        $error = DB::transaction(function () use ($subscription, $newPlan) {
+            Subscription::query()->whereKey($subscription->id)->lockForUpdate()->firstOrFail();
+            $subscription->refresh();
+
+            return $this->lifecycle->changePlan($subscription, $newPlan);
+        });
 
         if ($error) {
             return $this->errorResponse($error);

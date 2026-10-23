@@ -24,6 +24,16 @@ COPY backend/composer.json backend/composer.lock ./
 RUN composer install --no-dev --no-scripts --no-autoloader --no-interaction ${COMPOSER_INSTALL_FLAGS}
 
 COPY backend/. .
+RUN mkdir -p bootstrap/cache \
+        storage/app/private \
+        storage/app/public \
+        storage/framework/cache/data \
+        storage/framework/sessions \
+        storage/framework/views \
+        storage/logs \
+    && chown -R www-data:www-data bootstrap/cache storage \
+    && chmod -R ug+rwX bootstrap/cache storage
+
 RUN composer dump-autoload --optimize --no-dev --no-interaction
 
 COPY docker/backend/entrypoint.sh /usr/local/bin/entrypoint.sh

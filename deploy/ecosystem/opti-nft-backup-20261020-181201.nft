@@ -1,0 +1,242 @@
+﻿table inet netavark {
+	chain INPUT {
+		type filter hook input priority filter; policy accept;
+		ip saddr 10.89.1.0/24 meta l4proto { tcp, udp } th dport 53 accept
+		ip saddr 10.89.9.0/24 meta l4proto { tcp, udp } th dport 53 accept
+		ip saddr 10.89.8.0/24 meta l4proto { tcp, udp } th dport 53 accept
+		ip saddr 10.89.4.0/24 meta l4proto { tcp, udp } th dport 53 accept
+	}
+
+	chain FORWARD {
+		type filter hook forward priority filter; policy accept;
+		ct state invalid drop
+		ct mark & 0x00001000 == 0x00001000 accept
+		jump NETAVARK-ISOLATION-1
+		ip daddr 10.89.1.0/24 ct state established,related accept
+		ip saddr 10.89.1.0/24 accept
+		ip daddr 10.89.9.0/24 ct state established,related accept
+		ip saddr 10.89.9.0/24 accept
+		ip daddr 10.89.8.0/24 ct state established,related accept
+		ip saddr 10.89.8.0/24 accept
+		ip daddr 10.89.4.0/24 ct state established,related accept
+		ip saddr 10.89.4.0/24 accept
+	}
+
+	chain POSTROUTING {
+		type nat hook postrouting priority srcnat; policy accept;
+		meta mark & 0x00002000 == 0x00002000 masquerade
+		ip saddr 10.89.1.0/24 jump nv_49b79cba_10_89_1_0_nm24
+		ip saddr 10.89.9.0/24 jump nv_0f21352e_10_89_9_0_nm24
+		ip saddr 10.89.8.0/24 jump nv_eae1f3f1_10_89_8_0_nm24
+		ip saddr 10.89.4.0/24 jump nv_59b26638_10_89_4_0_nm24
+	}
+
+	chain PREROUTING {
+		type nat hook prerouting priority dstnat; policy accept;
+		fib daddr type local jump NETAVARK-HOSTPORT-DNAT
+	}
+
+	chain OUTPUT {
+		type nat hook output priority dstnat; policy accept;
+		fib daddr type local jump NETAVARK-HOSTPORT-DNAT
+	}
+
+	chain NETAVARK-HOSTPORT-DNAT {
+		ip daddr 127.0.0.1 tcp dport 5173 jump nv_59b26638_10_89_4_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5173 jump nv_49b79cba_10_89_1_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5190 jump nv_59b26638_10_89_4_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5190 jump nv_0f21352e_10_89_9_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 8100 jump nv_59b26638_10_89_4_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 8100 jump nv_eae1f3f1_10_89_8_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5180 jump nv_59b26638_10_89_4_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5180 jump nv_eae1f3f1_10_89_8_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5173 jump nv_59b26638_10_89_4_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5173 jump nv_49b79cba_10_89_1_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5190 jump nv_59b26638_10_89_4_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5190 jump nv_0f21352e_10_89_9_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 8100 jump nv_59b26638_10_89_4_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 8100 jump nv_eae1f3f1_10_89_8_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5180 jump nv_59b26638_10_89_4_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5180 jump nv_eae1f3f1_10_89_8_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5173 jump nv_59b26638_10_89_4_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5173 jump nv_49b79cba_10_89_1_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5190 jump nv_59b26638_10_89_4_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5190 jump nv_0f21352e_10_89_9_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 8100 jump nv_59b26638_10_89_4_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 8100 jump nv_eae1f3f1_10_89_8_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5180 jump nv_59b26638_10_89_4_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5180 jump nv_eae1f3f1_10_89_8_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5173 jump nv_59b26638_10_89_4_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5173 jump nv_49b79cba_10_89_1_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5190 jump nv_59b26638_10_89_4_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5190 jump nv_0f21352e_10_89_9_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 8000 jump nv_49b79cba_10_89_1_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 8200 jump nv_0f21352e_10_89_9_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 8100 jump nv_59b26638_10_89_4_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 8100 jump nv_eae1f3f1_10_89_8_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5180 jump nv_59b26638_10_89_4_0_nm24_dnat
+		ip daddr 127.0.0.1 tcp dport 5180 jump nv_eae1f3f1_10_89_8_0_nm24_dnat
+	}
+
+	chain NETAVARK-HOSTPORT-SETMARK {
+		meta mark set meta mark | 0x00002000
+	}
+
+	chain NETAVARK-ISOLATION-1 {
+		iifname "podman2" oifname != "podman2" jump NETAVARK-ISOLATION-3
+		iifname "podman10" oifname != "podman10" jump NETAVARK-ISOLATION-3
+		iifname "podman9" oifname != "podman9" jump NETAVARK-ISOLATION-3
+		iifname "podman5" oifname != "podman5" jump NETAVARK-ISOLATION-3
+	}
+
+	chain NETAVARK-ISOLATION-2 {
+		oifname "podman2" drop
+		oifname "podman10" drop
+		oifname "podman9" drop
+		oifname "podman5" drop
+	}
+
+	chain NETAVARK-ISOLATION-3 {
+		jump NETAVARK-ISOLATION-2
+	}
+
+	chain nv_49b79cba_10_89_1_0_nm24 {
+		ip daddr 10.89.1.0/24 accept
+		ip daddr != 224.0.0.0/4 masquerade
+	}
+
+	chain nv_49b79cba_10_89_1_0_nm24_dnat {
+		ip saddr 10.89.1.0/24 ip daddr 127.0.0.1 tcp dport 5173 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5173 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5173 ct mark set meta mark | 0x00001000 dnat ip to 10.89.1.6:5173
+		ip daddr 127.0.0.1 tcp dport 8000 ct mark set meta mark | 0x00001000 dnat ip to 10.89.1.12:8000
+		ip saddr 10.89.1.0/24 ip daddr 127.0.0.1 tcp dport 5173 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5173 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5173 ct mark set meta mark | 0x00001000 dnat ip to 10.89.1.7:5173
+		ip daddr 127.0.0.1 tcp dport 8000 ct mark set meta mark | 0x00001000 dnat ip to 10.89.1.13:8000
+		ip saddr 10.89.1.0/24 ip daddr 127.0.0.1 tcp dport 5173 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5173 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5173 ct mark set meta mark | 0x00001000 dnat ip to 10.89.1.8:5173
+		ip daddr 127.0.0.1 tcp dport 8000 ct mark set meta mark | 0x00001000 dnat ip to 10.89.1.11:8000
+		ip saddr 10.89.1.0/24 ip daddr 127.0.0.1 tcp dport 5173 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5173 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5173 ct mark set meta mark | 0x00001000 dnat ip to 10.89.1.8:5173
+		ip saddr 10.89.1.0/24 ip daddr 127.0.0.1 tcp dport 8000 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 8000 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 8000 ct mark set meta mark | 0x00001000 dnat ip to 10.89.1.12:8000
+	}
+
+	chain nv_0f21352e_10_89_9_0_nm24 {
+		ip daddr 10.89.9.0/24 accept
+		ip daddr != 224.0.0.0/4 masquerade
+	}
+
+	chain nv_0f21352e_10_89_9_0_nm24_dnat {
+		ip saddr 10.89.9.0/24 ip daddr 127.0.0.1 tcp dport 5190 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5190 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5190 ct mark set meta mark | 0x00001000 dnat ip to 10.89.9.5:5190
+		ip daddr 127.0.0.1 tcp dport 8200 ct mark set meta mark | 0x00001000 dnat ip to 10.89.9.11:8200
+		ip saddr 10.89.9.0/24 ip daddr 127.0.0.1 tcp dport 5190 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5190 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5190 ct mark set meta mark | 0x00001000 dnat ip to 10.89.9.7:5190
+		ip daddr 127.0.0.1 tcp dport 8200 ct mark set meta mark | 0x00001000 dnat ip to 10.89.9.12:8200
+		ip saddr 10.89.9.0/24 ip daddr 127.0.0.1 tcp dport 5190 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5190 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5190 ct mark set meta mark | 0x00001000 dnat ip to 10.89.9.7:5190
+		ip daddr 127.0.0.1 tcp dport 8200 ct mark set meta mark | 0x00001000 dnat ip to 10.89.9.11:8200
+		ip saddr 10.89.9.0/24 ip daddr 127.0.0.1 tcp dport 5190 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5190 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5190 ct mark set meta mark | 0x00001000 dnat ip to 10.89.9.7:5190
+		ip saddr 10.89.9.0/24 ip daddr 127.0.0.1 tcp dport 8200 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 8200 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 8200 ct mark set meta mark | 0x00001000 dnat ip to 10.89.9.13:8200
+	}
+
+	chain nv_eae1f3f1_10_89_8_0_nm24 {
+		ip daddr 10.89.8.0/24 accept
+		ip daddr != 224.0.0.0/4 masquerade
+	}
+
+	chain nv_59b26638_10_89_4_0_nm24 {
+		ip daddr 10.89.4.0/24 accept
+		ip daddr != 224.0.0.0/4 masquerade
+	}
+
+	chain nv_59b26638_10_89_4_0_nm24_dnat {
+		ip saddr 10.89.4.0/24 ip daddr 127.0.0.1 tcp dport 5173 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5173 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5173 ct mark set meta mark | 0x00001000 dnat ip to 10.89.4.5:5173
+		ip saddr 10.89.4.0/24 ip daddr 127.0.0.1 tcp dport 5190 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5190 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5190 ct mark set meta mark | 0x00001000 dnat ip to 10.89.4.6:5190
+		ip saddr 10.89.4.0/24 ip daddr 127.0.0.1 tcp dport 8100 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 8100 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 8100 ct mark set meta mark | 0x00001000 dnat ip to 10.89.4.13:8100
+		ip saddr 10.89.4.0/24 ip daddr 127.0.0.1 tcp dport 5180 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5180 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5180 ct mark set meta mark | 0x00001000 dnat ip to 10.89.4.14:5180
+		ip saddr 10.89.4.0/24 ip daddr 127.0.0.1 tcp dport 5173 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5173 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5173 ct mark set meta mark | 0x00001000 dnat ip to 10.89.4.5:5173
+		ip saddr 10.89.4.0/24 ip daddr 127.0.0.1 tcp dport 5190 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5190 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5190 ct mark set meta mark | 0x00001000 dnat ip to 10.89.4.6:5190
+		ip saddr 10.89.4.0/24 ip daddr 127.0.0.1 tcp dport 8100 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 8100 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 8100 ct mark set meta mark | 0x00001000 dnat ip to 10.89.4.13:8100
+		ip saddr 10.89.4.0/24 ip daddr 127.0.0.1 tcp dport 5180 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5180 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5180 ct mark set meta mark | 0x00001000 dnat ip to 10.89.4.14:5180
+		ip saddr 10.89.4.0/24 ip daddr 127.0.0.1 tcp dport 5173 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5173 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5173 ct mark set meta mark | 0x00001000 dnat ip to 10.89.4.5:5173
+		ip saddr 10.89.4.0/24 ip daddr 127.0.0.1 tcp dport 5190 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5190 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5190 ct mark set meta mark | 0x00001000 dnat ip to 10.89.4.6:5190
+		ip saddr 10.89.4.0/24 ip daddr 127.0.0.1 tcp dport 8100 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 8100 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 8100 ct mark set meta mark | 0x00001000 dnat ip to 10.89.4.13:8100
+		ip saddr 10.89.4.0/24 ip daddr 127.0.0.1 tcp dport 5180 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5180 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5180 ct mark set meta mark | 0x00001000 dnat ip to 10.89.4.14:5180
+		ip saddr 10.89.4.0/24 ip daddr 127.0.0.1 tcp dport 5173 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5173 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5173 ct mark set meta mark | 0x00001000 dnat ip to 10.89.4.5:5173
+		ip saddr 10.89.4.0/24 ip daddr 127.0.0.1 tcp dport 5190 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5190 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5190 ct mark set meta mark | 0x00001000 dnat ip to 10.89.4.6:5190
+		ip saddr 10.89.4.0/24 ip daddr 127.0.0.1 tcp dport 8100 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 8100 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 8100 ct mark set meta mark | 0x00001000 dnat ip to 10.89.4.13:8100
+		ip saddr 10.89.4.0/24 ip daddr 127.0.0.1 tcp dport 5180 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5180 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5180 ct mark set meta mark | 0x00001000 dnat ip to 10.89.4.14:5180
+	}
+
+	chain nv_eae1f3f1_10_89_8_0_nm24_dnat {
+		ip saddr 10.89.8.0/24 ip daddr 127.0.0.1 tcp dport 8100 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 8100 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 8100 ct mark set meta mark | 0x00001000 dnat ip to 10.89.8.6:8100
+		ip saddr 10.89.8.0/24 ip daddr 127.0.0.1 tcp dport 5180 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5180 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5180 ct mark set meta mark | 0x00001000 dnat ip to 10.89.8.7:5180
+		ip saddr 10.89.8.0/24 ip daddr 127.0.0.1 tcp dport 8100 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 8100 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 8100 ct mark set meta mark | 0x00001000 dnat ip to 10.89.8.6:8100
+		ip saddr 10.89.8.0/24 ip daddr 127.0.0.1 tcp dport 5180 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5180 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5180 ct mark set meta mark | 0x00001000 dnat ip to 10.89.8.7:5180
+		ip saddr 10.89.8.0/24 ip daddr 127.0.0.1 tcp dport 8100 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 8100 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 8100 ct mark set meta mark | 0x00001000 dnat ip to 10.89.8.6:8100
+		ip saddr 10.89.8.0/24 ip daddr 127.0.0.1 tcp dport 5180 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5180 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5180 ct mark set meta mark | 0x00001000 dnat ip to 10.89.8.7:5180
+		ip saddr 10.89.8.0/24 ip daddr 127.0.0.1 tcp dport 8100 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 8100 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 8100 ct mark set meta mark | 0x00001000 dnat ip to 10.89.8.6:8100
+		ip saddr 10.89.8.0/24 ip daddr 127.0.0.1 tcp dport 5180 jump NETAVARK-HOSTPORT-SETMARK
+		ip saddr 127.0.0.1 ip daddr 127.0.0.1 tcp dport 5180 jump NETAVARK-HOSTPORT-SETMARK
+		ip daddr 127.0.0.1 tcp dport 5180 ct mark set meta mark | 0x00001000 dnat ip to 10.89.8.7:5180
+	}
+}

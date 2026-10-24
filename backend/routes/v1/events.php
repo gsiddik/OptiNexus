@@ -14,7 +14,7 @@ Route::prefix('event-catalog')->name('event-catalog.')->middleware(['auth:sanctu
 
 // Machine-to-machine only: trusted integrated applications report facts.
 Route::post('/events', [EventController::class, 'store'])
-    ->middleware(['service_account:event.write'])
+    ->middleware(['service_account:event.write', 'service_account.tenant'])
     ->name('events.store');
 
 Route::prefix('event-deliveries')->name('event-deliveries.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {

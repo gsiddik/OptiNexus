@@ -13,5 +13,5 @@ Route::get('/tenants/{tenant}/usage', [UsageEventController::class, 'forTenant']
 
 // Machine-to-machine only: integrated applications report chargeable usage.
 Route::post('/usage-events', [UsageEventController::class, 'store'])
-    ->middleware(['service_account:usage.write'])
+    ->middleware(['service_account:usage.write', 'service_account.tenant'])
     ->name('usage-events.store');

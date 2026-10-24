@@ -25,6 +25,7 @@ class UpdateApplicationRequest extends FormRequest
             'frontend_url' => ['nullable', 'url', 'max:255'],
             'backend_url' => ['nullable', 'url', 'max:255'],
             'metadata' => ['nullable', 'array'],
+            'subscription_required' => ['nullable', 'boolean'],
         ];
     }
 }

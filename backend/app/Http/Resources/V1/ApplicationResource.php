@@ -3,6 +3,7 @@
 namespace App\Http\Resources\V1;
 
 use App\Models\Application;
+use App\Services\Commercial\SubscriptionAccess;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -22,6 +23,8 @@ class ApplicationResource extends JsonResource
             'frontend_url' => $this->frontend_url,
             'backend_url' => $this->backend_url,
             'metadata' => $this->metadata,
+            'subscription_required' => $this->subscription_required,
+            'subscription_required_effective' => app(SubscriptionAccess::class)->required($this->resource),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

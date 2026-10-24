@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthenticateServiceAccount;
+use App\Http\Middleware\BindServiceAccountTenant;
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\EnsureEcosystemAccess;
 use App\Http\Middleware\ForceJsonResponse;
@@ -34,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => CheckPermission::class,
             'ecosystem' => EnsureEcosystemAccess::class,
             'service_account' => AuthenticateServiceAccount::class,
+            'service_account.tenant' => BindServiceAccountTenant::class,
             'gateway_tenant' => ResolveGatewayTenant::class,
         ]);
 

@@ -1503,6 +1503,26 @@ paths:
         '403': { $ref: '#/components/responses/Unauthorized' }
         '502': { description: The embedded application did not issue a session }
 
+  /radar/positions:
+    get:
+      tags: [Authorization]
+      summary: Latest OptiRadar positions of one tenant (M2M only)
+      description: >
+        Machine-to-machine; scope `positions.read` (named explicitly) and a tenant-bound service account. Returns the latest position of
+        every OptiRadar device of the tenant (the device's group, or the nearest ancestor group, carries the tenant), never another
+        tenant's devices. The caller needs no OptiRadar credential. Nexus checks that the tenant is active and entitled to both the
+        caller and OptiRadar. One OptiRadar read is shared between callers for `OPTIRADAR_POSITIONS_CACHE` seconds (default 10), so
+        positions are at most that old. `speed_kmh` is converted from OptiRadar's knots. Errors: `TENANT_MISMATCH` (403),
+        `RADAR_NOT_ENTITLED` (403), `RADAR_UNAVAILABLE` (502).
+      security: [{ OAuth2ClientCredentials: [positions.read] }]
+      parameters:
+        - { name: tenant_id, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Devices: device_ref, name, registration_number, status, position {latitude, longitude, speed_kmh, course, valid, fix_time} or null' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Unauthorized' }
+        '502': { description: OptiRadar did not answer }
+
   # -------------------------------------------------------------- Usage
   /usage:
     get:

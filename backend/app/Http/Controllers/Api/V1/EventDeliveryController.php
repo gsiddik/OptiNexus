@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Concerns\ApiResponses;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\EventDeliveryResource;
 use App\Jobs\DeliverEventToConsumer;
+use App\Jobs\DeliverWebhook;
 use App\Models\EventDelivery;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
@@ -44,7 +45,9 @@ class EventDeliveryController extends Controller
         }
 
         $delivery->update(['status' => EventDelivery::STATUS_PENDING, 'next_retry_at' => null]);
-        DeliverEventToConsumer::dispatch($delivery->id);
+        $delivery->consumer_type === EventDelivery::CONSUMER_WEBHOOK
+            ? DeliverWebhook::dispatch($delivery->id)
+            : DeliverEventToConsumer::dispatch($delivery->id);
 
         $this->audit->record('event.delivery.retried', $request, resourceType: 'EventDelivery', resourceId: $delivery->id);
 

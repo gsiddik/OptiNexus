@@ -50,7 +50,7 @@ class OrchestrationRoleSeeder extends Seeder
             'description' => 'Manages the event catalog and operates failed/dead-lettered event deliveries.',
             'permissions' => [
                 'cgo.event.catalog.view', 'cgo.event.catalog.manage', 'cgo.event.delivery.view',
-                'cgo.event.delivery.retry', 'cgo.event.delivery.discard',
+                'cgo.event.delivery.retry', 'cgo.event.delivery.discard', 'cgo.event.subscription.view', 'cgo.event.subscription.manage',
             ],
         ],
         'FEATURE_FLAG_ADMIN' => [
@@ -77,7 +77,7 @@ class OrchestrationRoleSeeder extends Seeder
             'description' => 'Read-only visibility across policies, workflows, approvals, integrations, events, feature flags, and notifications.',
             'permissions' => [
                 'cgo.policy.view', 'cgo.workflow.view', 'cgo.approval.definition.view', 'cgo.approval.request.view',
-                'cgo.integration.view', 'cgo.event.catalog.view', 'cgo.event.delivery.view',
+                'cgo.integration.view', 'cgo.event.catalog.view', 'cgo.event.delivery.view', 'cgo.event.subscription.view',
                 'cgo.featureflag.view', 'cgo.notification.delivery.view', 'cgo.audit.view',
             ],
         ],

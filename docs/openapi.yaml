@@ -1821,6 +1821,25 @@ paths:
     parameters: [{ $ref: '#/components/parameters/EventDeliveryId' }]
     post: { tags: [Event Deliveries], summary: "Discard a delivery (never silent - always an explicit, audited action)", responses: { '200': { $ref: '#/components/responses/EventDeliveryItem' }, '409': { description: "A DELIVERED or already-DISCARDED delivery cannot be discarded", content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } } } }
 
+  /event-subscriptions:
+    get:
+      tags: [Event Deliveries]
+      summary: List event broker subscriptions (signing secrets are never listed)
+      parameters: [{ name: application_id, in: query, schema: { type: string, format: uuid } }, { name: tenant_id, in: query, schema: { type: string, format: uuid } }, { $ref: '#/components/parameters/Status' }, { $ref: '#/components/parameters/PerPage' }]
+      responses: { '200': { description: Paginated subscriptions }, '401': { $ref: '#/components/responses/Unauthenticated' } }
+    post:
+      tags: [Event Deliveries]
+      summary: Subscribe an application to an event key or "prefix.*" (webhook; secret returned once)
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [application_id, event_key_pattern, endpoint_url], properties: { application_id: { type: string, format: uuid }, event_key_pattern: { type: string }, tenant_id: { type: string, format: uuid, nullable: true }, endpoint_url: { type: string, description: "https only unless EVENT_WEBHOOK_ALLOW_HTTP" } } } } } }
+      responses: { '201': { description: Subscription with signing_secret }, '409': { description: Same application, pattern and tenant scope already exist }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /event-subscriptions/{subscription}:
+    parameters: [{ name: subscription, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Event Deliveries], summary: Get a subscription, responses: { '200': { description: Subscription }, '404': { $ref: '#/components/responses/NotFound' } } }
+    put: { tags: [Event Deliveries], summary: Change endpoint_url or status (ACTIVE/DISABLED), responses: { '200': { description: Subscription }, '422': { $ref: '#/components/responses/ValidationError' } } }
+  /event-subscriptions/{subscription}/rotate-secret:
+    parameters: [{ name: subscription, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [Event Deliveries], summary: Issue a new signing secret (the old one stops at once; returned once), responses: { '200': { description: Subscription with signing_secret } } }
+
   # --------------------------------------------------------- Feature Flags
   /feature-flags:
     get:

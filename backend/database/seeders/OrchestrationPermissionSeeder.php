@@ -22,7 +22,7 @@ class OrchestrationPermissionSeeder extends Seeder
         'cgo.integration.test', 'cgo.integration.credential.rotate',
 
         'cgo.event.catalog.view', 'cgo.event.catalog.manage', 'cgo.event.delivery.view',
-        'cgo.event.delivery.retry', 'cgo.event.delivery.discard',
+        'cgo.event.delivery.retry', 'cgo.event.delivery.discard', 'cgo.event.subscription.view', 'cgo.event.subscription.manage',
 
         'cgo.featureflag.view', 'cgo.featureflag.create', 'cgo.featureflag.update', 'cgo.featureflag.override',
 

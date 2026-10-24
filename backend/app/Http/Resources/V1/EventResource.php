@@ -2,16 +2,18 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Models\Event;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Event */
+/** @mixin Event */
 class EventResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
         return [
             'event_id' => $this->id,
+            'producer_event_id' => $this->producer_event_id,
             'event_key' => $this->event_key,
             'event_version' => $this->event_version,
             'occurred_at' => $this->occurred_at,

@@ -246,5 +246,6 @@ databases, scripted browser; not part of the automated suites):
 | Financial facts between OptiDeli, OptiFleet and OptiEntry (pull feed, not the broker) | OptiDeli `docs/integration/OPTI_INTEGRATION_FEED_V1.md`, OptiEntry `docs/architecture/INTEGRATION_ARCHITECTURE.md` |
 | Identity modes: OptiEntry `standalone` is a full mode (owner decision K1) | OptiEntry `docs/architecture/SAAS_ARCHITECTURE.md` |
 
-Still open: event ids are unique globally (`events.id`), not per `(source, event_id)`; making them per source needs a primary-key migration with
-the `event_deliveries` foreign key and is deferred until a producer actually collides.
+Event ids are idempotent per producing application: `events.producer_event_id` is what the producer sent, `(source_application_id, producer_event_id)` is unique,
+and `events.id` (the `event_id` consumers de-duplicate on) equals the producer's id whenever it is free, otherwise a fresh uuid. Events of a platform
+service account (no application) are matched in the service, not by the index.

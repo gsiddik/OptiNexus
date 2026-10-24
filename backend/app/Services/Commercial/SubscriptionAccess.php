@@ -3,14 +3,28 @@
 namespace App\Services\Commercial;
 
 use App\Models\Application;
+use App\Models\Capability;
 use App\Models\Subscription;
 use App\Models\Tenant;
+use Illuminate\Support\Facades\DB;
 
 class SubscriptionAccess
 {
+    /**
+     * Whether a tenant needs an active subscription to use the application. An explicit `subscription_required` wins; when it
+     * is NULL the catalog decides: an application sold through a product, or whose capabilities are in a plan or add-on, is
+     * required. Never decided by application code.
+     */
     public function required(Application $application): bool
     {
-        return in_array($application->application_code, ['optifleet', 'optiaccounting', 'optientry'], true);
+        if ($application->subscription_required !== null) {
+            return (bool) $application->subscription_required;
+        }
+
+        return $application->products()->exists()
+            || Capability::query()->where('application_id', $application->id)
+                ->where(fn ($q) => $q->whereIn('id', DB::table('plan_capabilities')->select('capability_id'))
+                    ->orWhereIn('id', DB::table('addon_capabilities')->select('capability_id')))->exists();
     }
 
     public function allowed(Tenant $tenant, Application $application): bool

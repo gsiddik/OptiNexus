@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'application_code', 'name', 'description', 'owner', 'version', 'status',
-    'frontend_url', 'backend_url', 'metadata',
+    'frontend_url', 'backend_url', 'metadata', 'subscription_required',
 ])]
 class Application extends Model
 {
@@ -38,6 +38,7 @@ class Application extends Model
     {
         return [
             'metadata' => 'array',
+            'subscription_required' => 'boolean',
         ];
     }
 

@@ -57,9 +57,10 @@ class EventDispatchService
             return [null, 'EVENT_SCHEMA_INVALID', ['errors' => $schemaErrors]];
         }
 
-        $eventId = $envelope['event_id'] ?? (string) Str::uuid();
+        // Idempotent per producing application: the same producer id twice is one event; another application's id is its own.
+        $producerEventId = $envelope['event_id'] ?? (string) Str::uuid();
 
-        $existing = Event::find($eventId);
+        $existing = $this->findByProducerId($producer, $producerEventId);
         if ($existing) {
             // A genuine idempotent retry (same id, same fact) replays the
             // original record; the same id reused for a *different* fact is
@@ -71,9 +72,14 @@ class EventDispatchService
             return [$existing, null, []];
         }
 
+        // Nexus's own id equals the producer's when it is free (nothing changes for existing producers); when another application
+        // already holds that id here, this event gets a fresh one so consumers still de-duplicate on a globally unique `event_id`.
+        $eventId = Event::query()->whereKey($producerEventId)->exists() ? (string) Str::uuid() : $producerEventId;
+
         try {
             $event = Event::create([
                 'id' => $eventId,
+                'producer_event_id' => $producerEventId,
                 'event_key' => $envelope['event_key'],
                 'event_version' => $envelope['event_version'] ?? $catalogEntry->schema_version,
                 'occurred_at' => $envelope['occurred_at'] ?? now(),
@@ -86,12 +92,25 @@ class EventDispatchService
             ]);
         } catch (UniqueConstraintViolationException) {
             // Lost a race against a concurrent identical delivery.
-            return [Event::findOrFail($eventId), null, []];
+            $raced = $this->findByProducerId($producer, $producerEventId);
+            if (! $raced) {
+                throw new \RuntimeException('Event id collision could not be resolved.');
+            }
+
+            return [$raced, null, []];
         }
 
         $this->dispatchToConsumers($event);
 
         return [$event, null, []];
+    }
+
+    private function findByProducerId(ServiceAccount $producer, string $producerEventId): ?Event
+    {
+        return Event::query()
+            ->where('producer_event_id', $producerEventId)
+            ->where('source_application_id', $producer->application_id)
+            ->first();
     }
 
     /**

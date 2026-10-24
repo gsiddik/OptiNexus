@@ -12,6 +12,7 @@ class EventResource extends JsonResource
     {
         return [
             'event_id' => $this->id,
+            'producer_event_id' => $this->producer_event_id,
             'event_key' => $this->event_key,
             'event_version' => $this->event_version,
             'occurred_at' => $this->occurred_at,

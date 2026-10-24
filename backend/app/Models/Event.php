@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /** Immutable ingested/produced fact record - see events table comment. */
 #[Fillable([
-    'id', 'event_key', 'event_version', 'occurred_at', 'source_application_id',
+    'id', 'producer_event_id', 'event_key', 'event_version', 'occurred_at', 'source_application_id',
     'producer_service_account_id', 'tenant_id', 'correlation_id', 'causation_id', 'data',
 ])]
 class Event extends Model

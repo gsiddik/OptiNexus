@@ -39,7 +39,7 @@ class SubscriptionDeadlinesTest extends TestCase
     {
         $this->freezeTime();
         $tenant = $this->makeTenant();
-        $fleet = $this->makeApplication(['application_code' => 'optifleet']);
+        $fleet = $this->makeApplication(['application_code' => 'optifleet', 'subscription_required' => true]);
         $sub = $this->makeActiveApplicationSubscription($tenant, $fleet);
         $end = $sub->current_period_end;
         $this->travelTo($end->copy()->subSecond());
@@ -63,8 +63,8 @@ class SubscriptionDeadlinesTest extends TestCase
     public function test_access_requires_active_subscription_for_the_same_application_and_tenant(): void
     {
         $tenant = $this->makeTenant();
-        $fleet = $this->makeApplication(['application_code' => 'optifleet']);
-        $entry = $this->makeApplication(['application_code' => 'optiaccounting']);
+        $fleet = $this->makeApplication(['application_code' => 'optifleet', 'subscription_required' => true]);
+        $entry = $this->makeApplication(['application_code' => 'optiaccounting', 'subscription_required' => true]);
         $user = $this->makeSsoUser($tenant, $fleet);
         $this->grantApplicationAccess($user, $tenant, $entry);
         $access = app(SsoAccessResolver::class);
@@ -89,8 +89,8 @@ class SubscriptionDeadlinesTest extends TestCase
     {
         Queue::fake();
         $tenant = $this->makeTenant();
-        $fleet = $this->makeApplication(['application_code' => 'optifleet']);
-        $entry = $this->makeApplication(['application_code' => 'optiaccounting']);
+        $fleet = $this->makeApplication(['application_code' => 'optifleet', 'subscription_required' => true]);
+        $entry = $this->makeApplication(['application_code' => 'optiaccounting', 'subscription_required' => true]);
         $user = $this->makeSsoUser($tenant, $fleet);
         $this->grantApplicationAccess($user, $tenant, $entry);
         $this->makeActiveApplicationSubscription($tenant, $entry);
@@ -113,7 +113,7 @@ class SubscriptionDeadlinesTest extends TestCase
     {
         Queue::fake();
         $tenant = $this->makeTenant();
-        $fleet = $this->makeApplication(['application_code' => 'optifleet']);
+        $fleet = $this->makeApplication(['application_code' => 'optifleet', 'subscription_required' => true]);
         $this->makeSsoUser($tenant, $fleet);
         $this->makeOidcClient($fleet, ['backchannel_logout_uri' => 'https://fleet.test/logout']);
         $sub = $tenant->subscriptions()->firstOrFail();
@@ -128,7 +128,7 @@ class SubscriptionDeadlinesTest extends TestCase
     public function test_cancelling_one_of_two_active_subscriptions_keeps_access_until_the_last_one_ends(): void
     {
         $tenant = $this->makeTenant();
-        $fleet = $this->makeApplication(['application_code' => 'optifleet']);
+        $fleet = $this->makeApplication(['application_code' => 'optifleet', 'subscription_required' => true]);
         $user = $this->makeSsoUser($tenant, $fleet);
         $first = $tenant->subscriptions()->firstOrFail();
         $second = $this->makeActiveApplicationSubscription($tenant, $fleet);

@@ -4,8 +4,6 @@ namespace App\Services\Gateway;
 
 use App\Models\Application;
 use App\Models\Tenant;
-use Illuminate\Http\Client\PendingRequest;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -18,7 +16,7 @@ use RuntimeException;
  */
 class OptiRadarConnector
 {
-    public function __construct(private readonly GatewayService $gateway) {}
+    public function __construct(private readonly GatewayService $gateway, private readonly RadarSnapshot $radar) {}
 
     /**
      * @return array{tenants: int, devices: int, accepted: int, duplicates: int, skipped: int}
@@ -30,11 +28,7 @@ class OptiRadarConnector
             throw new RuntimeException('OptiRadar connector is not configured (OPTIRADAR_BASE_URL / OPTIRADAR_API_TOKEN).');
         }
 
-        $http = Http::withToken($config['token'])->acceptJson()->timeout($config['timeout_seconds'])->baseUrl($config['base_url']);
-
-        $groups = collect($http->get('/api/groups')->throw()->json())->keyBy('id');
-        $devices = collect($http->get('/api/devices')->throw()->json());
-        $positions = collect($http->get('/api/positions')->throw()->json())->keyBy('deviceId');
+        ['groups' => $groups, 'devices' => $devices, 'positions' => $positions] = $this->radar->load();
 
         $subscribed = $this->subscribedTenantIds($config['application_code']);
 
@@ -42,7 +36,7 @@ class OptiRadarConnector
         $skipped = 0;
 
         foreach ($devices as $device) {
-            $tenantId = $this->tenantOf($groups, $device['groupId'] ?? null, $config['tenant_group_attribute']);
+            $tenantId = $this->radar->tenantOf($groups, $device['groupId'] ?? null);
             $position = $positions->get($device['id']);
             [$metres, $kind] = $position ? $this->odometerMetres($position) : [null, null];
 
@@ -95,26 +89,6 @@ class OptiRadarConnector
         }
 
         return [null, null];
-    }
-
-    private function tenantOf($groups, ?int $groupId, string $attribute): ?string
-    {
-        $seen = [];
-        while ($groupId && ! isset($seen[$groupId])) {
-            $seen[$groupId] = true;
-            $group = $groups->get($groupId);
-            if (! $group) {
-                return null;
-            }
-
-            if (! empty($group['attributes'][$attribute])) {
-                return (string) $group['attributes'][$attribute];
-            }
-
-            $groupId = $group['groupId'] ?? null;
-        }
-
-        return null;
     }
 
     /** @return array<int, string> */

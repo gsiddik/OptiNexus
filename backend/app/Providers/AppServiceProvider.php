@@ -92,6 +92,7 @@ class AppServiceProvider extends ServiceProvider
             'gateway.telematics.read' => 'Read the telematics odometer feed for linked vehicles from the API Gateway',
             'tenant.delegate' => "Manage a tenant's users and custom roles for the caller's own application on behalf of an Admin Tenant (delegation API)",
             'embed.create' => 'Open a short-lived, read-only embed session of another application (OptiRadar map) for a tenant',
+            'positions.read' => "Read the latest OptiRadar device positions of one tenant (never another tenant's devices)",
             'access.evaluate' => 'Evaluate aggregated effective access (entitlement + permission + policy + feature flag) via POST /access/evaluate',
         ]);
 

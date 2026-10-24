@@ -4,7 +4,7 @@ namespace App\Services\Embed;
 
 use App\Models\Application;
 use App\Models\Tenant;
-use App\Services\Commercial\SubscriptionAccess;
+use App\Services\Gateway\RadarAccess;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -18,7 +18,7 @@ class EmbedSessionService
 {
     public const TARGET_OPTIRADAR = 'optiradar';
 
-    public function __construct(private readonly SubscriptionAccess $access) {}
+    public function __construct(private readonly RadarAccess $radar) {}
 
     /**
      * @return array{0: ?array{url: string, expires_at: string, ttl_seconds: int}, 1: ?string, 2: ?string} [session, error code, message]
@@ -30,15 +30,9 @@ class EmbedSessionService
         }
 
         $config = config('gateway.optiradar');
-        $application = Application::query()->where('application_code', $config['application_code'])->first();
-        if (! $application || ! $application->isPublished() || ! $tenant->isActive()) {
-            return [null, 'EMBED_TARGET_NOT_ENTITLED', 'The tenant cannot use the embedded application.'];
-        }
-
-        foreach ([$caller, $application] as $app) {
-            if (! $tenant->applications()->where('applications.id', $app->id)->wherePivot('status', 'ACTIVE')->exists() || ! $this->access->allowed($tenant, $app)) {
-                return [null, 'EMBED_TARGET_NOT_ENTITLED', 'The tenant is not entitled to '.$app->application_code.'.'];
-            }
+        [$application, $refusal] = $this->radar->check($caller, $tenant);
+        if ($application === null) {
+            return [null, 'EMBED_TARGET_NOT_ENTITLED', $refusal];
         }
 
         if ($config['base_url'] === '' || ! $config['embed_token'] || ! $application->frontend_url) {

@@ -18,6 +18,8 @@ return [
         // read-only token limited to one tenant's group. Separate from the read-only sync token above.
         'embed_token' => env('OPTIRADAR_EMBED_TOKEN'),
         'embed_max_ttl_seconds' => 900,
+        // One OptiRadar read (groups, devices, positions) is shared by every caller for this many seconds.
+        'positions_cache_seconds' => (int) env('OPTIRADAR_POSITIONS_CACHE', 10),
         // Group attribute that carries the OptiNexus tenant id.
         'tenant_group_attribute' => 'optinexusTenantId',
     ],

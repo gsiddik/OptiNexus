@@ -132,6 +132,8 @@ tags:
     description: RBAC role management and permission assignment
   - name: Users
     description: Identity, tenant membership, application access, role assignment
+  - name: Commercial portal
+    description: M2M view of a tenant's invoices and payments for integrated applications (scope commercial.read)
   - name: Authorization
     description: Cross-application authorization decisions (M2M)
   - name: Audit
@@ -1352,6 +1354,126 @@ paths:
         '200': { description: Commercial context, content: { application/json: { schema: { $ref: '#/components/schemas/CommercialContextResponse' } } } }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Unauthorized' }
+
+  /authorization/product-context:
+    post:
+      tags: [Authorization]
+      summary: Products a person may switch to from the caller's application, and revalidation of the caller's session (M2M only)
+      description: >
+        Machine-to-machine only; scope `authorization.check`. Same request body, application binding and error codes as
+        `/authorization/effective-permissions` (`SERVICE_ACCOUNT_NOT_BOUND`, `TENANT_MISMATCH`). Returns the applications the user
+        may launch in that tenant (the governance portal is never listed; the caller's own entry is marked `current`), or an empty
+        list with `deny_reason` when the user, tenant or application is not usable. Nothing is cached in Nexus.
+      security: [{ OAuth2ClientCredentials: [authorization.check] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, tenant_id]
+              properties:
+                user_id: { type: string, format: uuid }
+                tenant_id: { type: string, format: uuid }
+      responses:
+        '200': { description: Product context }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Unauthorized' }
+  /commercial-portal/tenants/{tenant}/invoices:
+    parameters: [{ $ref: '#/components/parameters/TenantId' }]
+    get:
+      tags: [Commercial portal]
+      summary: A tenant's invoices as the tenant sees them (M2M only)
+      description: >
+        Machine-to-machine; scope `commercial.read`, and the service account must be bound to this tenant. Used by an integrated
+        application to show OptiNexus invoices in its own account screen for a CENTRAL tenant. The acting person is asserted by the
+        caller and checked against `account.*` permissions.
+      security: [{ OAuth2ClientCredentials: [commercial.read] }]
+      responses:
+        '200': { description: Invoice list }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Unauthorized' }
+  /commercial-portal/tenants/{tenant}/invoices/{invoice}:
+    parameters: [{ $ref: '#/components/parameters/TenantId' }, { name: invoice, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      tags: [Commercial portal]
+      summary: One invoice of the tenant (M2M only)
+      security: [{ OAuth2ClientCredentials: [commercial.read] }]
+      responses:
+        '200': { description: Invoice }
+        '403': { $ref: '#/components/responses/Unauthorized' }
+  /commercial-portal/tenants/{tenant}/payments:
+    parameters: [{ $ref: '#/components/parameters/TenantId' }]
+    get:
+      tags: [Commercial portal]
+      summary: Payment submissions of the tenant (M2M only)
+      security: [{ OAuth2ClientCredentials: [commercial.read] }]
+      responses:
+        '200': { description: Payment list }
+        '403': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Commercial portal]
+      summary: Submit a payment for an invoice (M2M only)
+      description: >
+        Scopes `commercial.read` and `commercial.payment.submit`. `submission_key` makes a retry idempotent. The payment stays
+        pending until a finance operator verifies it in OptiNexus.
+      security: [{ OAuth2ClientCredentials: [commercial.read, commercial.payment.submit] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [invoice_id, submission_key, payment_date, amount, payment_method]
+              properties:
+                invoice_id: { type: string, format: uuid }
+                submission_key: { type: string, format: uuid }
+                payment_date: { type: string, format: date }
+                amount: { type: string, description: Decimal string, at most 2 decimals, greater than 0 }
+                payment_method: { type: string, maxLength: 50 }
+                transaction_reference: { type: string, maxLength: 255, nullable: true }
+                bank_name: { type: string, maxLength: 255, nullable: true }
+                account_name: { type: string, maxLength: 255, nullable: true }
+                note: { type: string, maxLength: 5000, nullable: true }
+      responses:
+        '201': { description: Payment submitted }
+        '403': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /commercial-portal/tenants/{tenant}/payments/{payment}:
+    parameters: [{ $ref: '#/components/parameters/TenantId' }, { name: payment, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      tags: [Commercial portal]
+      summary: One payment submission (M2M only)
+      security: [{ OAuth2ClientCredentials: [commercial.read] }]
+      responses:
+        '200': { description: Payment }
+        '403': { $ref: '#/components/responses/Unauthorized' }
+  /commercial-portal/tenants/{tenant}/payments/{payment}/proof:
+    parameters: [{ $ref: '#/components/parameters/TenantId' }, { name: payment, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      tags: [Commercial portal]
+      summary: Download the proof file of a payment (M2M only)
+      security: [{ OAuth2ClientCredentials: [commercial.read] }]
+      responses:
+        '200': { description: Proof file }
+        '403': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Commercial portal]
+      summary: Attach or replace the proof file of a pending payment (M2M only)
+      security: [{ OAuth2ClientCredentials: [commercial.read, commercial.payment.submit] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [proof]
+              properties:
+                proof: { type: string, format: binary }
+      responses:
+        '200': { description: Payment with proof }
+        '403': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # -------------------------------------------------------------- Usage
   /usage:

@@ -1,7 +1,8 @@
 # OptiNexus Platform Integration — Architecture
 
-Status: design baseline for the OptiNexus ⇄ OptiFleet ⇄ OptiRadar integration
-(branch `claude/project-thread-bc4ya2` in every repository).
+Status: design baseline for the OptiNexus ⇄ OptiFleet ⇄ OptiRadar integration (all of it is on `main` in every repository).
+Since this baseline the ecosystem also covers OptiEntry (formerly OptiAccounting) and OptiDeli, the signed event broker
+(`event_subscriptions`) and the commercial portal for CENTRAL tenants; see section 8 for where each is specified.
 
 ## 1. Goals
 
@@ -232,4 +233,18 @@ databases, scripted browser; not part of the automated suites):
   user), whatever its age. Nothing runs it automatically: a person decides when the application is healthy again.
 * OptiRadar's built-in OpenID client does not verify the authorization `state` or the ID token
   separately (upstream behavior, unchanged). The user is identified through `userinfo`.
-* OptiAccounting is an empty repository; it can onboard using the guide without changes here.
+* OptiAccounting (OptiEntry) is no longer empty: it integrates as an application with delegation and the commercial context (section 8).
+
+## 8. Added since this baseline (wave 6 refresh, 2026-10-24)
+
+| Topic | Where it is specified |
+|---|---|
+| Service-account tenant binding on M2M routes (`service_account.tenant`), `applications.subscription_required` | `docs/ecosystem/GOVERNANCE_CONTRACTS.md`, `docs/openapi.yaml` |
+| Event broker for notifications: `event_subscriptions`, signed webhooks `Opti-Webhook-Signature: v1=HMAC(secret, "id.ts.body")`, `ecosystem:register-event-subscription` | `docs/ecosystem/GOVERNANCE_CONTRACTS.md` (events), `docs/integration/INTEGRATION_GUIDE.md` |
+| Commercial context and commercial portal for CENTRAL tenants (invoices, payments, proof) | `docs/openapi.yaml` (`/tenants/{tenant}/commercial-context`, `/commercial-portal/...`), `docs/ecosystem/CENTRAL_INVOICE_PAYMENTS.md` |
+| Product switcher context (`/authorization/product-context`) | `docs/openapi.yaml` |
+| Financial facts between OptiDeli, OptiFleet and OptiEntry (pull feed, not the broker) | OptiDeli `docs/integration/OPTI_INTEGRATION_FEED_V1.md`, OptiEntry `docs/architecture/INTEGRATION_ARCHITECTURE.md` |
+| Identity modes: OptiEntry `standalone` is a full mode (owner decision K1) | OptiEntry `docs/architecture/SAAS_ARCHITECTURE.md` |
+
+Still open: event ids are unique globally (`events.id`), not per `(source, event_id)`; making them per source needs a primary-key migration with
+the `event_deliveries` foreign key and is deferred until a producer actually collides.

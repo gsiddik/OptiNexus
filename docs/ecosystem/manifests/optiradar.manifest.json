@@ -1,0 +1,21 @@
+{
+  "manifest_version": "2.0",
+  "revision": "2026-10-24.1",
+  "application": { "application_code": "optiradar", "name": "OptiRadar" },
+  "capabilities": [
+    { "type": "MODULE", "code": "tracking", "name": "Live tracking", "sort_order": 1 },
+    { "type": "FEATURE", "code": "map", "name": "Live map", "parent_code": "tracking", "sort_order": 1 },
+    { "type": "FEATURE", "code": "embed", "name": "Embedded map for other Opti products", "parent_code": "tracking", "sort_order": 2 },
+    { "type": "MODULE", "code": "reports", "name": "Reports", "sort_order": 2 },
+    { "type": "FEATURE", "code": "trip_reports", "name": "Trip and stop reports", "parent_code": "reports", "sort_order": 1 },
+    { "type": "MODULE", "code": "geofencing", "name": "Geofences and alerts", "sort_order": 3 },
+    { "type": "FEATURE", "code": "geofences", "name": "Geofences", "parent_code": "geofencing", "sort_order": 1 }
+  ],
+  "permissions": [
+    { "permission_key": "optiradar.map.view", "name": "View the live map", "capability_code": "map", "delegable": true },
+    { "permission_key": "optiradar.embed.view", "name": "View the embedded map in another product", "capability_code": "embed", "delegable": true },
+    { "permission_key": "optiradar.report.view", "name": "View trip and stop reports", "capability_code": "trip_reports", "delegable": true },
+    { "permission_key": "optiradar.geofence.manage", "name": "Create and edit geofences", "capability_code": "geofences", "delegable": false }
+  ],
+  "entitlement_limit_keys": ["device_limit", "user_limit"]
+}

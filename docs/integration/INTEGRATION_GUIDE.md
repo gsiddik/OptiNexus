@@ -236,13 +236,14 @@ runs on a schedule. Calibration: GPS-only devices appear under *Vehicle > Telema
 
 ### OptiFleet events
 
-OptiFleet reports six events to `POST /api/v1/events` (key prefix `optifleet.`):
+OptiFleet reports seven events to `POST /api/v1/events` (key prefix `optifleet.`):
 `workshop_invoice.recorded`, `.corrected`, `.cancelled`, `.payment_recorded`, `maintenance_memo.billed`,
-`maintenance_memo.paid`. Each one carries `data.aggregate_type`, `data.aggregate_id`, `data.correlation`
+`maintenance_memo.paid` and `vehicle.availability_changed` (a vehicle moved between AVAILABLE, IN_USE and ON_HOLD; a transport
+system such as OptiDeli subscribes to it through the event broker, §4b). Each one carries `data.aggregate_type`, `data.aggregate_id`, `data.correlation`
 (work order, partner) and `data.payload`; money is a decimal string. OptiFleet sends the id of its outbox row as
 `event_id`, so a retry never makes a second event. To switch it on:
 
-1. Register the six events: `php artisan db:seed --class=OptiFleetEventCatalogSeeder` (the application with code
+1. Register the seven events: `php artisan db:seed --class=OptiFleetEventCatalogSeeder` (the application with code
    `optifleet` must exist; running it again only updates the entries).
 2. Give the OptiFleet service account (created for the OptiFleet application, not a platform account) the `event.write`
    scope and assign the OptiFleet application to the tenants.

@@ -41,6 +41,10 @@ class OptiFleetEventCatalogSeeder extends ApplicationEventCatalogSeeder
             'name' => 'Maintenance memo paid',
             'description' => 'A maintenance memo moved to PAID. payload: memo_number.',
         ],
+        'optifleet.vehicle.availability_changed' => [
+            'name' => 'Vehicle availability changed',
+            'description' => 'A vehicle moved between AVAILABLE, IN_USE and ON_HOLD (workshop start, release, breakdown). aggregate_type is vehicle_availability_change and aggregate_id is this occurrence (a vehicle changes many times). payload: vehicle_id, registration_number, operational_status, previous_operational_status, status, changed_at (UTC). Subscribe a transport system with ecosystem:register-event-subscription.',
+        ],
     ];
 
     protected function applicationCode(): string

@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Route;
 // Machine-to-machine only: integrated applications call this with a
 // client-credentials token carrying the `authorization.check` scope.
 Route::post('/authorization/check', [AuthorizationController::class, 'check'])
-    ->middleware(['service_account:authorization.check'])
+    ->middleware(['service_account:authorization.check', 'service_account.tenant'])
     ->name('authorization.check');
 
 // One request for everything a user holds in a tenant, for the application the calling service account is bound to

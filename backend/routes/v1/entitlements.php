@@ -12,7 +12,7 @@ Route::prefix('entitlements')->name('entitlements.')->middleware(['auth:sanctum'
 // Machine-to-machine only: integrated applications ask whether a tenant is
 // entitled to an application/feature/limit.
 Route::post('/entitlements/check', [EntitlementController::class, 'check'])
-    ->middleware(['service_account:entitlement.check'])
+    ->middleware(['service_account:entitlement.check', 'service_account.tenant'])
     ->name('entitlements.check');
 
 Route::prefix('tenants/{tenant}')->name('tenants.')->middleware(['auth:sanctum', 'ecosystem'])->group(function () {

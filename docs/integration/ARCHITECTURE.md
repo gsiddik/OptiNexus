@@ -108,7 +108,7 @@ session.
 
 `optifleet.*` events travel from OptiFleet's `integration_outbox_events` to `POST /api/v1/events` with the outbox
 row id as `event_id`. OptiNexus validates them against the Event Catalog (`OptiFleetEventCatalogSeeder` registers
-six events), stores each once per `event_id` (a replay with the same content is answered idempotently) and the
+seven events), stores each once per `event_id` (a replay with the same content is answered idempotently) and the
 workflow and notification engine can react. See the integration guide, §6.
 
 ### 3.1d OptiRadar events (D10)

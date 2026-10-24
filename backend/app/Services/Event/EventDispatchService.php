@@ -3,6 +3,7 @@
 namespace App\Services\Event;
 
 use App\Jobs\DeliverEventToConsumer;
+use App\Jobs\DeliverWebhook;
 use App\Models\Event;
 use App\Models\EventCatalogEntry;
 use App\Models\EventDelivery;
@@ -17,14 +18,18 @@ use Illuminate\Support\Str;
  * Catalog, checks payload shape, and writes the immutable Event row
  * idempotently (same event_id twice -> the same row, never a duplicate
  * fact). Only a genuinely NEW event fans out to consumers (a matching
- * ACTIVE event-triggered Workflow, or a matching ACTIVE NotificationRule)
+ * ACTIVE event-triggered Workflow, a matching ACTIVE NotificationRule, or a
+ * subscribed application through the event broker)
  * - an idempotent replay never re-fires side effects. Each fan-out gets
  * its own EventDelivery row (outbox-style) so one consumer's failure
  * never blocks another's delivery.
  */
 class EventDispatchService
 {
-    public function __construct(private readonly PayloadSchemaValidator $schemaValidator) {}
+    public function __construct(
+        private readonly PayloadSchemaValidator $schemaValidator,
+        private readonly EventSubscriptionService $subscriptions,
+    ) {}
 
     /**
      * @return array{0: ?Event, 1: ?string, 2: array} [event, errorCode, errorDetails]
@@ -140,6 +145,11 @@ class EventDispatchService
         foreach ($rules as $rule) {
             $this->queueDelivery($event, EventDelivery::CONSUMER_NOTIFICATION, $rule->id);
         }
+
+        // Event broker: subscribed applications get a signed webhook, only for tenants they are assigned to.
+        foreach ($this->subscriptions->recipients($event) as $subscription) {
+            $this->queueDelivery($event, EventDelivery::CONSUMER_WEBHOOK, $subscription->id);
+        }
     }
 
     private function queueDelivery(Event $event, string $consumerType, string $consumerReference): void
@@ -151,6 +161,18 @@ class EventDispatchService
             'status' => EventDelivery::STATUS_PENDING,
         ]);
 
-        DeliverEventToConsumer::dispatch($delivery->id);
+        if ($consumerType !== EventDelivery::CONSUMER_WEBHOOK) {
+            DeliverEventToConsumer::dispatch($delivery->id);
+
+            return;
+        }
+
+        try {
+            DeliverWebhook::dispatch($delivery->id);
+        } catch (\Throwable $e) {
+            // Only reachable with the sync queue: a subscriber's failure must never fail the producer's request. The delivery
+            // keeps its state (FAILED after the job's failed()) for an operator to retry.
+            report($e);
+        }
     }
 }

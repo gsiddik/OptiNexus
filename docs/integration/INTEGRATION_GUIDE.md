@@ -168,6 +168,43 @@ an admin links it (`PUT /api/v1/gateway/tenants/{tenant}/vehicle-links/{link}`).
   (`PUT /api/v1/event-catalog/{id}` with `application_id`); an owned key never changes hands.
 * `POST /api/v1/audit-events` (`audit.write`), `POST /api/v1/usage-events` (`usage.write`).
 
+## 4b. Event broker: receive other applications' events (webhooks)
+
+Owner decision K4 (2026-10-24): OptiNexus distributes **notifications** (vehicle available/unavailable, device offline, trip
+finished, ...) from one application to the others. Financial facts are not sent this way; they stay on ordered pull feeds.
+
+**Subscribing (operator).** `php artisan ecosystem:register-event-subscription <app> <pattern> --url=<endpoint> [--tenant=<id>]
+--secret-file=<0600 file>` or `POST /api/v1/event-subscriptions` (`cgo.event.subscription.manage`; list with
+`cgo.event.subscription.view`). The pattern is an event key or a prefix ending in `.*` (`optifleet.vehicle.*`). Without
+`--tenant` the subscription covers every tenant the application is assigned to. The signing secret is returned once (on
+creation and `rotate-secret`) and never listed; rotation replaces it at once. Endpoints must use `https` (plain `http` only
+with `EVENT_WEBHOOK_ALLOW_HTTP=true`, for local development) and carry no credentials; redirects are never followed.
+
+**Who receives an event.** Only applications with an ACTIVE subscription whose pattern matches, that are assigned (ACTIVE) to
+the event's tenant and, when their subscription is required, have an active subscription; never the producer itself. An
+event without a tenant reaches only subscriptions without a tenant. This is checked when the event arrives and again before
+every attempt, so removing an application from a tenant stops delivery at once.
+
+**The call.** `POST <endpoint>`, `Content-Type: application/json`, body:
+
+```json
+{"event_id": "...", "event_type": "optifleet.vehicle.status_changed", "schema_version": "1", "source_system": "optifleet",
+ "tenant_id": "<OptiNexus tenant id>", "occurred_at": "2026-10-24T10:00:00+00:00", "correlation_id": "...", "causation_id": null,
+ "data": {...}}
+```
+
+Headers: `Opti-Webhook-Id` (delivery id), `Opti-Event-Id`, `Opti-Webhook-Timestamp` (Unix seconds) and
+`Opti-Webhook-Signature: v1=<hex HMAC-SHA256(secret, "<Opti-Webhook-Id>.<Opti-Webhook-Timestamp>.<raw body>")>`.
+
+**Receiving.** Recompute the signature over the raw body and compare in constant time; refuse a timestamp more than 5 minutes
+away; map `tenant_id` to your tenant (`optinexus_tenant_id`) and ignore unknown tenants; de-duplicate on `event_id` (a retry
+or an operator's redelivery sends the same event again); answer `2xx` quickly and do the work afterwards.
+
+**Retries and dead letter.** `2xx` ends the delivery. `4xx` other than 408/429 means you refused it: FAILED at once. Anything
+else (5xx, 408, 429, network) is retried after 10 s, 30 s, 2 min, 10 min, 30 min, 1 h, 1 h (`config/event_broker.php`); after the
+last attempt the delivery stays FAILED. Operators see deliveries at `GET /api/v1/event-deliveries?consumer_type=WEBHOOK` and
+retry (`POST .../{id}/retry`) or discard them. A producer's `POST /events` never fails because a subscriber is down.
+
 ## 5. OptiRadar connector (operators)
 
 Set in `backend/.env`: `OPTIRADAR_SYNC_ENABLED=true`, `OPTIRADAR_BASE_URL`,

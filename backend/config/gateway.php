@@ -14,6 +14,10 @@ return [
         'base_url' => rtrim((string) env('OPTIRADAR_BASE_URL', ''), '/'),
         'token' => env('OPTIRADAR_API_TOKEN'),
         'timeout_seconds' => (int) env('OPTIRADAR_TIMEOUT', 20),
+        // Embed sessions (K3/K5): the token of an OptiRadar administrator, used only to ask OptiRadar for a short-lived,
+        // read-only token limited to one tenant's group. Separate from the read-only sync token above.
+        'embed_token' => env('OPTIRADAR_EMBED_TOKEN'),
+        'embed_max_ttl_seconds' => 900,
         // Group attribute that carries the OptiNexus tenant id.
         'tenant_group_attribute' => 'optinexusTenantId',
     ],

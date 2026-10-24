@@ -1475,6 +1475,34 @@ paths:
         '403': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /embed/sessions:
+    post:
+      tags: [Authorization]
+      summary: Open a short-lived, read-only embed session of another application (M2M only)
+      description: >
+        Machine-to-machine; scope `embed.create` (named explicitly, not part of the default product scopes) and a tenant-bound
+        service account. The caller (for example OptiDeli) asks for the `optiradar` target; Nexus checks that the tenant is active
+        and entitled to both the caller and the target, asks OptiRadar for a read-only token limited to that tenant's devices and
+        returns the URL to put in an iframe. `ttl_seconds` is 60 to 900 (default 900). Errors: `TENANT_MISMATCH` (403),
+        `EMBED_TARGET_NOT_ENTITLED` (403), `EMBED_UNAVAILABLE` (502). Every session is audited as `embed.session_opened`.
+      security: [{ OAuth2ClientCredentials: [embed.create] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenant_id, target]
+              properties:
+                tenant_id: { type: string, format: uuid }
+                target: { type: string, enum: [optiradar] }
+                ttl_seconds: { type: integer, minimum: 60, maximum: 900 }
+      responses:
+        '201': { description: Embed session (url, expires_at, ttl_seconds) }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Unauthorized' }
+        '502': { description: The embedded application did not issue a session }
+
   # -------------------------------------------------------------- Usage
   /usage:
     get:

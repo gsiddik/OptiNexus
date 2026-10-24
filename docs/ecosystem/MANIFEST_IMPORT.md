@@ -50,3 +50,13 @@ php artisan ecosystem:register-service-account <app_code> [--name=N] [--tenant=I
   application: tenant usable, Admin Tenant present, an application assigned; per application an OIDC client (PKCE, launch URL), a
   service account, an imported manifest with delegable permissions, users with access and an Admin Tenant with access. It reports
   only what Nexus holds as records; it never claims a product callback or connection works.
+
+## OptiRadar manifest and embed sessions (K5)
+
+`docs/ecosystem/manifests/optiradar.manifest.json` is the catalog of OptiRadar (3 modules, 4 features, 4 permissions, limits `device_limit` and
+`user_limit`). Import it like any other: `php artisan ecosystem:import-manifest optiradar docs/ecosystem/manifests/optiradar.manifest.json --dry-run`.
+
+Embed sessions (OptiDeli shows the OptiRadar map for its tenant): the caller's service account needs the scope `embed.create` (give it by name) and a tenant
+binding. Nexus holds `OPTIRADAR_BASE_URL` and `OPTIRADAR_EMBED_TOKEN` (the token of an OptiRadar administrator, separate from the read-only
+`OPTIRADAR_API_TOKEN`), asks `POST /api/optinexus/embed` for a read-only token of at most 15 minutes limited to the tenant's group, and returns
+`{url, expires_at}`. OptiRadar lists the embedding origins in `web.frameAncestors`; no Radar cookie is used inside the frame.

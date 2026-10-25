@@ -30,6 +30,7 @@ import type {
   IntegrationCredential,
   IntegrationLog,
   Invoice,
+  EmailSuppression,
   Notification,
   NotificationRule,
   NotificationTemplate,
@@ -543,6 +544,11 @@ export const notificationsApi = {
   send: (payload: Record<string, unknown>) => unwrap<Notification[]>(apiClient.post('/notifications/send', payload)),
   retry: (id: string) => unwrap<Notification>(apiClient.post(`/notifications/${id}/retry`)),
   cancel: (id: string) => unwrap<Notification>(apiClient.post(`/notifications/${id}/cancel`)),
+};
+
+export const emailSuppressionsApi = {
+  list: (params?: ListParams) => unwrapFull<EmailSuppression[]>(apiClient.get('/email-suppressions', { params })),
+  release: (id: string) => unwrap<EmailSuppression>(apiClient.post(`/email-suppressions/${id}/release`)),
 };
 
 // ----------------------------------------------------------------- Access

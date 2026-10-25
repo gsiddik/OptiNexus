@@ -81,6 +81,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/notification-templates', label: 'Notification Templates', labelKey: 'nav.notificationTemplates' },
       { to: '/notification-rules', label: 'Notification Rules', labelKey: 'nav.notificationRules' },
       { to: '/notifications', label: 'Notifications', labelKey: 'nav.notifications' },
+      { to: '/email-suppressions', label: 'Email Suppressions', labelKey: 'nav.emailSuppressions' },
     ],
   },
 ];

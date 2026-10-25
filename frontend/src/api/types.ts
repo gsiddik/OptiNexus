@@ -634,3 +634,9 @@ export interface SeatStatus {
   blocked_reason: string | null;
   limit_source: string | null;
 }
+
+export interface EmailSuppression {
+  id: string; email: string; reason: 'HARD_BOUNCE' | 'SPAM_COMPLAINT' | 'MANUAL_SUPPRESSION' | string; provider: string;
+  description: string | null; active: boolean; suppressed_at: string; released_at: string | null;
+  released_by?: { id: string; name: string } | null; created_at: string; updated_at: string;
+}

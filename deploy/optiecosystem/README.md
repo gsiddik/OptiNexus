@@ -161,7 +161,8 @@ is accepted, revoked or expired. Every way of adding someone (invitation, delega
 | Remove containers | `.\optiecosystem.ps1 down -Products all` | containers and network only; **volumes and `.state` are never deleted** |
 | Backup | `.\optiecosystem.ps1 backup -Products fleet,entry` | PostgreSQL dumps (all products incl. Nexus), Nexus signing keys, Fleet MongoDB and uploads, Entry uploads, with SHA-256 manifest, in `backups\` |
 | Restore | `.\optiecosystem.ps1 restore -Products fleet,entry -Backup <folder> -ConfirmReplace` | without `-ConfirmReplace` it only prints what would be replaced; it verifies checksums and takes a `pre-restore` backup first |
-| Upgrade | `git pull` in each repository, then `.\optiecosystem.ps1 upgrade -Products fleet,entry` | backup, rebuild, re-create; migrations are additive and run once in each product's bootstrap job |
+| Update the code | `.\optiecosystem.ps1 sync -Products all [-Branch main]` | clones missing repositories (LF line ends), fetches, then `pull --ff-only`; skips a repository with uncommitted changes and never merges or resets; `up`/`build` never touch Git |
+| Upgrade | `sync` (or `git pull` in each repository), then `.\optiecosystem.ps1 upgrade -Products fleet,entry` | backup, rebuild, re-create; migrations are additive and run once in each product's bootstrap job |
 | Roll back a settings change | `.\optiecosystem.ps1 rollback-config` (list) / `-To <name>` | every `init` snapshots `.state\*.env`; then `up` |
 | Roll back code | `git checkout <previous commit>` in the repository, `build`, `up` | additive migrations are not reversed; restore a backup if data must go back |
 | Record revisions | `.\optiecosystem.ps1 manifest` | writes `REVISIONS.lock.json` (branch + commit of every repository) |

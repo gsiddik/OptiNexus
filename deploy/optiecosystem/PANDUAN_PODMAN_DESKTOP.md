@@ -61,6 +61,19 @@ foreach ($r in 'OptiNexus', 'OptiDeli', 'OptiRadar') { git -C $r fetch origin; g
 foreach ($r in 'OptiRadar-web', 'OptiFleet-v2', 'OptiAccounting') { git -C $r checkout main; git -C $r pull }
 ```
 
+**Memperbarui kode nanti: `sync`.** `up` dan `build` tidak pernah menyentuh Git: keduanya memakai isi folder repository apa adanya.
+Untuk mengambil kode terbaru dipakai perintah terpisah (dari `OptiNexus\deploy\optiecosystem`, setelah OptiNexus sendiri ada):
+
+```powershell
+.\optiecosystem.ps1 sync -Products all                 # clone repo yang belum ada (LF), fetch, lalu pull --ff-only di cabang saat ini
+.\optiecosystem.ps1 sync -Products all -Branch main    # sekaligus pindah ke main di setiap repo yang punya cabang itu
+.\optiecosystem.ps1 upgrade -Products all              # backup, build ulang, buat ulang container (migrasi berjalan di bootstrap)
+```
+
+`sync` tidak pernah membuang pekerjaan: repo dengan perubahan yang belum di-commit dilewati (WARN), dan cabang yang sudah menyimpang
+dilaporkan (FAIL) tanpa merge atau reset. Ini bukan clone ulang: folder yang sudah ada dipakai lagi, sehingga `.state`, backup dan
+volume tetap. Untuk OptiRadar, OptiRadar-web ikut diambil.
+
 Clone lama yang dibuat dengan `core.autocrlf=true`: jalankan `git -C <repo> config core.autocrlf false` lalu
 `git -C <repo> checkout -- .` (hanya bila tidak ada perubahan lokal). OptiNexus, OptiDeli, OptiRadar dan OptiFleet-v2 juga memaksa LF
 lewat `.gitattributes`, dan Dockerfile OptiDeli/OptiRadar membuang CR, jadi langkah ini terutama untuk OptiAccounting.
@@ -195,7 +208,7 @@ Isi `OPTIRADAR_EMBED_TOKEN=<nilai $radarToken>` di `.state\nexus.env`, lalu `.\o
 | Stop / start | `.\optiecosystem.ps1 stop -Products deli,radar` / `start -Products deli,radar` (OptiNexus hanya bila disebut, atau `-Products all`) |
 | Hapus container | `.\optiecosystem.ps1 down -Products all` (volume dan `.state` tidak pernah dihapus) |
 | Backup / restore | `backup -Products deli,radar`; `restore -Products deli,radar -Backup <folder> -ConfirmReplace` |
-| Upgrade | `git pull` di tiap repository, lalu `.\optiecosystem.ps1 upgrade -Products deli,radar` |
+| Upgrade | `.\optiecosystem.ps1 sync -Products deli,radar` (atau `git pull` sendiri), lalu `upgrade -Products deli,radar` |
 | Log | Podman Desktop → *Containers* → container → *Logs*, atau `podman logs -f optiecosystem-deli-api-1` |
 
 ## 7. Instalasi yang sudah ada (`deploy\ecosystem`)

@@ -9,7 +9,7 @@
   Every product keeps its own Compose project and volumes (defined in its own repository); this script only adds what they share:
   a network, public host names that resolve to the same URL for the browser and for the other containers, and per-product env files.
 
-  Commands:  preflight | init | build | up | status | smoke | stop | start | down | backup | restore | upgrade | manifest | rollback-config
+  Commands:  sync | preflight | init | build | up | status | smoke | stop | start | down | backup | restore | upgrade | manifest | rollback-config
   Products:  -Products fleet,radar,entry,deli   (any subset; OptiNexus is always included; default = all four)
 
   Safety: nothing here deletes a volume or an env file, and no command prints a secret. `down` removes containers and the network only.
@@ -19,13 +19,16 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'preflight', 'init', 'build', 'up', 'status', 'smoke', 'stop', 'start', 'down', 'backup', 'restore', 'upgrade', 'manifest', 'rollback-config')]
+    [ValidateSet('help', 'sync', 'preflight', 'init', 'build', 'up', 'status', 'smoke', 'stop', 'start', 'down', 'backup', 'restore', 'upgrade', 'manifest', 'rollback-config')]
     [string]$Command = 'help',
     [string[]]$Products = @('fleet', 'radar', 'entry', 'deli'),
     [switch]$Build,
     [string]$Backup,
     [string]$To,
-    [switch]$ConfirmReplace
+    [switch]$ConfirmReplace,
+    # sync only: switch every selected repository that has this branch on origin to it (for example main). Without it each one stays
+    # on the branch it is on.
+    [string]$Branch
 )
 
 $ErrorActionPreference = 'Stop'
@@ -48,6 +51,9 @@ $Catalog = [ordered]@{
     radar = @{ Title = 'OptiRadar'; Dirs = @('OptiRadar', 'optiradar'); WebDirs = @('OptiRadar-web', 'optiradar-web'); Overlay = 'radar.yaml'; PhpService = $null; Postgres = 'database'
         Urls = @(@{ Name = 'Server + Web'; Port = 'RADAR_PORT'; Path = '/api/health' }); Public = 'RADAR_PUBLIC_URL' }
 }
+# Repositories fetched by `sync` (folder name = GitHub repository name). OPTI_GIT_BASE overrides the base URL, for example a fork.
+$Repos = [ordered]@{ nexus = 'OptiNexus'; fleet = 'OptiFleet-v2'; entry = 'OptiAccounting'; radar = 'OptiRadar'; 'radar-web' = 'OptiRadar-web'; deli = 'OptiDeli' }
+$GitBase = if ($env:OPTI_GIT_BASE) { $env:OPTI_GIT_BASE.TrimEnd('/') } else { 'https://github.com/gsiddik' }
 $MinMemoryMb = @{ nexus = 1024; fleet = 2560; entry = 1280; radar = 1536; deli = 768 }
 # Every product keeps its compose file in its own repository; docker-compose.yml unless the catalog names another one.
 function Get-ComposeFile([string]$Product) { if ($Catalog[$Product].ComposeFile) { return $Catalog[$Product].ComposeFile } return 'docker-compose.yml' }
@@ -279,6 +285,44 @@ function Get-LocalUrl([string]$Product, $Url) {
 }
 
 # --- commands -------------------------------------------------------------------------------------------------------------------------
+# sync: clone the repositories that are missing next to OptiNexus and fast-forward the others. Never discards work: a repository with
+# uncommitted changes is skipped, and only fast-forward pulls are made (a diverged branch is reported, not merged or reset).
+# up/build never touch Git; run sync (or git pull yourself) first, then upgrade or build + up.
+function Invoke-Sync {
+    if (-not (Find-Exe 'git')) { Stop-Script 'git not found on PATH (winget install Git.Git)' }
+    $names = @()
+    foreach ($p in @(Resolve-Products)) { $names += $p; if ($p -eq 'radar') { $names += 'radar-web' } }
+    foreach ($n in $names) {
+        $folder = $Repos[$n]
+        $dir = if ($n -eq 'radar-web') { Get-RepoDir 'radar' -Web } else { Get-RepoDir $n }
+        if (-not $dir) {
+            $dir = Join-Path $Root $folder
+            Say "== clone $folder"
+            # core.autocrlf=false: the shell scripts run inside Linux containers and need LF line ends, also on Windows.
+            & git clone -c core.autocrlf=false "$GitBase/$folder.git" $dir
+            if ($LASTEXITCODE -ne 0) { Add-Result FAIL "Sync $folder" "git clone $GitBase/$folder.git failed"; continue }
+        }
+        if (& git -C $dir status --porcelain) { Add-Result WARN "Sync $folder" 'uncommitted changes: left as it is (commit or stash them, then sync again)'; continue }
+        Say "== fetch $folder"
+        & git -C $dir fetch --prune origin
+        if ($LASTEXITCODE -ne 0) { Add-Result FAIL "Sync $folder" 'git fetch failed (network or credentials)'; continue }
+        if ($Branch) {
+            & git -C $dir rev-parse --verify --quiet "refs/remotes/origin/$Branch" *> $null
+            if ($LASTEXITCODE -eq 0) {
+                & git -C $dir checkout $Branch
+                if ($LASTEXITCODE -ne 0) { Add-Result FAIL "Sync $folder" "git checkout $Branch failed"; continue }
+            } else { Add-Result WARN "Sync $folder" "origin has no branch ${Branch}: staying on the current branch" }
+        }
+        & git -C $dir pull --ff-only
+        $pullCode = $LASTEXITCODE
+        $g = Get-GitInfo $dir
+        if ($pullCode -ne 0) { Add-Result FAIL "Sync $folder" "pull --ff-only refused on $($g.Branch) (diverged or no upstream): nothing was changed" }
+        else { Add-Result PASS "Sync $folder" "$($g.Branch) $($g.Sha)" }
+    }
+    Say 'Next: optiecosystem.ps1 upgrade -Products <list> (backup, rebuild, re-create), or build then up for a first installation.'
+    Complete-Checks
+}
+
 function Invoke-Preflight {
     $sel = @(Resolve-Products)
     Say "Preflight for: $($sel -join ', ')  (repositories under $Root)"
@@ -666,6 +710,7 @@ if ($Command -ne 'help') { Import-LegacyState }
 
 switch ($Command) {
     'help' { Show-Help }
+    'sync' { Invoke-Sync }
     'preflight' { Invoke-Preflight }
     'init' { Invoke-Init }
     'build' { Invoke-Build }

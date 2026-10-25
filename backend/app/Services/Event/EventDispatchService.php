@@ -9,6 +9,7 @@ use App\Models\EventCatalogEntry;
 use App\Models\EventDelivery;
 use App\Models\NotificationRule;
 use App\Models\ServiceAccount;
+use App\Models\Tenant;
 use App\Models\Workflow;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Str;
@@ -103,6 +104,46 @@ class EventDispatchService
         $this->dispatchToConsumers($event);
 
         return [$event, null, []];
+    }
+
+    /**
+     * An event OptiNexus publishes itself (see PlatformEvents): no producing application, always about one tenant. Fans out exactly like an
+     * ingested event, so only subscribed applications assigned to the tenant receive it. Failures here must never fail the caller's change.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function publishPlatform(string $eventKey, Tenant $tenant, array $data): Event
+    {
+        $definition = PlatformEvents::catalog()[$eventKey] ?? throw new \InvalidArgumentException("[{$eventKey}] is not a platform event.");
+
+        // `events.event_key` references the catalog. EcosystemCatalogSeeder registers the keys, but an installation that was not
+        // seeded (or seeded before this release) must not fail here, so the entry is made sure of.
+        EventCatalogEntry::query()->firstOrCreate(['event_key' => $eventKey], [
+            'application_id' => null,
+            'name' => $definition['name'],
+            'description' => $definition['description'],
+            'schema_version' => '1',
+            'payload_schema' => PlatformEvents::PAYLOAD_SCHEMA,
+            'status' => EventCatalogEntry::STATUS_ACTIVE,
+        ]);
+
+        $id = (string) Str::uuid();
+        $event = Event::create([
+            'id' => $id,
+            'producer_event_id' => $id,
+            'event_key' => $eventKey,
+            'event_version' => '1',
+            'occurred_at' => now(),
+            'source_application_id' => null,
+            'producer_service_account_id' => null,
+            'tenant_id' => $tenant->id,
+            'correlation_id' => (string) Str::uuid(),
+            'data' => $data,
+        ]);
+
+        $this->dispatchToConsumers($event);
+
+        return $event;
     }
 
     private function findByProducerId(ServiceAccount $producer, string $producerEventId): ?Event

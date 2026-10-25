@@ -186,7 +186,7 @@ function Get-Defaults([string]$Product, $Eco) {
                 APP_KEY = (New-AppKey); DB_PASSWORD = (New-Password); NEXUS_PUBLIC_URL = $nexusUrl; OIDC_REQUIRE_PUBLIC_ISSUER = 'true'
                 NEXUS_API_PORT = $Eco['NEXUS_API_PORT']; NEXUS_UI_PORT = $Eco['NEXUS_UI_PORT']
                 CGO_SUPERADMIN_EMAIL = 'superadmin@cgo.local'; CGO_SUPERADMIN_PASSWORD = (New-Password); NEXUS_SEED = 'catalog'
-                OPTIRADAR_SYNC_ENABLED = 'false'; OPTIRADAR_BASE_URL = "http://radar.$d`:$($Eco['RADAR_PORT'])"; OPTIRADAR_EMBED_TOKEN = '' } }
+                EVENT_WEBHOOK_ALLOW_HTTP = 'true'; OPTIRADAR_SYNC_ENABLED = 'false'; OPTIRADAR_BASE_URL = "http://radar.$d`:$($Eco['RADAR_PORT'])"; OPTIRADAR_EMBED_TOKEN = '' } }
         'fleet' { return [ordered]@{} + $common + [ordered]@{
                 APP_KEY = (New-AppKey); DB_PASSWORD = (New-Password); FLEET_PUBLIC_URL = "http://fleet.$d`:$($Eco['FLEET_UI_PORT'])"
                 FLEET_API_PORT = $Eco['FLEET_API_PORT']; FLEET_UI_PORT = $Eco['FLEET_UI_PORT']; FLEET_SEED = 'catalog'
@@ -199,7 +199,7 @@ function Get-Defaults([string]$Product, $Eco) {
                 OPTINEXUS_SSO_CLIENT_ID = ''; OPTINEXUS_SSO_CLIENT_SECRET = ''; OPTINEXUS_SERVICE_CLIENT_ID = ''; OPTINEXUS_SERVICE_CLIENT_SECRET = '' } }
         'radar' { return [ordered]@{} + $common + [ordered]@{
                 RADAR_DB_PASSWORD = (New-Password); RADAR_PUBLIC_URL = "http://radar.$d`:$($Eco['RADAR_PORT'])"; RADAR_PORT = $Eco['RADAR_PORT']
-                OPTINEXUS_BASE_URL = $nexusUrl; OPTINEXUS_SSO_CLIENT_ID = ''; OPTINEXUS_SSO_CLIENT_SECRET = ''; OPTINEXUS_EVENTS_ENABLE = 'false'
+                OPTINEXUS_BASE_URL = $nexusUrl; OPTINEXUS_SSO_CLIENT_ID = ''; OPTINEXUS_SSO_CLIENT_SECRET = ''; OPTINEXUS_EVENTS_ENABLE = 'false'; OPTINEXUS_WEBHOOK_SECRET = ''
                 OPTINEXUS_SERVICE_CLIENT_ID = ''; OPTINEXUS_SERVICE_CLIENT_SECRET = ''; OPTINEXUS_ENTITLEMENTS_ENFORCE = 'false'
                 WEB_FRAME_ANCESTORS = "http://deli.$d`:$($Eco['DELI_UI_PORT'])" } }
         # Local trial defaults: APP_ENV=local plus OPTIDELI_SEED=demo gives the demo tenant and accounts (DemoSeeder refuses anything else).

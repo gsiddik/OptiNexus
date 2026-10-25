@@ -2108,6 +2108,27 @@ paths:
   /notifications/{notification}/cancel:
     parameters: [{ $ref: '#/components/parameters/NotificationId' }]
     post: { tags: [Notifications], summary: Cancel (only while QUEUED/PROCESSING), responses: { '200': { $ref: '#/components/responses/NotificationItem' }, '409': { description: NOTIFICATION_NOT_CANCELLABLE, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } } } }
+  /email-suppressions:
+    get:
+      tags: [Notifications]
+      summary: List e-mail addresses suppressed after a provider bounce, spam complaint or manual suppression
+      description: "Platform-level list (cgo.notification.delivery.view). Operational e-mail to an active entry is cancelled with EMAIL_SUPPRESSED."
+      parameters: [{ name: state, in: query, schema: { type: string, enum: [active, released] } }, { name: search, in: query, schema: { type: string } }, { $ref: '#/components/parameters/PerPage' }]
+      responses: { '200': { description: Paginated suppressions, content: { application/json: { schema: { type: object, properties: { success: { type: boolean }, data: { type: array, items: { $ref: '#/components/schemas/EmailSuppression' } } } } } } }, '403': { $ref: '#/components/responses/Unauthorized' } }
+  /email-suppressions/{emailSuppression}/release:
+    parameters: [{ name: emailSuppression, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      tags: [Notifications]
+      summary: Release a suppression (cgo.notification.delivery.retry, audited)
+      responses: { '200': { description: Released entry, content: { application/json: { schema: { type: object, properties: { success: { type: boolean }, data: { $ref: '#/components/schemas/EmailSuppression' } } } } } }, '409': { description: EMAIL_SUPPRESSION_NOT_ACTIVE, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } } }
+  /webhooks/postmark:
+    post:
+      tags: [Notifications]
+      summary: Postmark bounce / spam complaint / subscription change webhook
+      description: "HTTP Basic credentials from POSTMARK_WEBHOOK_USERNAME/PASSWORD (embedded in the webhook URL configured in Postmark). 404 while they are not configured. Hard bounces, spam complaints and SuppressSending=true suppress the address; SuppressSending=false releases it; other records are ignored. Idempotent."
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { RecordType: { type: string, enum: [Bounce, SpamComplaint, SubscriptionChange] }, Type: { type: string }, Inactive: { type: boolean }, Email: { type: string }, Recipient: { type: string }, SuppressSending: { type: boolean }, SuppressionReason: { type: string }, MessageID: { type: string } } } } } }
+      responses: { '200': { description: "data.result is suppressed, released or ignored" }, '401': { $ref: '#/components/responses/Unauthenticated' }, '404': { $ref: '#/components/responses/NotFound' } }
 
   # -------------------------------------------------------------- Access
   /access/evaluate:
@@ -2546,6 +2567,18 @@ components:
                 properties: { data: { $ref: '#/components/schemas/AccessEvaluation' } }
           example: { success: true, data: { allowed: true, checks: { entitlement: true, permission: true, policy: true, feature_flag: true }, reason_code: null } }
   schemas:
+    EmailSuppression:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        reason: { type: string, enum: [HARD_BOUNCE, SPAM_COMPLAINT, MANUAL_SUPPRESSION] }
+        provider: { type: string }
+        description: { type: string, nullable: true }
+        active: { type: boolean }
+        suppressed_at: { type: string, format: date-time }
+        released_at: { type: string, format: date-time, nullable: true }
+        released_by: { type: object, nullable: true, properties: { id: { type: string }, name: { type: string } } }
     SuccessEnvelope:
       type: object
       properties:

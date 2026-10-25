@@ -136,6 +136,18 @@ class OperationalMailTest extends TestCase
         $this->assertCount(0, $this->mailsFor($stranger));
     }
 
+    public function test_cancelling_a_draft_that_was_never_announced_sends_nothing(): void
+    {
+        [$tenant, $billingId] = $this->finalizedBillingFor();
+        $admin = $this->tenantAdmin($tenant);
+        $this->actingAsCommercialRole('BILLING_ADMIN');
+        $invoiceId = $this->postJson("/api/v1/invoices/generate-from-billing/{$billingId}")->assertCreated()->json('data.id');
+        $this->actingAsCommercialRole('BILLING_APPROVER');
+        $this->postJson("/api/v1/invoices/{$invoiceId}/cancel")->assertOk()->assertJsonPath('data.status', 'CANCELLED');
+
+        $this->assertCount(0, $this->mailsFor($admin));
+    }
+
     public function test_unpaid_invoice_past_due_becomes_overdue_once_and_stays_overdue_after_a_partial_payment(): void
     {
         [$tenant, $invoiceId] = $this->issuedInvoice();

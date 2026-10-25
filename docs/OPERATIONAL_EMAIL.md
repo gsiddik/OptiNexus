@@ -17,7 +17,18 @@ Recipients are active, registered tenant admins with active memberships in the a
 
 Events: customer Suspend/Terminate, tenant Suspend/Terminate, user Suspend/Disable, invoice issuance and subsequent status transitions, approved price creation/approval/retirement/effective-window changes. Price amounts are versioned: creating a new price notifies users but never rewrites issued invoices. Scheduled prices are announced with their effective date when approved.
 
-Operational messages use the existing notification outbox, delivery history and retry mechanism. Notification status SENT means accepted by the configured transport, not guaranteed recipient inbox placement. User notification preferences are respected by the existing dispatcher.
+Invoice due dates (`invoices:process-due-dates`, hourly through the scheduler container): an ISSUED or PARTIALLY_PAID invoice with a balance due whose due date has passed becomes OVERDUE under a row lock (audited as `invoice.overdue`); the status change sends the usual invoice notice. A partial payment on an OVERDUE invoice keeps it OVERDUE; full payment makes it PAID. An unpaid invoice due within `INVOICE_DUE_REMINDER_DAYS` (default 3, `0` switches reminders off) gets exactly one reminder (`invoices.due_reminder_sent_at`).
+
+Operational messages use the existing notification outbox, delivery history and retry mechanism. Each message is rendered from `resources/views/mail/operational{,-text}.blade.php` and `lang/{id,en}/operational_mail.php` as HTML plus a plain-text part (multipart, no tracking pixels, no link shorteners), with the facts as a table and a link to the record in the console. `NOTIFICATION_MAIL_LOCALE` (default `id`) picks the language; `NEXUS_CONSOLE_URL` is the console address used for links (empty = `APP_URL`; the OptiEcosystem `init` fills `http://nexus-console.<domain>:<port>`). The messages are code templates on purpose, not editable Notification Templates: a deleted or edited template must never silently drop a lifecycle notice. Notification status SENT means accepted by the configured transport, not guaranteed recipient inbox placement. User notification preferences are respected by the existing dispatcher.
+
+## Bounces and spam complaints (suppression list)
+
+Sending again and again to an address that bounces or complained is what damages a sender's reputation, so OptiNexus follows the provider's suppression list:
+
+1. Set `POSTMARK_WEBHOOK_USERNAME` and a long random `POSTMARK_WEBHOOK_PASSWORD` (see `deploy/optiecosystem/postmark.env.example`) and recreate the containers. The endpoint answers 404 while either is empty; `ecosystem:preflight` warns when Postmark is the SMTP host and they are missing.
+2. In Postmark, on the transactional stream, add the webhook `https://USERNAME:PASSWORD@<public Nexus API host>/api/v1/webhooks/postmark` with Bounce, Spam Complaint and Subscription Change. Postmark must reach that address over the internet: a purely local installation needs a public reverse proxy or tunnel for this step.
+3. A hard bounce (or any bounce Postmark marks inactive), a spam complaint, or a suppression in Postmark creates an active entry in `email_suppressions`; soft bounces change nothing. Replays are harmless. Reactivating the address in Postmark (Subscription Change with SuppressSending=false) releases the entry.
+4. The dispatcher cancels operational e-mail to an active entry (`EMAIL_SUPPRESSED`, no retry). Operators see the list under Notifications > Email Suppressions (`cgo.notification.delivery.view`) and can release an entry (`cgo.notification.delivery.retry`, audited) after the address is fixed and reactivated in Postmark. Invitation and credential e-mails are not filtered by this list.
 
 ## Password and email lifecycle
 

@@ -185,6 +185,7 @@ function Get-Defaults([string]$Product, $Eco) {
         'nexus' { return [ordered]@{} + $common + [ordered]@{
                 APP_KEY = (New-AppKey); DB_PASSWORD = (New-Password); NEXUS_PUBLIC_URL = $nexusUrl; OIDC_REQUIRE_PUBLIC_ISSUER = 'true'
                 NEXUS_API_PORT = $Eco['NEXUS_API_PORT']; NEXUS_UI_PORT = $Eco['NEXUS_UI_PORT']
+                NEXUS_CONSOLE_URL = "http://nexus-console.$d`:$($Eco['NEXUS_UI_PORT'])"
                 CGO_SUPERADMIN_EMAIL = 'superadmin@cgo.local'; CGO_SUPERADMIN_PASSWORD = (New-Password); NEXUS_SEED = 'catalog'
                 OPTIRADAR_SYNC_ENABLED = 'false'; OPTIRADAR_BASE_URL = "http://radar.$d`:$($Eco['RADAR_PORT'])"; OPTIRADAR_EMBED_TOKEN = '' } }
         'fleet' { return [ordered]@{} + $common + [ordered]@{

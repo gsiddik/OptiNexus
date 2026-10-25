@@ -36,7 +36,8 @@ class OperationalMailObserver
         $mail = app(OperationalMailService::class);
         $compose = app(OperationalMailComposer::class);
         $previous = $model->getOriginal('status');
-        if ($model instanceof Invoice && $model->status !== 'DRAFT') {
+        // A draft was never announced, so neither is its cancellation.
+        if ($model instanceof Invoice && $model->status !== 'DRAFT' && ! ($previous === 'DRAFT' && $model->status === 'CANCELLED')) {
             $mail->send([$model->tenant_id], 'cgo.invoice.view', $compose->invoiceStatus($model, $previous));
         } elseif ($model instanceof Customer && in_array($model->status, ['SUSPENDED', 'TERMINATED'], true)) {
             $mail->send($model->tenants()->pluck('id')->all(), 'cgo.customer.view', $compose->customerStatus($model, $previous));

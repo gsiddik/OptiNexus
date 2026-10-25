@@ -8,6 +8,7 @@ use App\Models\EventCatalogEntry;
 use App\Models\Plan;
 use App\Models\PlanLimit;
 use App\Models\Product;
+use App\Services\Event\PlatformEvents;
 use App\Services\Manifest\ManifestImportService;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Seeder;
@@ -75,6 +76,7 @@ class EcosystemCatalogSeeder extends Seeder
             $this->command?->info("{$code}: manifest {$summary['revision']} imported.");
         }
 
+        $this->registerPlatformEvents();
         $this->registerSuite($applications, array_values(array_unique($limitKeys)));
     }
 
@@ -126,6 +128,24 @@ class EcosystemCatalogSeeder extends Seeder
                     'description' => $event['description'] ?? '',
                     'schema_version' => (string) ($event['schema_version'] ?? '1'),
                     'payload_schema' => $event['payload_schema'] ?? ApplicationEventCatalogSeeder::PAYLOAD_SCHEMA,
+                    'status' => EventCatalogEntry::STATUS_ACTIVE,
+                ],
+            );
+        }
+    }
+
+    /** The events OptiNexus publishes itself (PlatformEvents); they belong to no application. */
+    private function registerPlatformEvents(): void
+    {
+        foreach (PlatformEvents::catalog() as $key => $definition) {
+            EventCatalogEntry::query()->updateOrCreate(
+                ['event_key' => $key],
+                [
+                    'application_id' => null,
+                    'name' => $definition['name'],
+                    'description' => $definition['description'],
+                    'schema_version' => '1',
+                    'payload_schema' => ApplicationEventCatalogSeeder::PAYLOAD_SCHEMA,
                     'status' => EventCatalogEntry::STATUS_ACTIVE,
                 ],
             );

@@ -163,6 +163,23 @@ Grup tenant dibuat di 5.2 setelah UUID tenant OptiNexus diketahui.
    Posisi contoh tanpa membuka port perangkat (protokol OsmAnd di dalam container, **belum diuji**):
    `podman exec optiecosystem-radar-radar-1 curl -fsS "http://127.0.0.1:5055/?id=truk01&lat=-6.2&lon=106.82&speed=0"`
 
+#### Grup tenant otomatis (webhook OptiNexus ke OptiRadar)
+
+Langkah 6 di atas bisa dilewati: bila OptiNexus berlangganan event ke OptiRadar, grup tenant dibuat OptiRadar sendiri segera setelah
+OptiRadar ditetapkan ke tenant (yaitu saat langganan tenant mencakup OptiRadar), sebelum ada user yang login. Operator langsung bisa
+mendaftarkan perangkat ke grup itu. Sekali saja per instalasi:
+
+```powershell
+nexus php artisan ecosystem:register-event-subscription optiradar cgo.tenant.application_assigned --url=http://radar.localtest.me:8082/api/optinexus/events --secret-file=/tmp/radar.whsec
+podman cp optiecosystem-nexus-api-1:/tmp/radar.whsec .state\radar.whsec
+nexus rm /tmp/radar.whsec
+```
+
+Salin nilai `EVENT_WEBHOOK_SECRET` dari `.state\radar.whsec` ke `OPTINEXUS_WEBHOOK_SECRET` di `.state\radar.env`, hapus file `radar.whsec`, lalu
+`.\optiecosystem.ps1 up -Products radar`. `EVENT_WEBHOOK_ALLOW_HTTP=true` di `.state\nexus.env` (diisi `init` untuk instalasi baru; tambahkan sendiri
+pada instalasi lama lalu `up -Products nexus`) mengizinkan alamat http lokal; di luar uji lokal pakai https. Grup yang sudah ada tidak diubah,
+dan grup tidak pernah dihapus saat aplikasi dicabut dari tenant.
+
 ### 5.3 OptiNexus: token embed
 
 Isi `OPTIRADAR_EMBED_TOKEN=<nilai $radarToken>` di `.state\nexus.env`, lalu `.\optiecosystem.ps1 up -Products deli,radar`.

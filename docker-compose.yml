@@ -41,6 +41,8 @@ x-nexus-env: &nexus-env
   MAIL_TIMEOUT: ${MAIL_TIMEOUT:-30}
   MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-hello@example.com}
   MAIL_FROM_NAME: ${MAIL_FROM_NAME:-OptiNexus}
+  # Local trial only: the broker refuses plain-http webhook endpoints unless this is true (https is required elsewhere).
+  EVENT_WEBHOOK_ALLOW_HTTP: ${EVENT_WEBHOOK_ALLOW_HTTP:-false}
   INVITATION_TTL_HOURS: ${INVITATION_TTL_HOURS:-72}
   NEXUS_DELEGATION_DIRECT_USERS: ${NEXUS_DELEGATION_DIRECT_USERS:-true}
   NEXUS_TEMP_PASSWORD_TTL_HOURS: ${NEXUS_TEMP_PASSWORD_TTL_HOURS:-48}

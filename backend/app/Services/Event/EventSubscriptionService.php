@@ -99,6 +99,10 @@ class EventSubscriptionService
             return false;
         }
 
+        if ($event->source_application_id === null && PlatformEvents::isAssignment($event->event_key)) {
+            return true;
+        }
+
         return ! $this->subscriptions->required($application) || $this->subscriptions->allowed($tenant, $application);
     }
 

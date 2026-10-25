@@ -6,6 +6,7 @@ use App\Models\Application;
 use App\Models\Capability;
 use App\Models\EventCatalogEntry;
 use App\Models\Plan;
+use App\Models\PlanLimit;
 use App\Models\Product;
 use App\Services\Manifest\ManifestImportService;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -49,6 +50,7 @@ class EcosystemCatalogSeeder extends Seeder
     public function run(ManifestImportService $manifests): void
     {
         $applications = [];
+        $limitKeys = [];
 
         foreach (self::MANIFESTS as $code => $file) {
             $manifest = $this->readManifest($file);
@@ -59,6 +61,7 @@ class EcosystemCatalogSeeder extends Seeder
 
             $application = $this->registerApplication($code, $manifest);
             $applications[] = $application;
+            $limitKeys = array_merge($limitKeys, array_map('strtolower', (array) ($manifest['entitlement_limit_keys'] ?? [])));
 
             try {
                 $summary = $manifests->import($application, $manifest, dryRun: false, allowDelegableWidening: false);
@@ -72,7 +75,7 @@ class EcosystemCatalogSeeder extends Seeder
             $this->command?->info("{$code}: manifest {$summary['revision']} imported.");
         }
 
-        $this->registerSuite($applications);
+        $this->registerSuite($applications, array_values(array_unique($limitKeys)));
     }
 
     /** @return array<string, mixed>|null */
@@ -134,9 +137,13 @@ class EcosystemCatalogSeeder extends Seeder
      * subscription, so without this nothing could be onboarded from the console. Operators who sell the products separately create
      * their own products and plans; this one stays as the all-in default.
      *
+     * A product that declares a limit key (`user_limit`, `device_limit`, ...) is seat-controlled: with no limit on the plan nobody can be added to
+     * it. The all-in suite therefore starts unlimited for every declared key. A limit that exists is never changed, so an operator can set real numbers.
+     *
      * @param  array<int, Application>  $applications
+     * @param  array<int, string>  $limitKeys
      */
-    private function registerSuite(array $applications): void
+    private function registerSuite(array $applications, array $limitKeys): void
     {
         if ($applications === []) {
             return;
@@ -160,6 +167,10 @@ class EcosystemCatalogSeeder extends Seeder
         );
 
         $this->attachMissing($plan->capabilities(), 'capabilities.id', $capabilityIds);
+
+        foreach ($limitKeys as $key) {
+            PlanLimit::query()->firstOrCreate(['plan_id' => $plan->id, 'limit_key' => $key], ['limit_value' => null, 'is_unlimited' => true]);
+        }
     }
 
     /**

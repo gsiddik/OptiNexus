@@ -7,6 +7,7 @@ use App\Models\Capability;
 use App\Models\EventCatalogEntry;
 use App\Models\Permission;
 use App\Models\Plan;
+use App\Models\PlanLimit;
 use App\Models\Product;
 use App\Models\Role;
 use App\Models\Tenant;
@@ -49,6 +50,24 @@ class EcosystemCatalogSeederTest extends TestCase
         $this->assertSame($applicationIds->count(), $product->applications()->count());
         $this->assertSame($capabilities, $product->capabilities()->count());
         $this->assertSame($capabilities, $plan->capabilities()->count());
+    }
+
+    public function test_the_suite_plan_is_unlimited_for_every_declared_limit_key_and_keeps_edited_limits(): void
+    {
+        $this->seed(EcosystemCatalogSeeder::class);
+
+        $plan = Plan::query()->where('plan_code', EcosystemCatalogSeeder::SUITE_PLAN_CODE)->firstOrFail();
+        $keys = $plan->limits()->pluck('limit_key')->sort()->values()->all();
+
+        $this->assertSame(['branch_limit', 'business_unit_limit', 'device_limit', 'user_limit'], $keys);
+        $this->assertSame(4, $plan->limits()->where('is_unlimited', true)->count());
+
+        PlanLimit::query()->where('plan_id', $plan->id)->where('limit_key', 'user_limit')->update(['is_unlimited' => false, 'limit_value' => 25]);
+        $this->seed(EcosystemCatalogSeeder::class);
+
+        $limit = PlanLimit::query()->where('plan_id', $plan->id)->where('limit_key', 'user_limit')->firstOrFail();
+        $this->assertFalse((bool) $limit->is_unlimited);
+        $this->assertEquals(25, $limit->limit_value);
     }
 
     public function test_seeding_again_changes_nothing_and_keeps_an_operators_application_urls(): void

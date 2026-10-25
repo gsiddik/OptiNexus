@@ -5,9 +5,11 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 
 /**
- * Catalog data every installation needs and nothing else: permissions, system roles, the bootstrap administrator (only when
- * CGO_SUPERADMIN_PASSWORD is set outside local/testing), the OptiRadar application and the event catalogs. No demo customers, tenants or
- * users. DatabaseSeeder adds the demo data for local development; the container bootstrap runs this one unless NEXUS_SEED=demo.
+ * Catalog data every installation needs and nothing else: permissions, the application catalogs of all Opti products
+ * (EcosystemCatalogSeeder: applications, modules, features, permissions, events and the Opti Suite plan), system roles, the bootstrap
+ * administrator (only when CGO_SUPERADMIN_PASSWORD is set outside local/testing), the OptiRadar application and the event catalogs.
+ * No demo customers, tenants or users. DatabaseSeeder adds the demo data for local development; the container bootstrap runs this one
+ * unless NEXUS_SEED=demo.
  */
 class ProductionSeeder extends Seeder
 {
@@ -18,6 +20,9 @@ class ProductionSeeder extends Seeder
             CommercialPermissionSeeder::class,
             OrchestrationPermissionSeeder::class,
             PlatformIntegrationPermissionSeeder::class,
+            // Applications, modules, features, permissions and events of every Opti product. Before the system roles, which resolve
+            // "every permission" when they run.
+            EcosystemCatalogSeeder::class,
             SystemRoleSeeder::class,
             CommercialRoleSeeder::class,
             OrchestrationRoleSeeder::class,

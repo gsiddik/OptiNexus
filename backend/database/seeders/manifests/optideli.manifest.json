@@ -1,0 +1,184 @@
+{
+  "manifest_version": "2.0",
+  "revision": "r9cdb1c4af4fc",
+  "application_code": "optideli",
+  "application": {
+    "application_code": "optideli",
+    "name": "OptiDeli",
+    "description": "Transport management: orders, dispatch, trip execution, yard and freight audit.",
+    "frontend_url": "http://deli.localtest.me:5200"
+  },
+  "capabilities": [
+    {
+      "type": "MODULE",
+      "code": "optideli.enterprise",
+      "name": "Enterprise logistics",
+      "description": "Rate cards, tenders, load optimizer, telematics, ESG and EDI.",
+      "sort_order": 10,
+      "parent_code": null
+    },
+    {
+      "type": "MODULE",
+      "code": "optideli.vendor_portal",
+      "name": "Vendor portal",
+      "description": "Carrier and vendor self-service portal.",
+      "sort_order": 20,
+      "parent_code": null
+    }
+  ],
+  "permissions": [
+    {
+      "permission_key": "optideli.access.role.manage",
+      "name": "Access: access.role.manage",
+      "description": "Create, change and delete custom roles",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optideli.access.role.view",
+      "name": "Access: access.role.view",
+      "description": "View roles and permissions",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optideli.access.user.manage",
+      "name": "Access: access.user.manage",
+      "description": "Assign roles to members",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optideli.dispatch.approve.level1",
+      "name": "Dispatch approval: dispatch.approve.level1",
+      "description": "Approve a dispatch plan below the margin guardrail (level 1)",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optideli.dispatch.approve.level2",
+      "name": "Dispatch approval: dispatch.approve.level2",
+      "description": "Approve a dispatch plan at margin level 2",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optideli.dispatch.approve.level3",
+      "name": "Dispatch approval: dispatch.approve.level3",
+      "description": "Approve a dispatch plan at margin level 3 (critical)",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optideli.enterprise.manage",
+      "name": "Operations: enterprise.manage",
+      "description": "Use rate cards, tenders, telematics, ESG, EDI and accounting sync actions",
+      "capability_code": "optideli.enterprise",
+      "delegable": true
+    },
+    {
+      "permission_key": "optideli.execution.verify",
+      "name": "Operations: execution.verify",
+      "description": "Verify proof of delivery and operational evidence",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optideli.finance.access",
+      "name": "Finance: finance.access",
+      "description": "Register and review freight invoices and accessorial evidence",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optideli.freight.approve.cfo",
+      "name": "Finance: freight.approve.cfo",
+      "description": "Approve CFO-tier freight invoices",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optideli.freight.approve.finance",
+      "name": "Finance: freight.approve.finance",
+      "description": "Approve freight invoices at the Finance tier",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optideli.freight.approve.finance_supervisor",
+      "name": "Finance: freight.approve.finance_supervisor",
+      "description": "Approve dual-tier freight invoices as Finance Supervisor",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optideli.freight.approve.logistics_manager",
+      "name": "Finance: freight.approve.logistics_manager",
+      "description": "Approve dual-tier freight invoices as Logistics Manager",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optideli.freight.escalation.resolve",
+      "name": "Finance: freight.escalation.resolve",
+      "description": "Resolve critical freight escalations",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optideli.operations.manage",
+      "name": "Operations: operations.manage",
+      "description": "Create and progress orders, dispatch plans, fleet, trips, yard and vendors",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optideli.operations.view",
+      "name": "Operations: operations.view",
+      "description": "View orders, dispatch, fleet, trips, yard, vendors, freight and enterprise data",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optideli.policy.manage",
+      "name": "Commercial: policy.manage",
+      "description": "Change the margin policy",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optideli.vendor.portal",
+      "name": "Vendor portal: vendor.portal",
+      "description": "Use the vendor portal (requires a vendor-bound membership)",
+      "capability_code": "optideli.vendor_portal",
+      "delegable": false
+    },
+    {
+      "permission_key": "optideli.vendor.portal.provision",
+      "name": "Commercial: vendor.portal.provision",
+      "description": "Provision vendor portal accounts",
+      "capability_code": "optideli.vendor_portal",
+      "delegable": true
+    }
+  ],
+  "service_account": {
+    "scopes": [
+      "authorization.check"
+    ]
+  },
+  "oidc_client": {
+    "redirect_uris": [
+      "http://deli.localtest.me:5200/api/v1/auth/sso/callback"
+    ],
+    "post_logout_redirect_uris": [
+      "http://deli.localtest.me:5200/"
+    ],
+    "backchannel_logout_uri": "http://deli.localtest.me:5200/api/v1/integration/optinexus/backchannel-logout",
+    "launch_url": "http://deli.localtest.me:5200",
+    "scopes": [
+      "openid",
+      "profile",
+      "email"
+    ]
+  }
+}

@@ -60,3 +60,18 @@ Embed sessions (OptiDeli shows the OptiRadar map for its tenant): the caller's s
 binding. Nexus holds `OPTIRADAR_BASE_URL` and `OPTIRADAR_EMBED_TOKEN` (the token of an OptiRadar administrator, separate from the read-only
 `OPTIRADAR_API_TOKEN`), asks `POST /api/optinexus/embed` for a read-only token of at most 15 minutes limited to the tenant's group, and returns
 `{url, expires_at}`. OptiRadar lists the embedding origins in `web.frameAncestors`; no Radar cookie is used inside the frame.
+
+## Seeding the whole catalog (EcosystemCatalogSeeder)
+
+`ProductionSeeder` (the container bootstrap job, `NEXUS_SEED=catalog`) runs `EcosystemCatalogSeeder` before the system roles. For OptiFleet
+(`optifleet`), OptiEntry (`optiaccounting`), OptiDeli (`optideli`) and OptiRadar (`optiradar`) it registers the application (PUBLISHED), imports
+modules, features and permissions from `backend/database/seeders/manifests/<code>.manifest.json`, registers the events in the manifest's
+`events[]`, and puts every capability into the product `OPTI-SUITE` and the active plan `SUITE-MONTHLY`, so a tenant can be subscribed,
+provisioned and activated from the console. The bootstrap administrator (`AdminUserSeeder`) then receives every imported permission through
+PLATFORM_SUPERADMIN, so a fresh installation needs no manual import.
+
+* Additive and repeatable: an existing application keeps its URLs, nothing is deleted, the suite product and plan only gain capabilities.
+* Not seeded: customers, tenants, users, OIDC clients and service accounts. Clients and service accounts carry secrets; register them with
+  `ecosystem:register-oidc-client` and `ecosystem:register-service-account` (or `deploy/optiecosystem`).
+* After a product release, replace its manifest file with the product's current output and seed again
+  (`php artisan db:seed --class=EcosystemCatalogSeeder`, then the bootstrap job so the platform roles pick up new permissions).

@@ -1,4 +1,4 @@
-# Joins OptiRadar (server + OptiRadar Web) to the shared ecosystem network at http://radar.<domain>:8082.
+# Joins OptiRadar (server + OptiRadar Web) to the shared OptiEcosystem network at http://radar.<domain>:8082.
 services:
   radar:
     networks:
@@ -7,5 +7,5 @@ services:
         aliases: ["radar.${ECOSYSTEM_DOMAIN:-localtest.me}"]
 networks:
   ecosystem:
-    name: ${ECOSYSTEM_NETWORK:-opti-ecosystem}
+    name: ${ECOSYSTEM_NETWORK:-optiecosystem}
     external: true

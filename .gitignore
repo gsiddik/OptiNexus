@@ -1,3 +1,8 @@
 node_modules/
 .DS_Store
 *.log
+
+# Former location of deploy/optiecosystem: an installation made before the rename keeps its generated secrets and backups there until
+# optiecosystem.ps1 copies them over. Never commit them.
+deploy/ecosystem/.state/
+deploy/ecosystem/backups/

@@ -4,6 +4,9 @@ What an operator does, in order, to switch on the ecosystem integration (Feed v1
 below was run against live servers on 2026-10-24 (see "Verified run" at the end), except the OptiRadar Java service, which was replaced by a
 stub because the fork cannot be built in the test sandbox (CI builds it).
 
+On a workstation with Podman Desktop the same steps run inside the OptiEcosystem containers: `deploy/optiecosystem/PANDUAN_PODMAN_DESKTOP.md`
+(which `exec` command, which `.state` env file, and the browser check of the OptiRadar iframe in OptiDeli).
+
 ## 1. OptiNexus
 
 1. Register each product's catalog (additive, safe to repeat):

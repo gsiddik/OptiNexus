@@ -1,35 +1,41 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Runs the Opti platform (OptiNexus always, plus any of OptiFleet, OptiRadar, OptiEntry) on one machine with Docker or Podman.
+  OptiEcosystem: runs the Opti platform (OptiNexus always, plus any of OptiFleet, OptiRadar, OptiEntry, OptiDeli) on one machine with
+  Podman (Podman Desktop) or Docker.
 
 .DESCRIPTION
-  One script for Windows (Podman Desktop / Docker Desktop), Linux and macOS (PowerShell 7: pwsh ecosystem.ps1 <command>).
+  One script for Windows (Podman Desktop / Docker Desktop), Linux and macOS (PowerShell 7: pwsh optiecosystem.ps1 <command>).
   Every product keeps its own Compose project and volumes (defined in its own repository); this script only adds what they share:
   a network, public host names that resolve to the same URL for the browser and for the other containers, and per-product env files.
 
-  Commands:  preflight | init | build | up | status | smoke | stop | start | down | backup | restore | upgrade | manifest | rollback-config
-  Products:  -Products fleet,radar,entry   (any subset; OptiNexus is always included; default = all three)
+  Commands:  sync | preflight | init | build | up | status | smoke | stop | start | down | backup | restore | upgrade | manifest | rollback-config
+  Products:  -Products fleet,radar,entry,deli   (any subset; OptiNexus is always included; default = all four)
 
   Safety: nothing here deletes a volume or an env file, and no command prints a secret. `down` removes containers and the network only.
-  Generated settings and secrets live in deploy/ecosystem/.state (never committed); backups in deploy/ecosystem/backups.
+  Generated settings and secrets live in deploy/optiecosystem/.state (never committed); backups in deploy/optiecosystem/backups.
+  An installation made before the rename (deploy/ecosystem) is picked up: its .state is copied here once, the original stays untouched.
 #>
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'preflight', 'init', 'build', 'up', 'status', 'smoke', 'stop', 'start', 'down', 'backup', 'restore', 'upgrade', 'manifest', 'rollback-config')]
+    [ValidateSet('help', 'sync', 'preflight', 'init', 'build', 'up', 'status', 'smoke', 'stop', 'start', 'down', 'backup', 'restore', 'upgrade', 'manifest', 'rollback-config')]
     [string]$Command = 'help',
-    [string[]]$Products = @('fleet', 'radar', 'entry'),
+    [string[]]$Products = @('fleet', 'radar', 'entry', 'deli'),
     [switch]$Build,
     [string]$Backup,
     [string]$To,
-    [switch]$ConfirmReplace
+    [switch]$ConfirmReplace,
+    # sync only: switch every selected repository that has this branch on origin to it (for example main). Without it each one stays
+    # on the branch it is on.
+    [string]$Branch
 )
 
 $ErrorActionPreference = 'Stop'
 $Here = $PSScriptRoot
 $State = Join-Path $Here '.state'
 $Backups = Join-Path $Here 'backups'
+$LegacyState = Join-Path (Join-Path (Split-Path $Here -Parent) 'ecosystem') '.state'
 $Root = if ($env:OPTI_ROOT) { $env:OPTI_ROOT } else { (Resolve-Path (Join-Path $Here '../../..')).Path }
 
 # --- catalog: add a product here (and an overlay + env template) to make it available; no combination is hard-coded ----------------------
@@ -40,10 +46,26 @@ $Catalog = [ordered]@{
         Urls = @(@{ Name = 'API'; Port = 'FLEET_API_PORT'; Path = '/up' }, @{ Name = 'Console'; Port = 'FLEET_UI_PORT'; Path = '/nginx-health' }); Public = 'FLEET_PUBLIC_URL' }
     entry = @{ Title = 'OptiEntry'; Dirs = @('OptiAccounting', 'OptiEntry'); Overlay = 'entry.yaml'; PhpService = 'api'; Postgres = 'postgres'; Storage = '/var/www/html/storage/app'
         Urls = @(@{ Name = 'API'; Port = 'ENTRY_API_PORT'; Path = '/up' }, @{ Name = 'Console'; Port = 'ENTRY_UI_PORT'; Path = '/nginx-health' }); Public = 'ENTRY_PUBLIC_URL' }
+    deli = @{ Title = 'OptiDeli'; Dirs = @('OptiDeli'); Overlay = 'deli.yaml'; ComposeFile = 'docker-compose.container.yml'; PhpService = 'api'; Postgres = 'postgres'; Storage = '/var/www/html/storage/app'
+        Urls = @(@{ Name = 'API'; Port = 'DELI_API_PORT'; Path = '/up' }, @{ Name = 'Console'; Port = 'DELI_UI_PORT'; Path = '/nginx-health' }); Public = 'DELI_PUBLIC_URL' }
     radar = @{ Title = 'OptiRadar'; Dirs = @('OptiRadar', 'optiradar'); WebDirs = @('OptiRadar-web', 'optiradar-web'); Overlay = 'radar.yaml'; PhpService = $null; Postgres = 'database'
         Urls = @(@{ Name = 'Server + Web'; Port = 'RADAR_PORT'; Path = '/api/health' }); Public = 'RADAR_PUBLIC_URL' }
 }
-$MinMemoryMb = @{ nexus = 1024; fleet = 2560; entry = 1280; radar = 1536 }
+# Repositories fetched by `sync` (folder name = GitHub repository name). OPTI_GIT_BASE overrides the base URL, for example a fork.
+$Repos = [ordered]@{ nexus = 'OptiNexus'; fleet = 'OptiFleet-v2'; entry = 'OptiAccounting'; radar = 'OptiRadar'; 'radar-web' = 'OptiRadar-web'; deli = 'OptiDeli' }
+$GitBase = if ($env:OPTI_GIT_BASE) { $env:OPTI_GIT_BASE.TrimEnd('/') } else { 'https://github.com/gsiddik' }
+$MinMemoryMb = @{ nexus = 1024; fleet = 2560; entry = 1280; radar = 1536; deli = 768 }
+# Every product keeps its compose file in its own repository; docker-compose.yml unless the catalog names another one.
+function Get-ComposeFile([string]$Product) { if ($Catalog[$Product].ComposeFile) { return $Catalog[$Product].ComposeFile } return 'docker-compose.yml' }
+
+# One-time pick-up of the settings of an installation made before the folder was renamed (deploy/ecosystem -> deploy/optiecosystem).
+# Copy, never move: the old folder keeps its files, so going back to an older checkout still works.
+function Import-LegacyState {
+    if ((Test-Path $State) -or -not (Test-Path $LegacyState)) { return }
+    Copy-Item -LiteralPath $LegacyState -Destination $State -Recurse
+    if ($PSVersionTable.PSVersion.Major -ge 6 -and -not $IsWindows) { & chmod -R go-rwx $State 2>$null }
+    Write-Host "Settings of the existing installation copied from $LegacyState (the original is kept). Compose projects, volumes and the network keep their names, so no data moves."
+}
 
 # --- output helpers ---------------------------------------------------------------------------------------------------------------------
 $script:Results = New-Object System.Collections.ArrayList
@@ -137,7 +159,7 @@ function Read-EnvFile([string]$Path) {
     return $h
 }
 function Write-EnvFile([string]$Path, $Values, [string]$Header) {
-    $lines = @("# $Header", "# Generated by deploy/ecosystem/ecosystem.ps1 init. Contains secrets: never commit or share it. Edit values freely; init only adds missing keys.")
+    $lines = @("# $Header", "# Generated by deploy/optiecosystem/optiecosystem.ps1 init. Contains secrets: never commit or share it. Edit values freely; init only adds missing keys.")
     foreach ($k in $Values.Keys) { $lines += "$k=$($Values[$k])" }
     [System.IO.File]::WriteAllText($Path, (($lines -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
     if ($PSVersionTable.PSVersion.Major -ge 6 -and -not $IsWindows) { & chmod 600 $Path 2>$null }
@@ -149,6 +171,8 @@ function New-RandomBytes([int]$Count) {
 }
 function New-AppKey { return 'base64:' + [Convert]::ToBase64String((New-RandomBytes 32)) }
 function New-Password { return ([Convert]::ToBase64String((New-RandomBytes 24))).TrimEnd('=').Replace('+', 'A').Replace('/', 'b') }
+# For password rules that ask for upper and lower case, a digit and a symbol (OptiDeli platform administrator).
+function New-AdminPassword { return (New-Password) + 'aZ7!' }
 
 function Get-Eco { return Read-EnvFile (Join-Path $State 'ecosystem.env') }
 function Get-ProductEnv([string]$Product) { return Read-EnvFile (Join-Path $State "$Product.env") }
@@ -162,7 +186,7 @@ function Get-Defaults([string]$Product, $Eco) {
                 APP_KEY = (New-AppKey); DB_PASSWORD = (New-Password); NEXUS_PUBLIC_URL = $nexusUrl; OIDC_REQUIRE_PUBLIC_ISSUER = 'true'
                 NEXUS_API_PORT = $Eco['NEXUS_API_PORT']; NEXUS_UI_PORT = $Eco['NEXUS_UI_PORT']
                 CGO_SUPERADMIN_EMAIL = 'superadmin@cgo.local'; CGO_SUPERADMIN_PASSWORD = (New-Password); NEXUS_SEED = 'catalog'
-                OPTIRADAR_SYNC_ENABLED = 'false'; OPTIRADAR_BASE_URL = "http://radar.$d`:$($Eco['RADAR_PORT'])" } }
+                OPTIRADAR_SYNC_ENABLED = 'false'; OPTIRADAR_BASE_URL = "http://radar.$d`:$($Eco['RADAR_PORT'])"; OPTIRADAR_EMBED_TOKEN = '' } }
         'fleet' { return [ordered]@{} + $common + [ordered]@{
                 APP_KEY = (New-AppKey); DB_PASSWORD = (New-Password); FLEET_PUBLIC_URL = "http://fleet.$d`:$($Eco['FLEET_UI_PORT'])"
                 FLEET_API_PORT = $Eco['FLEET_API_PORT']; FLEET_UI_PORT = $Eco['FLEET_UI_PORT']; FLEET_SEED = 'catalog'
@@ -176,7 +200,18 @@ function Get-Defaults([string]$Product, $Eco) {
         'radar' { return [ordered]@{} + $common + [ordered]@{
                 RADAR_DB_PASSWORD = (New-Password); RADAR_PUBLIC_URL = "http://radar.$d`:$($Eco['RADAR_PORT'])"; RADAR_PORT = $Eco['RADAR_PORT']
                 OPTINEXUS_BASE_URL = $nexusUrl; OPTINEXUS_SSO_CLIENT_ID = ''; OPTINEXUS_SSO_CLIENT_SECRET = ''; OPTINEXUS_EVENTS_ENABLE = 'false'
-                OPTINEXUS_SERVICE_CLIENT_ID = ''; OPTINEXUS_SERVICE_CLIENT_SECRET = '' } }
+                OPTINEXUS_SERVICE_CLIENT_ID = ''; OPTINEXUS_SERVICE_CLIENT_SECRET = ''; OPTINEXUS_ENTITLEMENTS_ENFORCE = 'false'
+                WEB_FRAME_ANCESTORS = "http://deli.$d`:$($Eco['DELI_UI_PORT'])" } }
+        # Local trial defaults: APP_ENV=local plus OPTIDELI_SEED=demo gives the demo tenant and accounts (DemoSeeder refuses anything else).
+        # Identity stays local until OptiDeli is registered in OptiNexus; the service account alone is enough for the OptiRadar map.
+        'deli' { return [ordered]@{} + $common + [ordered]@{
+                APP_ENV = 'local'; APP_KEY = (New-AppKey); DB_PASSWORD = (New-Password); DELI_PUBLIC_URL = "http://deli.$d`:$($Eco['DELI_UI_PORT'])"
+                DELI_API_PORT = $Eco['DELI_API_PORT']; DELI_UI_PORT = $Eco['DELI_UI_PORT']
+                OPTIDELI_DEPLOYMENT_MODE = 'standalone'; OPTIDELI_STANDALONE_TENANT = 'demo'; OPTIDELI_IDENTITY_MODE = 'local'
+                OPTIDELI_SEED = 'demo'; OPTIDELI_DEMO_PASSWORD = (New-Password)
+                OPTIDELI_PLATFORM_ADMIN_EMAIL = 'superadmin@optideli.local'; OPTIDELI_PLATFORM_ADMIN_PASSWORD = (New-AdminPassword)
+                OPTINEXUS_BASE_URL = $nexusUrl; OPTINEXUS_SSO_CLIENT_ID = ''; OPTINEXUS_SSO_CLIENT_SECRET = ''
+                OPTINEXUS_SERVICE_CLIENT_ID = ''; OPTINEXUS_SERVICE_CLIENT_SECRET = ''; OPTINEXUS_FEED_PAIRING = 'auto' } }
     }
 }
 
@@ -196,14 +231,14 @@ function Save-History {
 # .state/<product>.override.yaml (registry mirrors, resource limits, ...). COMPOSE_PROJECT_NAME in .state/<product>.env renames the project.
 function Get-ComposeArgs([string]$Product, [string[]]$ComposeArgs) {
     $eng = Get-Engine
-    if (-not $eng -or -not $eng.Compose) { Stop-Script 'No Compose provider found. Run: ecosystem.ps1 preflight' }
+    if (-not $eng -or -not $eng.Compose) { Stop-Script 'No Compose provider found. Run: optiecosystem.ps1 preflight' }
     $dir = Get-RepoDir $Product
     if (-not $dir) { Stop-Script "Repository for $($Catalog[$Product].Title) not found under $Root (looked for: $($Catalog[$Product].Dirs -join ', '))." }
     $envFile = Join-Path $State "$Product.env"
-    if (-not (Test-Path $envFile)) { Stop-Script "Missing $envFile. Run: ecosystem.ps1 init" }
+    if (-not (Test-Path $envFile)) { Stop-Script "Missing $envFile. Run: optiecosystem.ps1 init" }
     $overlay = Join-Path (Join-Path $Here 'overlays') $Catalog[$Product].Overlay
     $prefix = @(); if ($eng.Compose.Count -gt 1) { $prefix = $eng.Compose[1..($eng.Compose.Count - 1)] }
-    $files = @('-f', (Join-Path $dir 'docker-compose.yml'), '-f', $overlay)
+    $files = @('-f', (Join-Path $dir (Get-ComposeFile $Product)), '-f', $overlay)
     $site = Join-Path $State "$Product.override.yaml"
     if (Test-Path $site) { $files += @('-f', $site) }
     return $prefix + @('--project-directory', $dir, '--env-file', $envFile) + $files + $ComposeArgs
@@ -250,6 +285,44 @@ function Get-LocalUrl([string]$Product, $Url) {
 }
 
 # --- commands -------------------------------------------------------------------------------------------------------------------------
+# sync: clone the repositories that are missing next to OptiNexus and fast-forward the others. Never discards work: a repository with
+# uncommitted changes is skipped, and only fast-forward pulls are made (a diverged branch is reported, not merged or reset).
+# up/build never touch Git; run sync (or git pull yourself) first, then upgrade or build + up.
+function Invoke-Sync {
+    if (-not (Find-Exe 'git')) { Stop-Script 'git not found on PATH (winget install Git.Git)' }
+    $names = @()
+    foreach ($p in @(Resolve-Products)) { $names += $p; if ($p -eq 'radar') { $names += 'radar-web' } }
+    foreach ($n in $names) {
+        $folder = $Repos[$n]
+        $dir = if ($n -eq 'radar-web') { Get-RepoDir 'radar' -Web } else { Get-RepoDir $n }
+        if (-not $dir) {
+            $dir = Join-Path $Root $folder
+            Say "== clone $folder"
+            # core.autocrlf=false: the shell scripts run inside Linux containers and need LF line ends, also on Windows.
+            & git clone -c core.autocrlf=false "$GitBase/$folder.git" $dir
+            if ($LASTEXITCODE -ne 0) { Add-Result FAIL "Sync $folder" "git clone $GitBase/$folder.git failed"; continue }
+        }
+        if (& git -C $dir status --porcelain) { Add-Result WARN "Sync $folder" 'uncommitted changes: left as it is (commit or stash them, then sync again)'; continue }
+        Say "== fetch $folder"
+        & git -C $dir fetch --prune origin
+        if ($LASTEXITCODE -ne 0) { Add-Result FAIL "Sync $folder" 'git fetch failed (network or credentials)'; continue }
+        if ($Branch) {
+            & git -C $dir rev-parse --verify --quiet "refs/remotes/origin/$Branch" *> $null
+            if ($LASTEXITCODE -eq 0) {
+                & git -C $dir checkout $Branch
+                if ($LASTEXITCODE -ne 0) { Add-Result FAIL "Sync $folder" "git checkout $Branch failed"; continue }
+            } else { Add-Result WARN "Sync $folder" "origin has no branch ${Branch}: staying on the current branch" }
+        }
+        & git -C $dir pull --ff-only
+        $pullCode = $LASTEXITCODE
+        $g = Get-GitInfo $dir
+        if ($pullCode -ne 0) { Add-Result FAIL "Sync $folder" "pull --ff-only refused on $($g.Branch) (diverged or no upstream): nothing was changed" }
+        else { Add-Result PASS "Sync $folder" "$($g.Branch) $($g.Sha)" }
+    }
+    Say 'Next: optiecosystem.ps1 upgrade -Products <list> (backup, rebuild, re-create), or build then up for a first installation.'
+    Complete-Checks
+}
+
 function Invoke-Preflight {
     $sel = @(Resolve-Products)
     Say "Preflight for: $($sel -join ', ')  (repositories under $Root)"
@@ -298,7 +371,8 @@ function Invoke-Preflight {
         $g = Get-GitInfo $dir
         $detail = if ($g) { "$dir @ $($g.Branch) $($g.Sha)$(if ($g.Dirty) { ' (uncommitted changes)' })" } else { "$dir (not a git checkout)" }
         Add-Result PASS "Repository $p" $detail
-        if (-not (Test-Path (Join-Path $dir 'docker-compose.yml'))) { Add-Result FAIL "Compose file $p" 'docker-compose.yml missing: this branch has no container package' }
+        $cf = Get-ComposeFile $p
+        if (-not (Test-Path (Join-Path $dir $cf))) { Add-Result FAIL "Compose file $p" "$cf missing: this branch has no container package" }
     }
     if ($sel -contains 'radar') {
         $web = Get-RepoDir 'radar' -Web
@@ -307,12 +381,12 @@ function Invoke-Preflight {
     }
 
     $ecoFile = Join-Path $State 'ecosystem.env'
-    if (-not (Test-Path $ecoFile)) { Add-Result WARN 'Settings' 'not initialised yet: run ecosystem.ps1 init' }
+    if (-not (Test-Path $ecoFile)) { Add-Result WARN 'Settings' 'not initialised yet: run optiecosystem.ps1 init' }
     else {
         $eco = Get-Eco
         foreach ($p in $sel) {
             $penv = Get-ProductEnv $p
-            if ($penv.Count -eq 0) { Add-Result WARN "Env $p" "missing $p.env: run ecosystem.ps1 init"; continue }
+            if ($penv.Count -eq 0) { Add-Result WARN "Env $p" "missing $p.env: run optiecosystem.ps1 init"; continue }
             $keyName = if ($p -eq 'radar') { 'RADAR_DB_PASSWORD' } else { 'DB_PASSWORD' }
             if (-not $penv[$keyName]) { Add-Result FAIL "Env $p" "$keyName is empty" }
             if ($p -ne 'radar' -and -not $penv['APP_KEY']) { Add-Result FAIL "Env $p" 'APP_KEY is empty' }
@@ -361,16 +435,23 @@ function Invoke-Init {
     if ($hist) { Say "Previous settings kept in $hist" }
     $ecoFile = Join-Path $State 'ecosystem.env'
     $eco = Read-EnvFile $ecoFile
-    $defaults = [ordered]@{ ECOSYSTEM_DOMAIN = 'localtest.me'; ECOSYSTEM_NETWORK = 'opti-ecosystem'; BIND_ADDRESS = '127.0.0.1'
-        NEXUS_API_PORT = '8100'; NEXUS_UI_PORT = '5180'; FLEET_API_PORT = '8000'; FLEET_UI_PORT = '5173'; ENTRY_API_PORT = '8200'; ENTRY_UI_PORT = '5190'; RADAR_PORT = '8082' }
+    # An existing ecosystem.env keeps its values (init only adds missing keys), so an installation made before the OptiEcosystem name
+    # keeps its network opti-ecosystem; a new one gets optiecosystem.
+    $defaults = [ordered]@{ ECOSYSTEM_DOMAIN = 'localtest.me'; ECOSYSTEM_NETWORK = 'optiecosystem'; BIND_ADDRESS = '127.0.0.1'
+        NEXUS_API_PORT = '8100'; NEXUS_UI_PORT = '5180'; FLEET_API_PORT = '8000'; FLEET_UI_PORT = '5173'; ENTRY_API_PORT = '8200'; ENTRY_UI_PORT = '5190'; RADAR_PORT = '8082'
+        DELI_API_PORT = '8300'; DELI_UI_PORT = '5200' }
     $added = 0
     foreach ($k in $defaults.Keys) { if (-not $eco.Contains($k)) { $eco[$k] = $defaults[$k]; $added++ } }
     Write-EnvFile $ecoFile $eco 'Shared ecosystem settings (domain, network, bind address, ports)'
     Say "ecosystem.env: $added value(s) added."
     foreach ($p in $Catalog.Keys) {
         $file = Join-Path $State "$p.env"
+        $isNew = -not (Test-Path $file)
         $cur = Read-EnvFile $file
         $def = Get-Defaults $p $eco
+        # Compose project name optiecosystem-<product> (containers, volumes and the group in Podman Desktop) for a new env file only:
+        # an existing installation keeps its project and therefore its volumes (moving data: README, "Switching to the OptiEcosystem names").
+        if ($isNew) { $def = [ordered]@{ COMPOSE_PROJECT_NAME = "optiecosystem-$p" } + $def }
         $n = 0
         foreach ($k in $def.Keys) { if (-not $cur.Contains($k)) { $cur[$k] = $def[$k]; $n++ } }
         Write-EnvFile $file $cur "$($Catalog[$p].Title) container settings"
@@ -378,7 +459,7 @@ function Invoke-Init {
     }
     Say ''
     Say "Settings are in $State. Sign-in credentials for the first OptiNexus administrator: see CGO_SUPERADMIN_EMAIL / CGO_SUPERADMIN_PASSWORD in nexus.env."
-    Say 'Next: ecosystem.ps1 preflight -Products <list>, then build, then up. Connecting each product to OptiNexus (OIDC client, service account) is the onboarding step in each product''s docs.'
+    Say 'Next: optiecosystem.ps1 preflight -Products <list>, then build, then up. Connecting each product to OptiNexus (OIDC client, service account) is the onboarding step in each product''s docs.'
 }
 
 function Invoke-Build {
@@ -412,7 +493,7 @@ function Invoke-Up {
         foreach ($u in $Catalog[$p].Urls) {
             $url = Get-LocalUrl $p $u
             if (Wait-Url $url 300) { Add-Result PASS "$($Catalog[$p].Title) $($u.Name)" "ready at $url" }
-            else { Add-Result FAIL "$($Catalog[$p].Title) $($u.Name)" "not ready within 300 s at $url (compose logs: ecosystem.ps1 status; $($eng.Name) logs <container>)" }
+            else { Add-Result FAIL "$($Catalog[$p].Title) $($u.Name)" "not ready within 300 s at $url (compose logs: optiecosystem.ps1 status; $($eng.Name) logs <container>)" }
         }
         if ($p -eq 'nexus' -and ($script:Results | Where-Object { $_.Level -eq 'FAIL' -and $_.Check -like 'OptiNexus*' })) { Stop-Script 'OptiNexus is not ready; the products need it for sign-in and permissions. Fix it and run up again.' }
     }
@@ -464,8 +545,20 @@ function Invoke-Smoke {
         if ($r.Code -eq 0 -and $r.Text.Trim().EndsWith('200')) { Add-Result PASS "$($Catalog[$p].Title) reaches the issuer" 'same URL works from inside the container' }
         else { Add-Result FAIL "$($Catalog[$p].Title) reaches the issuer" "container cannot read $disco (network alias / shared network)" }
     }
-    $proxyChecks = @{ fleet = '/api/v1/auth/sso/status'; entry = '/api/v1/health' }
+    $proxyChecks = @{ fleet = '/api/v1/auth/sso/status'; entry = '/api/v1/health'; deli = '/api/v1/health' }
     foreach ($p in $proxyChecks.Keys) { if ($sel -contains $p) { $url = (Get-ProductEnv $p)[$Catalog[$p].Public] + $proxyChecks[$p]; $pub = Test-Url $url 6; if ($pub -eq 200) { Add-Result PASS "$($Catalog[$p].Title) console proxies /api" $url } else { Add-Result FAIL "$($Catalog[$p].Title) console proxies /api" "HTTP $pub at $url" } } }
+    if ($sel -contains 'radar') {
+        # The OptiDeli map page frames OptiRadar Web: the browser refuses unless Radar names the OptiDeli origin in frame-ancestors.
+        $radarUrl = (Get-LocalUrl 'radar' $Catalog['radar'].Urls[0]) -replace '/api/health$', '/'
+        $deliOrigin = (Get-ProductEnv 'deli')['DELI_PUBLIC_URL']
+        try {
+            $resp = Invoke-WebRequest -Uri $radarUrl -TimeoutSec 6 -UseBasicParsing -ErrorAction Stop
+            $csp = "$($resp.Headers['Content-Security-Policy'])"
+            if ($deliOrigin -and $csp -match [regex]::Escape($deliOrigin)) { Add-Result PASS 'OptiRadar frame-ancestors' $csp }
+            elseif ($sel -contains 'deli') { Add-Result FAIL 'OptiRadar frame-ancestors' "'$csp' does not name ${deliOrigin}: set WEB_FRAME_ANCESTORS in radar.env, then up -Products radar" }
+            else { Add-Result PASS 'OptiRadar frame-ancestors' "$(if ($csp) { $csp } else { 'no header (WEB_FRAME_ANCESTORS empty)' })" }
+        } catch { Add-Result WARN 'OptiRadar frame-ancestors' "could not read the headers of $radarUrl" }
+    }
     foreach ($p in $Catalog.Keys) {
         if ($sel -contains $p) { continue }
         if (-not (Test-Path (Join-Path $State "$p.env")) -or -not (Get-RepoDir $p)) { Add-Result PASS "$($Catalog[$p].Title) not selected" 'nothing to check'; continue }
@@ -563,7 +656,7 @@ function Invoke-BackupCmd([string]$Label = 'backup') {
 }
 
 function Invoke-RestoreCmd {
-    if (-not $Backup) { Stop-Script 'restore needs -Backup <folder> (see deploy/ecosystem/backups)' }
+    if (-not $Backup) { Stop-Script 'restore needs -Backup <folder> (see deploy/optiecosystem/backups)' }
     $dir = if (Test-Path $Backup) { (Resolve-Path $Backup).Path } else { Join-Path $Backups $Backup }
     if (-not (Test-Path (Join-Path $dir 'manifest.json'))) { Stop-Script "No manifest.json in $dir" }
     $m = Get-Content -LiteralPath (Join-Path $dir 'manifest.json') -Raw | ConvertFrom-Json
@@ -606,15 +699,18 @@ function Invoke-RollbackConfig {
     if (-not (Test-Path $src)) { Stop-Script "No saved settings named $To" }
     [void](Save-History)
     Get-ChildItem -Path $src -Filter '*.env' -File | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $State -Force }
-    Say "Settings restored from $To. Apply them with: ecosystem.ps1 up (containers are re-created; no image rebuild and no data change)."
+    Say "Settings restored from $To. Apply them with: optiecosystem.ps1 up (containers are re-created; no image rebuild and no data change)."
 }
 
 function Show-Help {
     Get-Help $PSCommandPath -Detailed | Out-String | Write-Host
 }
 
+if ($Command -ne 'help') { Import-LegacyState }
+
 switch ($Command) {
     'help' { Show-Help }
+    'sync' { Invoke-Sync }
     'preflight' { Invoke-Preflight }
     'init' { Invoke-Init }
     'build' { Invoke-Build }

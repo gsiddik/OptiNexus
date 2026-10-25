@@ -54,6 +54,10 @@ x-nexus-env: &nexus-env
   OPTIRADAR_APPLICATION_CODE: ${OPTIRADAR_APPLICATION_CODE:-optiradar}
   OPTIRADAR_BASE_URL: ${OPTIRADAR_BASE_URL:-}
   OPTIRADAR_API_TOKEN: ${OPTIRADAR_API_TOKEN:-}
+  # Embed sessions (OptiRadar map inside OptiDeli): API token of an OptiRadar administrator, used only to mint short-lived read-only tokens.
+  OPTIRADAR_EMBED_TOKEN: ${OPTIRADAR_EMBED_TOKEN:-}
+  OPTIRADAR_TIMEOUT: ${OPTIRADAR_TIMEOUT:-20}
+  OPTIRADAR_POSITIONS_CACHE: ${OPTIRADAR_POSITIONS_CACHE:-10}
 
 x-php: &php
   image: ${NEXUS_IMAGE:-optinexus-backend:local}

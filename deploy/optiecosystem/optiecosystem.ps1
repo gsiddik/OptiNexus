@@ -211,7 +211,7 @@ function Get-Defaults([string]$Product, $Eco) {
                 OPTIDELI_SEED = 'demo'; OPTIDELI_DEMO_PASSWORD = (New-Password)
                 OPTIDELI_PLATFORM_ADMIN_EMAIL = 'superadmin@optideli.local'; OPTIDELI_PLATFORM_ADMIN_PASSWORD = (New-AdminPassword)
                 OPTINEXUS_BASE_URL = $nexusUrl; OPTINEXUS_SSO_CLIENT_ID = ''; OPTINEXUS_SSO_CLIENT_SECRET = ''
-                OPTINEXUS_SERVICE_CLIENT_ID = ''; OPTINEXUS_SERVICE_CLIENT_SECRET = ''; OPTINEXUS_FEED_PAIRING = 'auto' } }
+                OPTINEXUS_SERVICE_CLIENT_ID = ''; OPTINEXUS_SERVICE_CLIENT_SECRET = ''; OPTINEXUS_EVENT_WEBHOOK_SECRET = ''; OPTINEXUS_FEED_PAIRING = 'auto' } }
     }
 }
 

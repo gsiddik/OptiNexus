@@ -51,6 +51,7 @@ class PlatformTenantEventsTest extends TestCase
         $this->assertSame($this->tenant->id, $event->tenant_id);
 
         Http::assertSentCount(1);
+        // jsonb hands the payload keys back in its own order, so it is compared by content (==), not by order.
         Http::assertSent(function (HttpRequest $request) {
             $body = json_decode($request->body(), true);
             $expected = app(WebhookSigner::class)->sign($this->secret, $request->header('Opti-Webhook-Id')[0], (int) $request->header('Opti-Webhook-Timestamp')[0], $request->body());
@@ -60,7 +61,7 @@ class PlatformTenantEventsTest extends TestCase
                 && $body['event_type'] === 'cgo.tenant.application_assigned'
                 && $body['source_system'] === 'optinexus'
                 && $body['tenant_id'] === $this->tenant->id
-                && $body['data']['payload'] === [
+                && $body['data']['payload'] == [
                     'application_code' => 'optiradar', 'application_name' => 'OptiRadar',
                     'tenant_code' => 'ACME-ID', 'tenant_name' => 'Acme Indonesia',
                 ];

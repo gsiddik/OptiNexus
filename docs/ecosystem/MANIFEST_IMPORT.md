@@ -75,3 +75,7 @@ PLATFORM_SUPERADMIN, so a fresh installation needs no manual import.
   `ecosystem:register-oidc-client` and `ecosystem:register-service-account` (or `deploy/optiecosystem`).
 * After a product release, replace its manifest file with the product's current output and seed again
   (`php artisan db:seed --class=EcosystemCatalogSeeder`, then the bootstrap job so the platform roles pick up new permissions).
+
+* Seats: an application is seat-controlled only when its manifest declares `user_limit` in `entitlement_limit_keys`, and the Seats screen lists only those.
+  OptiEntry and OptiRadar declare it; the seeder adds it for `optifleet` and `optideli` (`EcosystemCatalogSeeder::SEAT_CONTROLLED`) so their seats can be set
+  per tenant. The suite plan starts unlimited, so nobody is blocked until an operator sets a number. Drop an entry once the product declares the key itself.

@@ -43,6 +43,13 @@ class EcosystemCatalogSeeder extends Seeder
         'optiradar' => 'optiradar.manifest.json',
     ];
 
+    /**
+     * Applications whose seats are managed from OptiNexus although their own manifest does not declare `user_limit` (OptiEntry and OptiRadar
+     * do). An application is seat-controlled only when its manifest declares that key, and the Seats screen lists only controlled
+     * applications, so without this OptiFleet and OptiDeli seats could not be edited. Remove an entry once the product declares it itself.
+     */
+    public const SEAT_CONTROLLED = ['optifleet', 'optideli'];
+
     public const SUITE_PRODUCT_CODE = 'OPTI-SUITE';
 
     public const SUITE_PLAN_CODE = 'SUITE-MONTHLY';
@@ -57,6 +64,10 @@ class EcosystemCatalogSeeder extends Seeder
 
             if ($manifest === null) {
                 continue;
+            }
+
+            if (in_array($code, self::SEAT_CONTROLLED, true)) {
+                $manifest['entitlement_limit_keys'] = array_values(array_unique(array_merge($manifest['entitlement_limit_keys'] ?? [], ['user_limit'])));
             }
 
             $application = $this->registerApplication($code, $manifest);

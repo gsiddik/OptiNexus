@@ -36,6 +36,17 @@ class EcosystemCatalogSeederTest extends TestCase
         $this->assertTrue(EventCatalogEntry::query()->where('event_key', 'like', 'optiaccounting.%')->exists());
     }
 
+    public function test_every_application_is_seat_controlled_so_seats_can_be_managed_for_all(): void
+    {
+        $this->seed(EcosystemCatalogSeeder::class);
+
+        foreach (['optifleet', 'optiaccounting', 'optideli', 'optiradar'] as $code) {
+            $keys = Application::query()->where('application_code', $code)->firstOrFail()->metadata['manifest']['entitlement_limit_keys'] ?? [];
+
+            $this->assertContains('user_limit', $keys, "{$code} declares user_limit");
+        }
+    }
+
     public function test_the_suite_plan_holds_every_capability_so_a_tenant_can_be_provisioned(): void
     {
         $this->seed(EcosystemCatalogSeeder::class);

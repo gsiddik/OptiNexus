@@ -1,0 +1,1616 @@
+{
+  "manifest_version": "2.0",
+  "revision": "cef515c2c2c399ad",
+  "application": {
+    "application_code": "optiaccounting",
+    "name": "OptiEntry",
+    "description": "Double-entry accounting for the organization.",
+    "frontend_url": "http://entry.localtest.me:5190"
+  },
+  "capabilities": [
+    {
+      "type": "MODULE",
+      "code": "ACCOUNTING_CORE",
+      "name": "Accounting Core",
+      "description": "Profile, fiscal year, periods, chart of accounts, journals, general ledger, trial balance",
+      "sort_order": 10,
+      "parent_code": null
+    },
+    {
+      "type": "FEATURE",
+      "code": "ACCOUNTING_CONFIGURATION",
+      "name": "Accounting configuration",
+      "description": null,
+      "sort_order": 10,
+      "parent_code": "ACCOUNTING_CORE"
+    },
+    {
+      "type": "FEATURE",
+      "code": "JOURNAL",
+      "name": "Journal",
+      "description": null,
+      "sort_order": 20,
+      "parent_code": "ACCOUNTING_CORE"
+    },
+    {
+      "type": "FEATURE",
+      "code": "GENERAL_LEDGER",
+      "name": "General ledger",
+      "description": null,
+      "sort_order": 30,
+      "parent_code": "ACCOUNTING_CORE"
+    },
+    {
+      "type": "FEATURE",
+      "code": "OPENING_BALANCE",
+      "name": "Opening balance",
+      "description": null,
+      "sort_order": 40,
+      "parent_code": "ACCOUNTING_CORE"
+    },
+    {
+      "type": "MODULE",
+      "code": "ACCOUNTING_AP",
+      "name": "Accounts Payable",
+      "description": "Vendors, vendor invoices, AP subledger and aging",
+      "sort_order": 20,
+      "parent_code": null
+    },
+    {
+      "type": "FEATURE",
+      "code": "VENDOR_INVOICE",
+      "name": "Vendor invoice",
+      "description": null,
+      "sort_order": 10,
+      "parent_code": "ACCOUNTING_AP"
+    },
+    {
+      "type": "FEATURE",
+      "code": "AP_AGING",
+      "name": "AP aging",
+      "description": null,
+      "sort_order": 20,
+      "parent_code": "ACCOUNTING_AP"
+    },
+    {
+      "type": "FEATURE",
+      "code": "VENDOR",
+      "name": "Vendor",
+      "description": null,
+      "sort_order": 30,
+      "parent_code": "ACCOUNTING_AP"
+    },
+    {
+      "type": "FEATURE",
+      "code": "AP_PAYMENT",
+      "name": "Vendor payment",
+      "description": null,
+      "sort_order": 40,
+      "parent_code": "ACCOUNTING_AP"
+    },
+    {
+      "type": "MODULE",
+      "code": "ACCOUNTING_EXPENSE",
+      "name": "Expense",
+      "description": "Expense categories and expense claims",
+      "sort_order": 30,
+      "parent_code": null
+    },
+    {
+      "type": "FEATURE",
+      "code": "EXPENSE",
+      "name": "Expense",
+      "description": null,
+      "sort_order": 10,
+      "parent_code": "ACCOUNTING_EXPENSE"
+    },
+    {
+      "type": "MODULE",
+      "code": "ACCOUNTING_CASH_BANK",
+      "name": "Cash & Bank",
+      "description": "Cash and bank accounts, payments, receipts, bank reconciliation",
+      "sort_order": 40,
+      "parent_code": null
+    },
+    {
+      "type": "FEATURE",
+      "code": "PAYMENT",
+      "name": "Payment",
+      "description": null,
+      "sort_order": 10,
+      "parent_code": "ACCOUNTING_CASH_BANK"
+    },
+    {
+      "type": "FEATURE",
+      "code": "RECEIPT",
+      "name": "Receipt",
+      "description": null,
+      "sort_order": 20,
+      "parent_code": "ACCOUNTING_CASH_BANK"
+    },
+    {
+      "type": "FEATURE",
+      "code": "BANK_RECONCILIATION",
+      "name": "Bank reconciliation",
+      "description": null,
+      "sort_order": 30,
+      "parent_code": "ACCOUNTING_CASH_BANK"
+    },
+    {
+      "type": "FEATURE",
+      "code": "CASH_BANK_ACCOUNT",
+      "name": "Cash and bank account",
+      "description": null,
+      "sort_order": 40,
+      "parent_code": "ACCOUNTING_CASH_BANK"
+    },
+    {
+      "type": "MODULE",
+      "code": "ACCOUNTING_AR",
+      "name": "Accounts Receivable",
+      "description": "Customers, customer invoices, credit/debit notes, AR aging",
+      "sort_order": 50,
+      "parent_code": null
+    },
+    {
+      "type": "FEATURE",
+      "code": "CUSTOMER_INVOICE",
+      "name": "Customer invoice",
+      "description": null,
+      "sort_order": 10,
+      "parent_code": "ACCOUNTING_AR"
+    },
+    {
+      "type": "FEATURE",
+      "code": "CREDIT_NOTE",
+      "name": "Credit note",
+      "description": null,
+      "sort_order": 20,
+      "parent_code": "ACCOUNTING_AR"
+    },
+    {
+      "type": "FEATURE",
+      "code": "AR_AGING",
+      "name": "AR aging",
+      "description": null,
+      "sort_order": 30,
+      "parent_code": "ACCOUNTING_AR"
+    },
+    {
+      "type": "FEATURE",
+      "code": "CUSTOMER",
+      "name": "Customer",
+      "description": null,
+      "sort_order": 40,
+      "parent_code": "ACCOUNTING_AR"
+    },
+    {
+      "type": "FEATURE",
+      "code": "AR_RECEIPT",
+      "name": "Customer receipt",
+      "description": null,
+      "sort_order": 50,
+      "parent_code": "ACCOUNTING_AR"
+    },
+    {
+      "type": "MODULE",
+      "code": "ACCOUNTING_BUDGET",
+      "name": "Budget",
+      "description": "Budgets, versions and budget versus actual",
+      "sort_order": 60,
+      "parent_code": null
+    },
+    {
+      "type": "FEATURE",
+      "code": "BUDGET",
+      "name": "Budget",
+      "description": null,
+      "sort_order": 10,
+      "parent_code": "ACCOUNTING_BUDGET"
+    },
+    {
+      "type": "MODULE",
+      "code": "ACCOUNTING_FIXED_ASSET",
+      "name": "Fixed Asset",
+      "description": "Asset register, depreciation and disposal",
+      "sort_order": 70,
+      "parent_code": null
+    },
+    {
+      "type": "FEATURE",
+      "code": "ASSET_REGISTER",
+      "name": "Asset register",
+      "description": null,
+      "sort_order": 10,
+      "parent_code": "ACCOUNTING_FIXED_ASSET"
+    },
+    {
+      "type": "FEATURE",
+      "code": "DEPRECIATION",
+      "name": "Depreciation",
+      "description": null,
+      "sort_order": 20,
+      "parent_code": "ACCOUNTING_FIXED_ASSET"
+    },
+    {
+      "type": "MODULE",
+      "code": "ACCOUNTING_TAX",
+      "name": "Tax",
+      "description": "Tax codes, effective-dated rates, tax postings and reports",
+      "sort_order": 80,
+      "parent_code": null
+    },
+    {
+      "type": "FEATURE",
+      "code": "TAX_CONFIGURATION",
+      "name": "Tax configuration",
+      "description": null,
+      "sort_order": 10,
+      "parent_code": "ACCOUNTING_TAX"
+    },
+    {
+      "type": "FEATURE",
+      "code": "TAX_REPORT",
+      "name": "Tax report",
+      "description": null,
+      "sort_order": 20,
+      "parent_code": "ACCOUNTING_TAX"
+    },
+    {
+      "type": "MODULE",
+      "code": "ACCOUNTING_MULTI_CURRENCY",
+      "name": "Multi-Currency",
+      "description": "Currencies, exchange rates, FX gain/loss and revaluation",
+      "sort_order": 90,
+      "parent_code": null
+    },
+    {
+      "type": "FEATURE",
+      "code": "EXCHANGE_RATE",
+      "name": "Exchange rate",
+      "description": null,
+      "sort_order": 10,
+      "parent_code": "ACCOUNTING_MULTI_CURRENCY"
+    },
+    {
+      "type": "FEATURE",
+      "code": "FX_REVALUATION",
+      "name": "FX revaluation",
+      "description": null,
+      "sort_order": 20,
+      "parent_code": "ACCOUNTING_MULTI_CURRENCY"
+    },
+    {
+      "type": "MODULE",
+      "code": "ACCOUNTING_REPORTING",
+      "name": "Reporting & Closing",
+      "description": "Financial statements, report mapping, closing and reconciliation",
+      "sort_order": 100,
+      "parent_code": null
+    },
+    {
+      "type": "FEATURE",
+      "code": "FINANCIAL_STATEMENTS",
+      "name": "Financial statements",
+      "description": null,
+      "sort_order": 10,
+      "parent_code": "ACCOUNTING_REPORTING"
+    },
+    {
+      "type": "FEATURE",
+      "code": "PERIOD_CLOSING",
+      "name": "Period closing",
+      "description": null,
+      "sort_order": 20,
+      "parent_code": "ACCOUNTING_REPORTING"
+    },
+    {
+      "type": "FEATURE",
+      "code": "RECONCILIATION",
+      "name": "Reconciliation",
+      "description": null,
+      "sort_order": 30,
+      "parent_code": "ACCOUNTING_REPORTING"
+    },
+    {
+      "type": "MODULE",
+      "code": "ACCOUNTING_INTEGRATION",
+      "name": "Integration",
+      "description": "Integration connections, canonical events and adapters (OptiFleet, OptiDeli)",
+      "sort_order": 110,
+      "parent_code": null
+    },
+    {
+      "type": "FEATURE",
+      "code": "INTEGRATION_CONNECTION",
+      "name": "Integration connection",
+      "description": null,
+      "sort_order": 10,
+      "parent_code": "ACCOUNTING_INTEGRATION"
+    },
+    {
+      "type": "FEATURE",
+      "code": "OPTIFLEET_CONNECTOR",
+      "name": "OptiFleet connector",
+      "description": null,
+      "sort_order": 20,
+      "parent_code": "ACCOUNTING_INTEGRATION"
+    },
+    {
+      "type": "FEATURE",
+      "code": "OPTIDELI_CONNECTOR",
+      "name": "OptiDeli connector",
+      "description": null,
+      "sort_order": 30,
+      "parent_code": "ACCOUNTING_INTEGRATION"
+    },
+    {
+      "type": "MODULE",
+      "code": "ACCOUNTING_ANALYTICS",
+      "name": "Analytics",
+      "description": "Management accounting, KPIs and analytical projections",
+      "sort_order": 120,
+      "parent_code": null
+    },
+    {
+      "type": "FEATURE",
+      "code": "FINANCIAL_KPI",
+      "name": "Financial KPI",
+      "description": null,
+      "sort_order": 10,
+      "parent_code": "ACCOUNTING_ANALYTICS"
+    },
+    {
+      "type": "FEATURE",
+      "code": "COST_ANALYSIS",
+      "name": "Cost analysis",
+      "description": null,
+      "sort_order": 20,
+      "parent_code": "ACCOUNTING_ANALYTICS"
+    }
+  ],
+  "permissions": [
+    {
+      "permission_key": "optiaccounting.access.permission.view",
+      "name": "access.permission.view",
+      "description": "View the permission list",
+      "group": "Access",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.access.role.manage",
+      "name": "access.role.manage",
+      "description": "Manage roles and their permissions",
+      "group": "Access",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.access.role.view",
+      "name": "access.role.view",
+      "description": "View roles",
+      "group": "Access",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.access.scope.manage",
+      "name": "access.scope.manage",
+      "description": "Manage data scopes",
+      "group": "Access",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.access.scope.view",
+      "name": "access.scope.view",
+      "description": "View data scopes",
+      "group": "Access",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.access.user.manage",
+      "name": "access.user.manage",
+      "description": "Invite and manage users",
+      "group": "Access",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.access.user.view",
+      "name": "access.user.view",
+      "description": "View users and memberships",
+      "group": "Access",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.account.subscription.view",
+      "name": "account.subscription.view",
+      "description": "View subscription, modules, features and usage",
+      "group": "Account",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.account_mapping.manage",
+      "name": "accounting.account_mapping.manage",
+      "description": "Manage account mappings",
+      "group": "Accounting configuration",
+      "capability_code": "ACCOUNTING_CONFIGURATION",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.account_mapping.view",
+      "name": "accounting.account_mapping.view",
+      "description": "View account mappings",
+      "group": "Accounting configuration",
+      "capability_code": "ACCOUNTING_CONFIGURATION",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ap_aging.view",
+      "name": "accounting.ap_aging.view",
+      "description": "View the accounts payable subledger and aging",
+      "group": "Payables",
+      "capability_code": "AP_AGING",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ap_invoice.approve",
+      "name": "accounting.ap_invoice.approve",
+      "description": "Approve or reject vendor invoices",
+      "group": "Payables",
+      "capability_code": "VENDOR_INVOICE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ap_invoice.create",
+      "name": "accounting.ap_invoice.create",
+      "description": "Create draft vendor invoices",
+      "group": "Payables",
+      "capability_code": "VENDOR_INVOICE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ap_invoice.override_duplicate",
+      "name": "accounting.ap_invoice.override_duplicate",
+      "description": "Record a vendor invoice whose vendor invoice number already exists",
+      "group": "Payables",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ap_invoice.post",
+      "name": "accounting.ap_invoice.post",
+      "description": "Post approved vendor invoices",
+      "group": "Payables",
+      "capability_code": "VENDOR_INVOICE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ap_invoice.reverse",
+      "name": "accounting.ap_invoice.reverse",
+      "description": "Reverse posted vendor invoices",
+      "group": "Payables",
+      "capability_code": "VENDOR_INVOICE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ap_invoice.submit",
+      "name": "accounting.ap_invoice.submit",
+      "description": "Submit vendor invoices for approval",
+      "group": "Payables",
+      "capability_code": "VENDOR_INVOICE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ap_invoice.update",
+      "name": "accounting.ap_invoice.update",
+      "description": "Edit and cancel draft vendor invoices",
+      "group": "Payables",
+      "capability_code": "VENDOR_INVOICE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ap_invoice.view",
+      "name": "accounting.ap_invoice.view",
+      "description": "View vendor invoices",
+      "group": "Payables",
+      "capability_code": "VENDOR_INVOICE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ap_payment.approve",
+      "name": "accounting.ap_payment.approve",
+      "description": "Approve or reject vendor payments",
+      "group": "Payables",
+      "capability_code": "AP_PAYMENT",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ap_payment.create",
+      "name": "accounting.ap_payment.create",
+      "description": "Create, edit and cancel draft vendor payments",
+      "group": "Payables",
+      "capability_code": "AP_PAYMENT",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ap_payment.post",
+      "name": "accounting.ap_payment.post",
+      "description": "Post approved vendor payments",
+      "group": "Payables",
+      "capability_code": "AP_PAYMENT",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ap_payment.reverse",
+      "name": "accounting.ap_payment.reverse",
+      "description": "Reverse posted vendor payments",
+      "group": "Payables",
+      "capability_code": "AP_PAYMENT",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ap_payment.submit",
+      "name": "accounting.ap_payment.submit",
+      "description": "Submit vendor payments for approval",
+      "group": "Payables",
+      "capability_code": "AP_PAYMENT",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ap_payment.view",
+      "name": "accounting.ap_payment.view",
+      "description": "View vendor payments",
+      "group": "Payables",
+      "capability_code": "AP_PAYMENT",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_aging.view",
+      "name": "accounting.ar_aging.view",
+      "description": "View the accounts receivable subledger and aging",
+      "group": "Receivables",
+      "capability_code": "AR_AGING",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_credit_note.approve",
+      "name": "accounting.ar_credit_note.approve",
+      "description": "Approve or reject credit notes",
+      "group": "Receivables",
+      "capability_code": "CREDIT_NOTE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_credit_note.create",
+      "name": "accounting.ar_credit_note.create",
+      "description": "Create, edit and cancel draft credit notes",
+      "group": "Receivables",
+      "capability_code": "CREDIT_NOTE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_credit_note.post",
+      "name": "accounting.ar_credit_note.post",
+      "description": "Post approved credit notes",
+      "group": "Receivables",
+      "capability_code": "CREDIT_NOTE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_credit_note.reverse",
+      "name": "accounting.ar_credit_note.reverse",
+      "description": "Reverse posted credit notes",
+      "group": "Receivables",
+      "capability_code": "CREDIT_NOTE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_credit_note.submit",
+      "name": "accounting.ar_credit_note.submit",
+      "description": "Submit credit notes for approval",
+      "group": "Receivables",
+      "capability_code": "CREDIT_NOTE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_credit_note.view",
+      "name": "accounting.ar_credit_note.view",
+      "description": "View credit notes",
+      "group": "Receivables",
+      "capability_code": "CREDIT_NOTE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_invoice.approve",
+      "name": "accounting.ar_invoice.approve",
+      "description": "Approve or reject customer invoices",
+      "group": "Receivables",
+      "capability_code": "CUSTOMER_INVOICE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_invoice.create",
+      "name": "accounting.ar_invoice.create",
+      "description": "Create draft customer invoices",
+      "group": "Receivables",
+      "capability_code": "CUSTOMER_INVOICE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_invoice.post",
+      "name": "accounting.ar_invoice.post",
+      "description": "Post approved customer invoices",
+      "group": "Receivables",
+      "capability_code": "CUSTOMER_INVOICE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_invoice.reverse",
+      "name": "accounting.ar_invoice.reverse",
+      "description": "Reverse posted customer invoices",
+      "group": "Receivables",
+      "capability_code": "CUSTOMER_INVOICE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_invoice.submit",
+      "name": "accounting.ar_invoice.submit",
+      "description": "Submit customer invoices for approval",
+      "group": "Receivables",
+      "capability_code": "CUSTOMER_INVOICE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_invoice.update",
+      "name": "accounting.ar_invoice.update",
+      "description": "Edit and cancel draft customer invoices",
+      "group": "Receivables",
+      "capability_code": "CUSTOMER_INVOICE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_invoice.view",
+      "name": "accounting.ar_invoice.view",
+      "description": "View customer invoices",
+      "group": "Receivables",
+      "capability_code": "CUSTOMER_INVOICE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_receipt.approve",
+      "name": "accounting.ar_receipt.approve",
+      "description": "Approve or reject customer receipts",
+      "group": "Receivables",
+      "capability_code": "AR_RECEIPT",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_receipt.create",
+      "name": "accounting.ar_receipt.create",
+      "description": "Create, edit and cancel draft customer receipts",
+      "group": "Receivables",
+      "capability_code": "AR_RECEIPT",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_receipt.post",
+      "name": "accounting.ar_receipt.post",
+      "description": "Post approved customer receipts",
+      "group": "Receivables",
+      "capability_code": "AR_RECEIPT",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_receipt.reverse",
+      "name": "accounting.ar_receipt.reverse",
+      "description": "Reverse posted customer receipts",
+      "group": "Receivables",
+      "capability_code": "AR_RECEIPT",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_receipt.submit",
+      "name": "accounting.ar_receipt.submit",
+      "description": "Submit customer receipts for approval",
+      "group": "Receivables",
+      "capability_code": "AR_RECEIPT",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.ar_receipt.view",
+      "name": "accounting.ar_receipt.view",
+      "description": "View customer receipts",
+      "group": "Receivables",
+      "capability_code": "AR_RECEIPT",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.asset.capitalize",
+      "name": "accounting.asset.capitalize",
+      "description": "Capitalize assets and reverse a capitalization",
+      "group": "Fixed assets",
+      "capability_code": "ASSET_REGISTER",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.asset.depreciation.post",
+      "name": "accounting.asset.depreciation.post",
+      "description": "Post and reverse depreciation runs",
+      "group": "Fixed assets",
+      "capability_code": "DEPRECIATION",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.asset.depreciation.run",
+      "name": "accounting.asset.depreciation.run",
+      "description": "Calculate and cancel depreciation runs",
+      "group": "Fixed assets",
+      "capability_code": "DEPRECIATION",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.asset.disposal.approve",
+      "name": "accounting.asset.disposal.approve",
+      "description": "Approve or reject asset disposals",
+      "group": "Fixed assets",
+      "capability_code": "ASSET_REGISTER",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.asset.disposal.post",
+      "name": "accounting.asset.disposal.post",
+      "description": "Post and reverse asset disposals",
+      "group": "Fixed assets",
+      "capability_code": "ASSET_REGISTER",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.asset.dispose",
+      "name": "accounting.asset.dispose",
+      "description": "Prepare asset disposals and submit them for approval",
+      "group": "Fixed assets",
+      "capability_code": "ASSET_REGISTER",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.asset.manage",
+      "name": "accounting.asset.manage",
+      "description": "Create and edit draft assets, discard drafts",
+      "group": "Fixed assets",
+      "capability_code": "ASSET_REGISTER",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.asset.reconciliation.view",
+      "name": "accounting.asset.reconciliation.view",
+      "description": "View the asset register to ledger reconciliation",
+      "group": "Fixed assets",
+      "capability_code": "ASSET_REGISTER",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.asset.view",
+      "name": "accounting.asset.view",
+      "description": "View the asset register, categories, schedules, depreciation runs and disposals",
+      "group": "Fixed assets",
+      "capability_code": "ACCOUNTING_FIXED_ASSET",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.asset_category.manage",
+      "name": "accounting.asset_category.manage",
+      "description": "Create and edit asset categories",
+      "group": "Fixed assets",
+      "capability_code": "ASSET_REGISTER",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.bank_reconciliation.manage",
+      "name": "accounting.bank_reconciliation.manage",
+      "description": "Prepare and complete bank reconciliations",
+      "group": "Cash and bank",
+      "capability_code": "BANK_RECONCILIATION",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.bank_reconciliation.view",
+      "name": "accounting.bank_reconciliation.view",
+      "description": "View bank reconciliations",
+      "group": "Cash and bank",
+      "capability_code": "BANK_RECONCILIATION",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.budget.approve",
+      "name": "accounting.budget.approve",
+      "description": "Approve or reject budget versions, activate versions, open and close budgets",
+      "group": "Budget",
+      "capability_code": "BUDGET",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.budget.manage",
+      "name": "accounting.budget.manage",
+      "description": "Create budgets, prepare versions and lines, cancel",
+      "group": "Budget",
+      "capability_code": "BUDGET",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.budget.submit",
+      "name": "accounting.budget.submit",
+      "description": "Submit budget versions for approval",
+      "group": "Budget",
+      "capability_code": "BUDGET",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.budget.view",
+      "name": "accounting.budget.view",
+      "description": "View budgets, their versions and budget versus actual",
+      "group": "Budget",
+      "capability_code": "BUDGET",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.cash_bank.manage",
+      "name": "accounting.cash_bank.manage",
+      "description": "Manage cash and bank accounts",
+      "group": "Cash and bank",
+      "capability_code": "CASH_BANK_ACCOUNT",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.cash_bank.view",
+      "name": "accounting.cash_bank.view",
+      "description": "View cash and bank accounts",
+      "group": "Cash and bank",
+      "capability_code": "CASH_BANK_ACCOUNT",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.cash_transaction.create",
+      "name": "accounting.cash_transaction.create",
+      "description": "Create draft cash and bank payments and receipts",
+      "group": "Cash and bank",
+      "capability_code": "ACCOUNTING_CASH_BANK",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.cash_transaction.post",
+      "name": "accounting.cash_transaction.post",
+      "description": "Post cash and bank transactions",
+      "group": "Cash and bank",
+      "capability_code": "ACCOUNTING_CASH_BANK",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.cash_transaction.reverse",
+      "name": "accounting.cash_transaction.reverse",
+      "description": "Reverse posted cash and bank transactions",
+      "group": "Cash and bank",
+      "capability_code": "ACCOUNTING_CASH_BANK",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.cash_transaction.view",
+      "name": "accounting.cash_transaction.view",
+      "description": "View cash and bank transactions",
+      "group": "Cash and bank",
+      "capability_code": "ACCOUNTING_CASH_BANK",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.closing.checklist.manage",
+      "name": "accounting.closing.checklist.manage",
+      "description": "Complete, waive and reset manual closing checklist items",
+      "group": "Closing",
+      "capability_code": "PERIOD_CLOSING",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.closing.policy.manage",
+      "name": "accounting.closing.policy.manage",
+      "description": "Manage the closing policy and the checklist templates",
+      "group": "Closing",
+      "capability_code": "PERIOD_CLOSING",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.coa.manage",
+      "name": "accounting.coa.manage",
+      "description": "Manage the chart of accounts and apply a template",
+      "group": "Accounting configuration",
+      "capability_code": "ACCOUNTING_CONFIGURATION",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.coa.view",
+      "name": "accounting.coa.view",
+      "description": "View the chart of accounts",
+      "group": "Accounting configuration",
+      "capability_code": "ACCOUNTING_CONFIGURATION",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.currency.manage",
+      "name": "accounting.currency.manage",
+      "description": "Add and edit foreign currencies, activate and deactivate them",
+      "group": "Multi-currency",
+      "capability_code": "EXCHANGE_RATE",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.currency.view",
+      "name": "accounting.currency.view",
+      "description": "View the foreign currencies of the tenant",
+      "group": "Multi-currency",
+      "capability_code": "EXCHANGE_RATE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.customer.manage",
+      "name": "accounting.customer.manage",
+      "description": "Manage customers, their financial profile and payment terms",
+      "group": "Receivables",
+      "capability_code": "CUSTOMER",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.customer.view",
+      "name": "accounting.customer.view",
+      "description": "View customers",
+      "group": "Receivables",
+      "capability_code": "CUSTOMER",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.dimension.manage",
+      "name": "accounting.dimension.manage",
+      "description": "Manage cost centers",
+      "group": "Accounting configuration",
+      "capability_code": "ACCOUNTING_CONFIGURATION",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.dimension.view",
+      "name": "accounting.dimension.view",
+      "description": "View accounting dimensions and cost centers",
+      "group": "Accounting configuration",
+      "capability_code": "ACCOUNTING_CONFIGURATION",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.exchange_rate.manage",
+      "name": "accounting.exchange_rate.manage",
+      "description": "Enter, withdraw and delete exchange rates",
+      "group": "Multi-currency",
+      "capability_code": "EXCHANGE_RATE",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.exchange_rate.view",
+      "name": "accounting.exchange_rate.view",
+      "description": "View exchange rates",
+      "group": "Multi-currency",
+      "capability_code": "EXCHANGE_RATE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.expense.approve",
+      "name": "accounting.expense.approve",
+      "description": "Approve or reject expenses",
+      "group": "Expense",
+      "capability_code": "EXPENSE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.expense.create",
+      "name": "accounting.expense.create",
+      "description": "Create draft expenses",
+      "group": "Expense",
+      "capability_code": "EXPENSE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.expense.post",
+      "name": "accounting.expense.post",
+      "description": "Post approved expenses",
+      "group": "Expense",
+      "capability_code": "EXPENSE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.expense.reverse",
+      "name": "accounting.expense.reverse",
+      "description": "Reverse posted expenses",
+      "group": "Expense",
+      "capability_code": "EXPENSE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.expense.submit",
+      "name": "accounting.expense.submit",
+      "description": "Submit expenses for approval",
+      "group": "Expense",
+      "capability_code": "EXPENSE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.expense.update",
+      "name": "accounting.expense.update",
+      "description": "Edit and cancel draft expenses",
+      "group": "Expense",
+      "capability_code": "EXPENSE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.expense.view",
+      "name": "accounting.expense.view",
+      "description": "View expenses and expense categories",
+      "group": "Expense",
+      "capability_code": "EXPENSE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.expense_category.manage",
+      "name": "accounting.expense_category.manage",
+      "description": "Manage expense categories",
+      "group": "Expense",
+      "capability_code": "EXPENSE",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.gl.view",
+      "name": "accounting.gl.view",
+      "description": "View the general ledger",
+      "group": "Ledger and reports",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.integration.manage",
+      "name": "accounting.integration.manage",
+      "description": "Create, configure, activate, pause and disconnect integration connections and pull them now",
+      "group": "Integration",
+      "capability_code": "INTEGRATION_CONNECTION",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.integration.retry",
+      "name": "accounting.integration.retry",
+      "description": "Retry failed or unreviewed integration events",
+      "group": "Integration",
+      "capability_code": "INTEGRATION_CONNECTION",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.integration.view",
+      "name": "accounting.integration.view",
+      "description": "View integration connections, received events, references and source links",
+      "group": "Integration",
+      "capability_code": "INTEGRATION_CONNECTION",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.journal.approve",
+      "name": "accounting.journal.approve",
+      "description": "Approve or reject submitted journals",
+      "group": "Journals",
+      "capability_code": "JOURNAL",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.journal.create",
+      "name": "accounting.journal.create",
+      "description": "Create draft journals",
+      "group": "Journals",
+      "capability_code": "JOURNAL",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.journal.post",
+      "name": "accounting.journal.post",
+      "description": "Post approved journals",
+      "group": "Journals",
+      "capability_code": "JOURNAL",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.journal.post_soft_closed",
+      "name": "accounting.journal.post_soft_closed",
+      "description": "Post into soft-closed periods",
+      "group": "Journals",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.journal.reverse",
+      "name": "accounting.journal.reverse",
+      "description": "Reverse posted journals",
+      "group": "Journals",
+      "capability_code": "JOURNAL",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.journal.submit",
+      "name": "accounting.journal.submit",
+      "description": "Submit journals for approval",
+      "group": "Journals",
+      "capability_code": "JOURNAL",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.journal.update",
+      "name": "accounting.journal.update",
+      "description": "Edit and cancel draft journals",
+      "group": "Journals",
+      "capability_code": "JOURNAL",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.journal.view",
+      "name": "accounting.journal.view",
+      "description": "View journals",
+      "group": "Journals",
+      "capability_code": "JOURNAL",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.opening_balance.manage",
+      "name": "accounting.opening_balance.manage",
+      "description": "Prepare the opening balance",
+      "group": "Journals",
+      "capability_code": "OPENING_BALANCE",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.opening_balance.post",
+      "name": "accounting.opening_balance.post",
+      "description": "Post the opening balance",
+      "group": "Journals",
+      "capability_code": "OPENING_BALANCE",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.opening_balance.view",
+      "name": "accounting.opening_balance.view",
+      "description": "View the opening balance",
+      "group": "Journals",
+      "capability_code": "OPENING_BALANCE",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.period.close",
+      "name": "accounting.period.close",
+      "description": "Close accounting periods",
+      "group": "Accounting configuration",
+      "capability_code": "ACCOUNTING_CONFIGURATION",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.period.hard_close",
+      "name": "accounting.period.hard_close",
+      "description": "Hard-close an accounting period",
+      "group": "Closing",
+      "capability_code": "PERIOD_CLOSING",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.period.manage",
+      "name": "accounting.period.manage",
+      "description": "Manage fiscal years and open or soft-close periods",
+      "group": "Accounting configuration",
+      "capability_code": "ACCOUNTING_CONFIGURATION",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.period.preclose",
+      "name": "accounting.period.preclose",
+      "description": "Run the pre-close readiness check of a period",
+      "group": "Closing",
+      "capability_code": "PERIOD_CLOSING",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.period.reopen",
+      "name": "accounting.period.reopen",
+      "description": "Reopen a closed accounting period with a reason",
+      "group": "Closing",
+      "capability_code": "PERIOD_CLOSING",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.period.soft_close",
+      "name": "accounting.period.soft_close",
+      "description": "Soft-close an accounting period",
+      "group": "Closing",
+      "capability_code": "PERIOD_CLOSING",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.period.view",
+      "name": "accounting.period.view",
+      "description": "View fiscal years and accounting periods",
+      "group": "Accounting configuration",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.posting_rule.manage",
+      "name": "accounting.posting_rule.manage",
+      "description": "Manage posting rules",
+      "group": "Accounting configuration",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.posting_rule.view",
+      "name": "accounting.posting_rule.view",
+      "description": "View posting rules",
+      "group": "Accounting configuration",
+      "capability_code": "ACCOUNTING_CONFIGURATION",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.profile.manage",
+      "name": "accounting.profile.manage",
+      "description": "Manage the accounting profile and activate accounting",
+      "group": "Accounting configuration",
+      "capability_code": "ACCOUNTING_CONFIGURATION",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.profile.view",
+      "name": "accounting.profile.view",
+      "description": "View the accounting profile and setup status",
+      "group": "Accounting configuration",
+      "capability_code": "ACCOUNTING_CONFIGURATION",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.reconciliation.ap.view",
+      "name": "accounting.reconciliation.ap.view",
+      "description": "View the accounts payable to general ledger reconciliation",
+      "group": "Payables",
+      "capability_code": "AP_AGING",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.reconciliation.ar.view",
+      "name": "accounting.reconciliation.ar.view",
+      "description": "View the accounts receivable to general ledger reconciliation",
+      "group": "Receivables",
+      "capability_code": "AR_AGING",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.reconciliation.cash_bank.view",
+      "name": "accounting.reconciliation.cash_bank.view",
+      "description": "View the cash and bank to general ledger reconciliation",
+      "group": "Cash and bank",
+      "capability_code": "BANK_RECONCILIATION",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.reconciliation.exception.manage",
+      "name": "accounting.reconciliation.exception.manage",
+      "description": "Assign, explain and resolve reconciliation exceptions",
+      "group": "Reconciliation",
+      "capability_code": "RECONCILIATION",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.reconciliation.run",
+      "name": "accounting.reconciliation.run",
+      "description": "Run a reconciliation and keep its result",
+      "group": "Reconciliation",
+      "capability_code": "RECONCILIATION",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.reconciliation.view",
+      "name": "accounting.reconciliation.view",
+      "description": "View the reconciliation overview and the reconciliations of the active modules",
+      "group": "Reconciliation",
+      "capability_code": "RECONCILIATION",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.report.export",
+      "name": "accounting.report.export",
+      "description": "Export the chart of accounts, general ledger and trial balance",
+      "group": "Ledger and reports",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.report_definition.manage",
+      "name": "accounting.report_definition.manage",
+      "description": "Manage financial report definitions, versions and account mapping",
+      "group": "Reporting",
+      "capability_code": "FINANCIAL_STATEMENTS",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.report_definition.view",
+      "name": "accounting.report_definition.view",
+      "description": "View financial report definitions and their account mapping",
+      "group": "Reporting",
+      "capability_code": "FINANCIAL_STATEMENTS",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.reporting.balance_sheet.view",
+      "name": "accounting.reporting.balance_sheet.view",
+      "description": "View the balance sheet (statement of financial position)",
+      "group": "Reporting",
+      "capability_code": "FINANCIAL_STATEMENTS",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.reporting.cash_flow.view",
+      "name": "accounting.reporting.cash_flow.view",
+      "description": "View the cash flow statement",
+      "group": "Reporting",
+      "capability_code": "FINANCIAL_STATEMENTS",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.reporting.pnl.view",
+      "name": "accounting.reporting.pnl.view",
+      "description": "View the profit and loss statement",
+      "group": "Reporting",
+      "capability_code": "FINANCIAL_STATEMENTS",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.tax.manage",
+      "name": "accounting.tax.manage",
+      "description": "Create and edit tax codes, add rates, activate and deactivate codes",
+      "group": "Tax",
+      "capability_code": "TAX_CONFIGURATION",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.tax.report.view",
+      "name": "accounting.tax.report.view",
+      "description": "View the tax report",
+      "group": "Tax",
+      "capability_code": "TAX_REPORT",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.tax.view",
+      "name": "accounting.tax.view",
+      "description": "View tax codes, rates and tax transactions, and preview a tax calculation",
+      "group": "Tax",
+      "capability_code": "TAX_CONFIGURATION",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.trial_balance.view",
+      "name": "accounting.trial_balance.view",
+      "description": "View the trial balance",
+      "group": "Ledger and reports",
+      "capability_code": "GENERAL_LEDGER",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.vendor.manage",
+      "name": "accounting.vendor.manage",
+      "description": "Manage vendors, their financial profile and payment terms",
+      "group": "Payables",
+      "capability_code": "VENDOR",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.vendor.view",
+      "name": "accounting.vendor.view",
+      "description": "View vendors and payment terms",
+      "group": "Payables",
+      "capability_code": "VENDOR",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.accounting.year_end.run",
+      "name": "accounting.year_end.run",
+      "description": "Run and reverse the year-end closing",
+      "group": "Closing",
+      "capability_code": "PERIOD_CLOSING",
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.accounting.year_end.view",
+      "name": "accounting.year_end.view",
+      "description": "View the year-end closing",
+      "group": "Closing",
+      "capability_code": "PERIOD_CLOSING",
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.audit.view",
+      "name": "audit.view",
+      "description": "View the tenant audit log",
+      "group": "Audit",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optiaccounting.organization.manage",
+      "name": "organization.manage",
+      "description": "Manage branches and business units",
+      "group": "Organization",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optiaccounting.organization.view",
+      "name": "organization.view",
+      "description": "View branches and business units",
+      "group": "Organization",
+      "capability_code": null,
+      "delegable": true
+    }
+  ],
+  "events": [
+    {
+      "event_key": "optiaccounting.tenant.linked",
+      "name": "Tenant linked",
+      "schema_version": "1",
+      "description": "An OptiNexus tenant was linked to a local OptiEntry organization on its first sign-in.",
+      "payload_schema": {
+        "required": [
+          "optinexus_tenant_id",
+          "code"
+        ],
+        "properties": {
+          "optinexus_tenant_id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "event_key": "optiaccounting.membership.provisioned",
+      "name": "Membership provisioned",
+      "schema_version": "1",
+      "description": "A user was given a membership of a linked organization on their first sign-in.",
+      "payload_schema": {
+        "required": [
+          "user_subject",
+          "membership_id"
+        ],
+        "properties": {
+          "user_subject": {
+            "type": "string"
+          },
+          "membership_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "event_key": "optiaccounting.membership.deactivated",
+      "name": "Membership deactivated",
+      "schema_version": "1",
+      "description": "A membership was deactivated because OptiNexus revoked the user's access to the organization.",
+      "payload_schema": {
+        "required": [
+          "user_subject",
+          "reason"
+        ],
+        "properties": {
+          "user_subject": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "event_key": "optiaccounting.journal.posted",
+      "name": "Journal posted",
+      "schema_version": "1",
+      "description": "A journal was posted to the general ledger of an organization.",
+      "payload_schema": {
+        "required": [
+          "journal_id",
+          "journal_number",
+          "posting_date"
+        ],
+        "properties": {
+          "journal_id": {
+            "type": "string"
+          },
+          "journal_number": {
+            "type": "string"
+          },
+          "journal_type": {
+            "type": "string"
+          },
+          "posting_date": {
+            "type": "string"
+          },
+          "total": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "event_key": "optiaccounting.journal.reversed",
+      "name": "Journal reversed",
+      "schema_version": "1",
+      "description": "A posted journal was reversed by a new journal.",
+      "payload_schema": {
+        "required": [
+          "journal_id",
+          "reversal_id"
+        ],
+        "properties": {
+          "journal_id": {
+            "type": "string"
+          },
+          "journal_number": {
+            "type": "string"
+          },
+          "reversal_id": {
+            "type": "string"
+          },
+          "reversal_number": {
+            "type": "string"
+          },
+          "posting_date": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ],
+  "entitlement_limit_keys": [
+    "user_limit",
+    "branch_limit",
+    "business_unit_limit"
+  ],
+  "service_account": {
+    "scopes": [
+      "authorization.check",
+      "commercial.read",
+      "event.write",
+      "audit.write",
+      "tenant.delegate"
+    ]
+  },
+  "oidc_client": {
+    "redirect_uris": [
+      "http://entry.localtest.me:5190/api/v1/auth/sso/callback"
+    ],
+    "post_logout_redirect_uris": [
+      "http://entry.localtest.me:5190/login"
+    ],
+    "backchannel_logout_uri": "http://entry.localtest.me:5190/api/v1/integration/optinexus/backchannel-logout",
+    "launch_url": "http://entry.localtest.me:5190",
+    "scopes": [
+      "openid",
+      "profile",
+      "email"
+    ]
+  },
+  "application_code": "optiaccounting"
+}

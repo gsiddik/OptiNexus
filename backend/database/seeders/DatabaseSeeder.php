@@ -17,6 +17,9 @@ class DatabaseSeeder extends Seeder
             CommercialPermissionSeeder::class,
             OrchestrationPermissionSeeder::class,
             PlatformIntegrationPermissionSeeder::class,
+            // Applications, modules, features, permissions and events of every Opti product. Before the system roles, which resolve
+            // "every permission" when they run.
+            EcosystemCatalogSeeder::class,
             SystemRoleSeeder::class,
             CommercialRoleSeeder::class,
             OrchestrationRoleSeeder::class,

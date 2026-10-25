@@ -1,0 +1,1956 @@
+{
+  "manifest_version": "2.0",
+  "revision": "r0604ad4a3631",
+  "application_code": "optifleet",
+  "application": {
+    "application_code": "optifleet",
+    "name": "OptiFleet",
+    "description": "Fleet, workshop and work-order operations.",
+    "frontend_url": "http://fleet.localtest.me:5173"
+  },
+  "capabilities": [
+    {
+      "type": "MODULE",
+      "code": "optifleet.component",
+      "name": "Component Tracking",
+      "description": "Fleet module of OptiFleet.",
+      "sort_order": 10,
+      "parent_code": null
+    },
+    {
+      "type": "MODULE",
+      "code": "optifleet.tire",
+      "name": "Tire Management",
+      "description": "Fleet module of OptiFleet.",
+      "sort_order": 20,
+      "parent_code": null
+    },
+    {
+      "type": "MODULE",
+      "code": "optifleet.vehicle",
+      "name": "Vehicle Registry",
+      "description": "Fleet module of OptiFleet.",
+      "sort_order": 30,
+      "parent_code": null
+    },
+    {
+      "type": "MODULE",
+      "code": "optifleet.warranty",
+      "name": "Warranty",
+      "description": "Fleet module of OptiFleet.",
+      "sort_order": 40,
+      "parent_code": null
+    },
+    {
+      "type": "MODULE",
+      "code": "optifleet.analytics",
+      "name": "Analytics & Data Warehouse",
+      "description": "Intelligence module of OptiFleet.",
+      "sort_order": 50,
+      "parent_code": null
+    },
+    {
+      "type": "MODULE",
+      "code": "optifleet.history",
+      "name": "History & Records",
+      "description": "Intelligence module of OptiFleet.",
+      "sort_order": 60,
+      "parent_code": null
+    },
+    {
+      "type": "MODULE",
+      "code": "optifleet.maintenance_intelligence",
+      "name": "Maintenance Intelligence",
+      "description": "Intelligence module of OptiFleet.",
+      "sort_order": 70,
+      "parent_code": null
+    },
+    {
+      "type": "MODULE",
+      "code": "optifleet.telematics",
+      "name": "Telematics",
+      "description": "Intelligence module of OptiFleet.",
+      "sort_order": 80,
+      "parent_code": null
+    },
+    {
+      "type": "MODULE",
+      "code": "optifleet.inspection",
+      "name": "Inspection",
+      "description": "Maintenance module of OptiFleet.",
+      "sort_order": 90,
+      "parent_code": null
+    },
+    {
+      "type": "MODULE",
+      "code": "optifleet.maintenance",
+      "name": "Maintenance Planning",
+      "description": "Maintenance module of OptiFleet.",
+      "sort_order": 100,
+      "parent_code": null
+    },
+    {
+      "type": "MODULE",
+      "code": "optifleet.workshop",
+      "name": "Workshop Operations",
+      "description": "Maintenance module of OptiFleet.",
+      "sort_order": 110,
+      "parent_code": null
+    },
+    {
+      "type": "MODULE",
+      "code": "optifleet.work_order",
+      "name": "Work Order",
+      "description": "Maintenance module of OptiFleet.",
+      "sort_order": 120,
+      "parent_code": null
+    },
+    {
+      "type": "MODULE",
+      "code": "optifleet.report",
+      "name": "Reporting",
+      "description": "Reporting module of OptiFleet.",
+      "sort_order": 130,
+      "parent_code": null
+    },
+    {
+      "type": "MODULE",
+      "code": "optifleet.inventory",
+      "name": "Inventory",
+      "description": "Supply Chain module of OptiFleet.",
+      "sort_order": 140,
+      "parent_code": null
+    },
+    {
+      "type": "MODULE",
+      "code": "optifleet.partner",
+      "name": "Partner / Vendor",
+      "description": "Supply Chain module of OptiFleet.",
+      "sort_order": 150,
+      "parent_code": null
+    },
+    {
+      "type": "MODULE",
+      "code": "optifleet.procurement",
+      "name": "Procurement",
+      "description": "Supply Chain module of OptiFleet.",
+      "sort_order": 160,
+      "parent_code": null
+    }
+  ],
+  "permissions": [
+    {
+      "permission_key": "optifleet.account.contract.view",
+      "name": "Account: Contract View",
+      "description": "account contract view",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.account.invoice.download",
+      "name": "Account: Invoice Download",
+      "description": "account invoice download",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.account.invoice.view",
+      "name": "Account: Invoice View",
+      "description": "account invoice view",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.account.payment.submit",
+      "name": "Account: Payment Submit",
+      "description": "account payment submit",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.account.payment.view",
+      "name": "Account: Payment View",
+      "description": "account payment view",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.account.subscription.view",
+      "name": "Account: Subscription View",
+      "description": "account subscription view",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.analytics.breakdown.view",
+      "name": "Analytics: Breakdown View",
+      "description": "analytics breakdown view",
+      "capability_code": "optifleet.analytics",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.analytics.component.view",
+      "name": "Analytics: Component View",
+      "description": "analytics component view",
+      "capability_code": "optifleet.analytics",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.analytics.cost.view",
+      "name": "Analytics: Cost View",
+      "description": "analytics cost view",
+      "capability_code": "optifleet.analytics",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.analytics.export",
+      "name": "Analytics: Export",
+      "description": "analytics export",
+      "capability_code": "optifleet.analytics",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.analytics.fleet.view",
+      "name": "Analytics: Fleet View",
+      "description": "analytics fleet view",
+      "capability_code": "optifleet.analytics",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.analytics.inventory.view",
+      "name": "Analytics: Inventory View",
+      "description": "analytics inventory view",
+      "capability_code": "optifleet.analytics",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.analytics.maintenance.view",
+      "name": "Analytics: Maintenance View",
+      "description": "analytics maintenance view",
+      "capability_code": "optifleet.analytics",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.analytics.mechanic.view",
+      "name": "Analytics: Mechanic View",
+      "description": "analytics mechanic view",
+      "capability_code": "optifleet.analytics",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.analytics.overview.view",
+      "name": "Analytics: Overview View",
+      "description": "analytics overview view",
+      "capability_code": "optifleet.analytics",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.analytics.procurement.view",
+      "name": "Analytics: Procurement View",
+      "description": "analytics procurement view",
+      "capability_code": "optifleet.analytics",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.analytics.tire.view",
+      "name": "Analytics: Tire View",
+      "description": "analytics tire view",
+      "capability_code": "optifleet.analytics",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.analytics.vendor.view",
+      "name": "Analytics: Vendor View",
+      "description": "analytics vendor view",
+      "capability_code": "optifleet.analytics",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.analytics.warranty.view",
+      "name": "Analytics: Warranty View",
+      "description": "analytics warranty view",
+      "capability_code": "optifleet.analytics",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.analytics.work_order.view",
+      "name": "Analytics: Work Order View",
+      "description": "analytics work_order view",
+      "capability_code": "optifleet.analytics",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.analytics.workshop.view",
+      "name": "Analytics: Workshop View",
+      "description": "analytics workshop view",
+      "capability_code": "optifleet.analytics",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.audit.view",
+      "name": "Audit: View",
+      "description": "View audit",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.branch.activate",
+      "name": "Branch: Activate",
+      "description": "Activate branch",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.branch.create",
+      "name": "Branch: Create",
+      "description": "Create branch",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.branch.deactivate",
+      "name": "Branch: Deactivate",
+      "description": "Deactivate branch",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.branch.update",
+      "name": "Branch: Update",
+      "description": "Update branch",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.branch.view",
+      "name": "Branch: View",
+      "description": "View branch",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.breakdown.report",
+      "name": "Breakdown: Report",
+      "description": "Report breakdown",
+      "capability_code": "optifleet.maintenance",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.breakdown.resolve",
+      "name": "Breakdown: Resolve",
+      "description": "Resolve breakdown",
+      "capability_code": "optifleet.maintenance",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.breakdown.review",
+      "name": "Breakdown: Review",
+      "description": "Review breakdown",
+      "capability_code": "optifleet.maintenance",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.breakdown.view",
+      "name": "Breakdown: View",
+      "description": "View breakdown",
+      "capability_code": "optifleet.maintenance",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.company.update",
+      "name": "Company: Update",
+      "description": "Update company",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.company.view",
+      "name": "Company: View",
+      "description": "View company",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.component_asset.install",
+      "name": "Component Asset: Install",
+      "description": "Install component asset",
+      "capability_code": "optifleet.component",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.component_asset.manage",
+      "name": "Component Asset: Manage",
+      "description": "Manage component asset",
+      "capability_code": "optifleet.component",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.component_asset.remove",
+      "name": "Component Asset: Remove",
+      "description": "Remove component asset",
+      "capability_code": "optifleet.component",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.component_asset.replace",
+      "name": "Component Asset: Replace",
+      "description": "Replace component asset",
+      "capability_code": "optifleet.component",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.component_asset.view",
+      "name": "Component Asset: View",
+      "description": "View component asset",
+      "capability_code": "optifleet.component",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.component_category.create",
+      "name": "Component Category: Create",
+      "description": "Create component category",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.component_category.delete",
+      "name": "Component Category: Delete",
+      "description": "Delete component category",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.component_category.update",
+      "name": "Component Category: Update",
+      "description": "Update component category",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.component_category.view",
+      "name": "Component Category: View",
+      "description": "View component category",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.component_group.create",
+      "name": "Component Group: Create",
+      "description": "Create component group",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.component_group.delete",
+      "name": "Component Group: Delete",
+      "description": "Delete component group",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.component_group.map",
+      "name": "Component Group: Map",
+      "description": "Map component group",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.component_group.update",
+      "name": "Component Group: Update",
+      "description": "Update component group",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.component_group.view",
+      "name": "Component Group: View",
+      "description": "View component group",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.component_subcategory.create",
+      "name": "Component Subcategory: Create",
+      "description": "Create component subcategory",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.component_subcategory.delete",
+      "name": "Component Subcategory: Delete",
+      "description": "Delete component subcategory",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.component_subcategory.update",
+      "name": "Component Subcategory: Update",
+      "description": "Update component subcategory",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.component_subcategory.view",
+      "name": "Component Subcategory: View",
+      "description": "View component subcategory",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.configuration.view",
+      "name": "Configuration: View",
+      "description": "View configuration",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.configuration_history.view",
+      "name": "Configuration History: View",
+      "description": "View configuration history",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.dashboard.finance.view",
+      "name": "Dashboard: Finance View",
+      "description": "View financial dashboard widgets",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.diagnosis.manage",
+      "name": "Diagnosis: Manage",
+      "description": "Manage diagnosis",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.document_template.manage",
+      "name": "Document Template: Manage",
+      "description": "Manage document template",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.document_template.publish",
+      "name": "Document Template: Publish",
+      "description": "Publish document template",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.external_work_order_invoice.acknowledge",
+      "name": "External Work Order Invoice: Acknowledge",
+      "description": "Acknowledge external work order invoice",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.external_work_order_invoice.cancel",
+      "name": "External Work Order Invoice: Cancel",
+      "description": "Cancel external work order invoice",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.external_work_order_invoice.complete",
+      "name": "External Work Order Invoice: Complete",
+      "description": "Complete external work order invoice",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.external_work_order_invoice.deliver",
+      "name": "External Work Order Invoice: Deliver",
+      "description": "Deliver external work order invoice",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.external_work_order_invoice.generate_authorization",
+      "name": "External Work Order Invoice: Generate Authorization",
+      "description": "Generate_authorization external work order invoice",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.external_work_order_invoice.settle",
+      "name": "External Work Order Invoice: Settle",
+      "description": "Settle external work order invoice",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.external_work_order_invoice.view",
+      "name": "External Work Order Invoice: View",
+      "description": "View external work order invoice",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.goods_receipt.post",
+      "name": "Goods Receipt: Post",
+      "description": "Post goods receipt",
+      "capability_code": "optifleet.procurement",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.goods_receipt.view",
+      "name": "Goods Receipt: View",
+      "description": "View goods receipt",
+      "capability_code": "optifleet.procurement",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.inspection.create",
+      "name": "Inspection: Create",
+      "description": "Create inspection",
+      "capability_code": "optifleet.inspection",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.inspection.perform",
+      "name": "Inspection: Perform",
+      "description": "Perform inspection",
+      "capability_code": "optifleet.inspection",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.inspection.review",
+      "name": "Inspection: Review",
+      "description": "Review inspection",
+      "capability_code": "optifleet.inspection",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.inspection.submit",
+      "name": "Inspection: Submit",
+      "description": "Submit inspection",
+      "capability_code": "optifleet.inspection",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.inspection.view",
+      "name": "Inspection: View",
+      "description": "View inspection",
+      "capability_code": "optifleet.inspection",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.intelligence.component.view",
+      "name": "Intelligence: Component View",
+      "description": "intelligence component view",
+      "capability_code": "optifleet.maintenance_intelligence",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.intelligence.inventory.view",
+      "name": "Intelligence: Inventory View",
+      "description": "intelligence inventory view",
+      "capability_code": "optifleet.maintenance_intelligence",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.intelligence.overview.view",
+      "name": "Intelligence: Overview View",
+      "description": "intelligence overview view",
+      "capability_code": "optifleet.maintenance_intelligence",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.intelligence.recommendation.accept",
+      "name": "Intelligence: Recommendation Accept",
+      "description": "intelligence recommendation accept",
+      "capability_code": "optifleet.maintenance_intelligence",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.intelligence.recommendation.convert",
+      "name": "Intelligence: Recommendation Convert",
+      "description": "intelligence recommendation convert",
+      "capability_code": "optifleet.maintenance_intelligence",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.intelligence.recommendation.reject",
+      "name": "Intelligence: Recommendation Reject",
+      "description": "intelligence recommendation reject",
+      "capability_code": "optifleet.maintenance_intelligence",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.intelligence.recommendation.review",
+      "name": "Intelligence: Recommendation Review",
+      "description": "intelligence recommendation review",
+      "capability_code": "optifleet.maintenance_intelligence",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.intelligence.recommendation.view",
+      "name": "Intelligence: Recommendation View",
+      "description": "intelligence recommendation view",
+      "capability_code": "optifleet.maintenance_intelligence",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.intelligence.tire.view",
+      "name": "Intelligence: Tire View",
+      "description": "intelligence tire view",
+      "capability_code": "optifleet.maintenance_intelligence",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.intelligence.vehicle.view",
+      "name": "Intelligence: Vehicle View",
+      "description": "intelligence vehicle view",
+      "capability_code": "optifleet.maintenance_intelligence",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.inventory.adjust",
+      "name": "Inventory: Adjust",
+      "description": "Adjust inventory",
+      "capability_code": "optifleet.inventory",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.inventory.issue",
+      "name": "Inventory: Issue",
+      "description": "Issue inventory",
+      "capability_code": "optifleet.inventory",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.inventory.return",
+      "name": "Inventory: Return",
+      "description": "Return inventory",
+      "capability_code": "optifleet.inventory",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.inventory.scrap",
+      "name": "Inventory: Scrap",
+      "description": "Scrap inventory",
+      "capability_code": "optifleet.inventory",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.inventory.stock_opname",
+      "name": "Inventory: Stock Opname",
+      "description": "Stock_opname inventory",
+      "capability_code": "optifleet.inventory",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.inventory.view",
+      "name": "Inventory: View",
+      "description": "View inventory",
+      "capability_code": "optifleet.inventory",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.inventory_reconcile.approve",
+      "name": "Inventory Reconcile: Approve",
+      "description": "Approve inventory reconcile",
+      "capability_code": "optifleet.inventory",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.inventory_reconcile.manage",
+      "name": "Inventory Reconcile: Manage",
+      "description": "Manage inventory reconcile",
+      "capability_code": "optifleet.inventory",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.inventory_reconcile.view",
+      "name": "Inventory Reconcile: View",
+      "description": "View inventory reconcile",
+      "capability_code": "optifleet.inventory",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.inventory_valuation.verify",
+      "name": "Inventory Valuation: Verify",
+      "description": "Verify inventory valuation",
+      "capability_code": "optifleet.inventory",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.inventory_valuation.view",
+      "name": "Inventory Valuation: View",
+      "description": "View inventory valuation",
+      "capability_code": "optifleet.inventory",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.maintenance_history.view",
+      "name": "Maintenance History: View",
+      "description": "View maintenance history",
+      "capability_code": "optifleet.vehicle",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.maintenance_job.manage",
+      "name": "Maintenance Job: Manage",
+      "description": "Manage maintenance job",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.maintenance_policy.manage",
+      "name": "Maintenance Policy: Manage",
+      "description": "Manage maintenance policy",
+      "capability_code": "optifleet.maintenance",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.maintenance_policy.view",
+      "name": "Maintenance Policy: View",
+      "description": "View maintenance policy",
+      "capability_code": "optifleet.maintenance",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.maintenance_request.approve",
+      "name": "Maintenance Request: Approve",
+      "description": "Approve maintenance request",
+      "capability_code": "optifleet.maintenance",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.maintenance_request.convert_work_order",
+      "name": "Maintenance Request: Convert Work Order",
+      "description": "Convert_work_order maintenance request",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.maintenance_request.create",
+      "name": "Maintenance Request: Create",
+      "description": "Create maintenance request",
+      "capability_code": "optifleet.inspection",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.maintenance_request.reject",
+      "name": "Maintenance Request: Reject",
+      "description": "Reject maintenance request",
+      "capability_code": "optifleet.maintenance",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.maintenance_request.review",
+      "name": "Maintenance Request: Review",
+      "description": "Review maintenance request",
+      "capability_code": "optifleet.maintenance",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.maintenance_request.view",
+      "name": "Maintenance Request: View",
+      "description": "View maintenance request",
+      "capability_code": "optifleet.maintenance",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.maintenance_schedule.convert_maintenance_request",
+      "name": "Maintenance Schedule: Convert Maintenance Request",
+      "description": "Convert_maintenance_request maintenance schedule",
+      "capability_code": "optifleet.maintenance",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.maintenance_schedule.convert_work_order",
+      "name": "Maintenance Schedule: Convert Work Order",
+      "description": "Convert_work_order maintenance schedule",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.maintenance_schedule.create",
+      "name": "Maintenance Schedule: Create",
+      "description": "Create maintenance schedule",
+      "capability_code": "optifleet.maintenance",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.maintenance_schedule.manage",
+      "name": "Maintenance Schedule: Manage",
+      "description": "Manage maintenance schedule",
+      "capability_code": "optifleet.maintenance",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.maintenance_schedule.view",
+      "name": "Maintenance Schedule: View",
+      "description": "View maintenance schedule",
+      "capability_code": "optifleet.maintenance",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.mechanic_baseline.manage",
+      "name": "Dashboard: Mechanic Baseline Manage",
+      "description": "Manage mechanic performance baselines",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.notification_rule.manage",
+      "name": "Notification Rule: Manage",
+      "description": "Manage notification rule",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.numbering.manage",
+      "name": "Numbering: Manage",
+      "description": "Manage numbering",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.numbering.publish",
+      "name": "Numbering: Publish",
+      "description": "Publish numbering",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.part_request.approve",
+      "name": "Part Request: Approve",
+      "description": "Approve part request",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.part_request.cancel",
+      "name": "Part Request: Cancel",
+      "description": "Cancel part request",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.part_request.create",
+      "name": "Part Request: Create",
+      "description": "Create part request",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.part_request.issue",
+      "name": "Part Request: Issue",
+      "description": "Issue part request",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.part_request.reject",
+      "name": "Part Request: Reject",
+      "description": "Reject part request",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.part_request.view",
+      "name": "Part Request: View",
+      "description": "View part request",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.part_return.process",
+      "name": "Stock Return: Process",
+      "description": "Process part return",
+      "capability_code": "optifleet.inventory",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.part_return.view",
+      "name": "Stock Return: View",
+      "description": "View part return",
+      "capability_code": "optifleet.inventory",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.partner.manage",
+      "name": "Partner: Manage",
+      "description": "Manage partner",
+      "capability_code": "optifleet.partner",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.partner.view",
+      "name": "Partner: View",
+      "description": "View partner",
+      "capability_code": "optifleet.partner",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.product.create",
+      "name": "Product: Create",
+      "description": "Create product",
+      "capability_code": "optifleet.inventory",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.product.delete",
+      "name": "Product: Delete",
+      "description": "Delete product",
+      "capability_code": "optifleet.inventory",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.product.update",
+      "name": "Product: Update",
+      "description": "Update product",
+      "capability_code": "optifleet.inventory",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.product.view",
+      "name": "Product: View",
+      "description": "View product",
+      "capability_code": "optifleet.inventory",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.purchase_order.approve",
+      "name": "Purchase Order: Approve",
+      "description": "Approve purchase order",
+      "capability_code": "optifleet.procurement",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.purchase_order.create",
+      "name": "Purchase Order: Create",
+      "description": "Create purchase order",
+      "capability_code": "optifleet.procurement",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.purchase_order.issue",
+      "name": "Purchase Order: Issue",
+      "description": "Issue purchase order",
+      "capability_code": "optifleet.procurement",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.purchase_order.view",
+      "name": "Purchase Order: View",
+      "description": "View purchase order",
+      "capability_code": "optifleet.procurement",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.purchase_request.approve",
+      "name": "Purchase Request: Approve",
+      "description": "Approve purchase request",
+      "capability_code": "optifleet.procurement",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.purchase_request.create",
+      "name": "Purchase Request: Create",
+      "description": "Create purchase request",
+      "capability_code": "optifleet.procurement",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.purchase_request.submit",
+      "name": "Purchase Request: Submit",
+      "description": "Submit purchase request",
+      "capability_code": "optifleet.procurement",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.purchase_request.view",
+      "name": "Purchase Request: View",
+      "description": "View purchase request",
+      "capability_code": "optifleet.procurement",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.purchase_return.create",
+      "name": "Purchase Return: Create",
+      "description": "Create purchase return",
+      "capability_code": "optifleet.procurement",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.purchase_return.decide",
+      "name": "Purchase Return: Decide",
+      "description": "Decide purchase return",
+      "capability_code": "optifleet.procurement",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.purchase_return.receive_redelivery",
+      "name": "Purchase Return: Receive Redelivery",
+      "description": "Receive_redelivery purchase return",
+      "capability_code": "optifleet.procurement",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.qc.approve",
+      "name": "Qc: Approve",
+      "description": "Approve qc",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.qc.perform",
+      "name": "Qc: Perform",
+      "description": "Perform qc",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.qc.reject",
+      "name": "Qc: Reject",
+      "description": "Reject qc",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.qc.view",
+      "name": "Qc: View",
+      "description": "View qc",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.quotation.manage",
+      "name": "Quotation: Manage",
+      "description": "Manage quotation",
+      "capability_code": "optifleet.procurement",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.quotation.select",
+      "name": "Quotation: Select",
+      "description": "Select quotation",
+      "capability_code": "optifleet.procurement",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.quotation.view",
+      "name": "Quotation: View",
+      "description": "View quotation",
+      "capability_code": "optifleet.procurement",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.rfq.manage",
+      "name": "Rfq: Manage",
+      "description": "Manage rfq",
+      "capability_code": "optifleet.procurement",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.rfq.view",
+      "name": "Rfq: View",
+      "description": "View rfq",
+      "capability_code": "optifleet.procurement",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.rim.manage",
+      "name": "Rim: Manage",
+      "description": "Manage rim",
+      "capability_code": "optifleet.tire",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.rim.view",
+      "name": "Rim: View",
+      "description": "View rim",
+      "capability_code": "optifleet.tire",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.role.assign_permission",
+      "name": "Role: Assign Permission",
+      "description": "Assign_permission role",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.role.create",
+      "name": "Role: Create",
+      "description": "Create role",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.role.update",
+      "name": "Role: Update",
+      "description": "Update role",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.role.view",
+      "name": "Role: View",
+      "description": "View role",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.sparepart_sale.approve",
+      "name": "Sparepart Sale: Approve",
+      "description": "Approve sparepart sale",
+      "capability_code": "optifleet.inventory",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.sparepart_sale.create",
+      "name": "Sparepart Sale: Create",
+      "description": "Create sparepart sale",
+      "capability_code": "optifleet.inventory",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.sparepart_sale.view",
+      "name": "Sparepart Sale: View",
+      "description": "View sparepart sale",
+      "capability_code": "optifleet.inventory",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.stock_transfer.approve",
+      "name": "Stock Transfer: Approve",
+      "description": "Approve stock transfer",
+      "capability_code": "optifleet.inventory",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.stock_transfer.create",
+      "name": "Stock Transfer: Create",
+      "description": "Create stock transfer",
+      "capability_code": "optifleet.inventory",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.stock_transfer.dispatch",
+      "name": "Stock Transfer: Dispatch",
+      "description": "Dispatch stock transfer",
+      "capability_code": "optifleet.inventory",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.stock_transfer.receive",
+      "name": "Stock Transfer: Receive",
+      "description": "Receive stock transfer",
+      "capability_code": "optifleet.inventory",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.stock_transfer.view",
+      "name": "Stock Transfer: View",
+      "description": "View stock transfer",
+      "capability_code": "optifleet.inventory",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.telematics_link.manage",
+      "name": "Telematics Link: Manage",
+      "description": "Manage telematics link",
+      "capability_code": "optifleet.vehicle",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.telematics_link.view",
+      "name": "Telematics Link: View",
+      "description": "View telematics link",
+      "capability_code": "optifleet.vehicle",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.tire.inspect",
+      "name": "Tire: Inspect",
+      "description": "Inspect tire",
+      "capability_code": "optifleet.tire",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.tire.install",
+      "name": "Tire: Install",
+      "description": "Install tire",
+      "capability_code": "optifleet.tire",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.tire.manage",
+      "name": "Tire: Manage",
+      "description": "Manage tire",
+      "capability_code": "optifleet.tire",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.tire.remove",
+      "name": "Tire: Remove",
+      "description": "Remove tire",
+      "capability_code": "optifleet.tire",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.tire.rotate",
+      "name": "Tire: Rotate",
+      "description": "Rotate tire",
+      "capability_code": "optifleet.tire",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.tire.scrap",
+      "name": "Tire: Scrap",
+      "description": "Scrap tire",
+      "capability_code": "optifleet.tire",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.tire.sell",
+      "name": "Tire: Sell",
+      "description": "Sell tire",
+      "capability_code": "optifleet.tire",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.tire.view",
+      "name": "Tire: View",
+      "description": "View tire",
+      "capability_code": "optifleet.tire",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.tire_repair.approve",
+      "name": "Tire Repair: Approve",
+      "description": "Approve tire repair",
+      "capability_code": "optifleet.tire",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.tire_repair.inspect",
+      "name": "Tire Repair: Inspect",
+      "description": "Inspect tire repair",
+      "capability_code": "optifleet.tire",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.tire_repair.receive",
+      "name": "Tire Repair: Receive",
+      "description": "Receive tire repair",
+      "capability_code": "optifleet.tire",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.tire_repair.send",
+      "name": "Tire Repair: Send",
+      "description": "Send tire repair",
+      "capability_code": "optifleet.tire",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.tire_retread.approve",
+      "name": "Tire Retread: Approve",
+      "description": "Approve tire retread",
+      "capability_code": "optifleet.tire",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.tire_retread.inspect",
+      "name": "Tire Retread: Inspect",
+      "description": "Inspect tire retread",
+      "capability_code": "optifleet.tire",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.tire_retread.receive",
+      "name": "Tire Retread: Receive",
+      "description": "Receive tire retread",
+      "capability_code": "optifleet.tire",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.tire_retread.send",
+      "name": "Tire Retread: Send",
+      "description": "Send tire retread",
+      "capability_code": "optifleet.tire",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.tire_rule_profile.manage",
+      "name": "Tire Rule Profile: Manage",
+      "description": "Manage tire rule profile",
+      "capability_code": "optifleet.tire",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.tire_used_inspection.approve",
+      "name": "Tire Used Inspection: Approve",
+      "description": "Approve tire used inspection",
+      "capability_code": "optifleet.tire",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.used_part.approve",
+      "name": "Used Part: Approve",
+      "description": "Approve used part",
+      "capability_code": "optifleet.inventory",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.used_part.dispose",
+      "name": "Used Part: Dispose",
+      "description": "Dispose used part",
+      "capability_code": "optifleet.inventory",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.used_part.inspect",
+      "name": "Used Part: Inspect",
+      "description": "Inspect used part",
+      "capability_code": "optifleet.inventory",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.used_part.view",
+      "name": "Used Part: View",
+      "description": "View used part",
+      "capability_code": "optifleet.inventory",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.user.assign",
+      "name": "User: Assign",
+      "description": "Assign user",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.user.create",
+      "name": "User: Create",
+      "description": "Create user",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.user.update",
+      "name": "User: Update",
+      "description": "Update user",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.user.view",
+      "name": "User: View",
+      "description": "View user",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.vehicle.assign",
+      "name": "Vehicle: Assign",
+      "description": "Assign vehicle",
+      "capability_code": "optifleet.vehicle",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.vehicle.create",
+      "name": "Vehicle: Create",
+      "description": "Create vehicle",
+      "capability_code": "optifleet.vehicle",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.vehicle.status.update",
+      "name": "Vehicle: Status Update",
+      "description": "Status.update vehicle",
+      "capability_code": "optifleet.vehicle",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.vehicle.transfer",
+      "name": "Vehicle: Transfer",
+      "description": "Transfer vehicle",
+      "capability_code": "optifleet.vehicle",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.vehicle.update",
+      "name": "Vehicle: Update",
+      "description": "Update vehicle",
+      "capability_code": "optifleet.vehicle",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.vehicle.view",
+      "name": "Vehicle: View",
+      "description": "View vehicle",
+      "capability_code": "optifleet.vehicle",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.vehicle_brand.create",
+      "name": "Vehicle Brand: Create",
+      "description": "Create vehicle brand",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.vehicle_brand.update",
+      "name": "Vehicle Brand: Update",
+      "description": "Update vehicle brand",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.vehicle_brand.view",
+      "name": "Vehicle Brand: View",
+      "description": "View vehicle brand",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.vehicle_category.create",
+      "name": "Vehicle Category: Create",
+      "description": "Create vehicle category",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.vehicle_category.update",
+      "name": "Vehicle Category: Update",
+      "description": "Update vehicle category",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.vehicle_category.view",
+      "name": "Vehicle Category: View",
+      "description": "View vehicle category",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.vehicle_release.perform",
+      "name": "Vehicle Release: Perform",
+      "description": "Perform vehicle release",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.vendor_invoice.pay",
+      "name": "Vendor Invoice: Pay",
+      "description": "Pay vendor invoice",
+      "capability_code": "optifleet.procurement",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.vendor_invoice.view",
+      "name": "Vendor Invoice: View",
+      "description": "View vendor invoice",
+      "capability_code": "optifleet.procurement",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.warehouse.activate",
+      "name": "Warehouse: Activate",
+      "description": "Activate warehouse",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.warehouse.create",
+      "name": "Warehouse: Create",
+      "description": "Create warehouse",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.warehouse.deactivate",
+      "name": "Warehouse: Deactivate",
+      "description": "Deactivate warehouse",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.warehouse.update",
+      "name": "Warehouse: Update",
+      "description": "Update warehouse",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.warehouse.view",
+      "name": "Warehouse: View",
+      "description": "View warehouse",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.warranty.manage",
+      "name": "Warranty: Manage",
+      "description": "Manage warranty",
+      "capability_code": "optifleet.warranty",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.warranty.view",
+      "name": "Warranty: View",
+      "description": "View warranty",
+      "capability_code": "optifleet.warranty",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.warranty_claim.approve",
+      "name": "Warranty Claim: Approve",
+      "description": "Approve warranty claim",
+      "capability_code": "optifleet.warranty",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.warranty_claim.create",
+      "name": "Warranty Claim: Create",
+      "description": "Create warranty claim",
+      "capability_code": "optifleet.warranty",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.warranty_claim.review",
+      "name": "Warranty Claim: Review",
+      "description": "Review warranty claim",
+      "capability_code": "optifleet.warranty",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.wheel_configuration.map_vehicle",
+      "name": "Wheel Configuration: Map Vehicle",
+      "description": "Map_vehicle wheel configuration",
+      "capability_code": "optifleet.tire",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order.approve",
+      "name": "Work Order: Approve",
+      "description": "Approve work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.work_order.assign",
+      "name": "Work Order: Assign",
+      "description": "Assign work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order.cancel",
+      "name": "Work Order: Cancel",
+      "description": "Cancel work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order.cancel_external",
+      "name": "Work Order: Cancel External",
+      "description": "Cancel_external work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.work_order.close",
+      "name": "Work Order: Close",
+      "description": "Close work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order.complete",
+      "name": "Work Order: Complete",
+      "description": "Complete work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order.create",
+      "name": "Work Order: Create",
+      "description": "Create work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order.estimate",
+      "name": "Work Order: Estimate",
+      "description": "Estimate work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order.finalize_external",
+      "name": "Work Order: Finalize External",
+      "description": "Finalize_external work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.work_order.pause",
+      "name": "Work Order: Pause",
+      "description": "Pause work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order.prepare_external",
+      "name": "Work Order: Prepare External",
+      "description": "Prepare_external work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order.reject",
+      "name": "Work Order: Reject",
+      "description": "Reject work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.work_order.revise_external",
+      "name": "Work Order: Revise External",
+      "description": "Revise_external work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order.schedule",
+      "name": "Work Order: Schedule",
+      "description": "Schedule work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order.start",
+      "name": "Work Order: Start",
+      "description": "Start work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order.submit",
+      "name": "Work Order: Submit",
+      "description": "Submit work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order.update",
+      "name": "Work Order: Update",
+      "description": "Update work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order.view",
+      "name": "Work Order: View",
+      "description": "View work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order.view_workshop_invoice_reference",
+      "name": "Work Order: View External Workshop Invoice Reference",
+      "description": "View_workshop_invoice_reference work order",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order_external_service.cancel",
+      "name": "Work Order External Service: Cancel",
+      "description": "Cancel work order external service",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order_external_service.complete",
+      "name": "Work Order External Service: Complete",
+      "description": "Complete work order external service",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.work_order_external_service.create",
+      "name": "Work Order External Service: Create",
+      "description": "Create work order external service",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.worker.assign",
+      "name": "Worker: Assign",
+      "description": "Assign worker",
+      "capability_code": "optifleet.work_order",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.worker.manage",
+      "name": "Worker: Manage",
+      "description": "Manage worker",
+      "capability_code": "optifleet.workshop",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.worker.view",
+      "name": "Worker: View",
+      "description": "View worker",
+      "capability_code": "optifleet.workshop",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.workflow.manage",
+      "name": "Workflow: Manage",
+      "description": "Manage workflow",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.workflow.publish",
+      "name": "Workflow: Publish",
+      "description": "Publish workflow",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.workflow.simulate",
+      "name": "Workflow: Simulate",
+      "description": "Simulate workflow",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.workshop.activate",
+      "name": "Workshop: Activate",
+      "description": "Activate workshop",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.workshop.create",
+      "name": "Workshop: Create",
+      "description": "Create workshop",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.workshop.deactivate",
+      "name": "Workshop: Deactivate",
+      "description": "Deactivate workshop",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.workshop.update",
+      "name": "Workshop: Update",
+      "description": "Update workshop",
+      "capability_code": null,
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.workshop.view",
+      "name": "Workshop: View",
+      "description": "View workshop",
+      "capability_code": null,
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.workshop_invoice.record",
+      "name": "Service Invoice: Record",
+      "description": "Record workshop invoice",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.workshop_invoice.request_cancellation",
+      "name": "Service Invoice: Request Cancellation",
+      "description": "Request_cancellation workshop invoice",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.workshop_invoice.request_correction",
+      "name": "Service Invoice: Request Correction",
+      "description": "Request_correction workshop invoice",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.workshop_invoice.upload_payment",
+      "name": "Service Invoice: Upload Payment",
+      "description": "Upload_payment workshop invoice",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.workshop_invoice.verify_cancellation",
+      "name": "Service Invoice: Verify Cancellation",
+      "description": "Verify_cancellation workshop invoice",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.workshop_invoice.verify_correction",
+      "name": "Service Invoice: Verify Correction",
+      "description": "Verify_correction workshop invoice",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.workshop_invoice.view",
+      "name": "Service Invoice: View",
+      "description": "View workshop invoice",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.workshop_invoice.view_settlement_history",
+      "name": "Service Invoice: View Settlement History",
+      "description": "View_settlement_history workshop invoice",
+      "capability_code": "optifleet.work_order",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.workspace.approve",
+      "name": "Workspace: Approve",
+      "description": "Approve workspace",
+      "capability_code": "optifleet.workshop",
+      "delegable": false
+    },
+    {
+      "permission_key": "optifleet.workspace.block",
+      "name": "Workspace: Block",
+      "description": "Block workspace",
+      "capability_code": "optifleet.workshop",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.workspace.manage",
+      "name": "Workspace: Manage",
+      "description": "Manage workspace",
+      "capability_code": "optifleet.workshop",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.workspace.reserve",
+      "name": "Workspace: Reserve",
+      "description": "Reserve workspace",
+      "capability_code": "optifleet.workshop",
+      "delegable": true
+    },
+    {
+      "permission_key": "optifleet.workspace.view",
+      "name": "Workspace: View",
+      "description": "View workspace",
+      "capability_code": "optifleet.workshop",
+      "delegable": true
+    }
+  ]
+}

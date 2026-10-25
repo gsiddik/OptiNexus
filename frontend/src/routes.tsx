@@ -68,6 +68,7 @@ const NotificationTemplateDetailPage = lazyPage(() => import('./pages/orchestrat
 const NotificationRulesListPage = lazyPage(() => import('./pages/orchestration/notifications/NotificationRulesListPage'), 'NotificationRulesListPage');
 const NotificationRuleDetailPage = lazyPage(() => import('./pages/orchestration/notifications/NotificationRuleDetailPage'), 'NotificationRuleDetailPage');
 const NotificationsListPage = lazyPage(() => import('./pages/orchestration/notifications/NotificationsListPage'), 'NotificationsListPage');
+const EmailSuppressionsListPage = lazyPage(() => import('./pages/orchestration/notifications/EmailSuppressionsListPage'), 'EmailSuppressionsListPage');
 const NotificationDetailPage = lazyPage(() => import('./pages/orchestration/notifications/NotificationDetailPage'), 'NotificationDetailPage');
 
 /** Every route of the portal. Kept apart from the router components so tests and the preload can read it. */
@@ -137,6 +138,7 @@ export const routeTree = (
       <Route path="/notification-rules" element={<NotificationRulesListPage />} />
       <Route path="/notification-rules/:id" element={<NotificationRuleDetailPage />} />
       <Route path="/notifications" element={<NotificationsListPage />} />
+      <Route path="/email-suppressions" element={<EmailSuppressionsListPage />} />
       <Route path="/notifications/:id" element={<NotificationDetailPage />} />
     </Route>
     <Route path="*" element={<Navigate to="/" replace />} />

@@ -139,7 +139,8 @@ class InvoiceService
 
             $invoice->update([
                 'balance_due' => $fullyPaid ? Money::zero() : $newBalance,
-                'status' => $fullyPaid ? Invoice::STATUS_PAID : Invoice::STATUS_PARTIALLY_PAID,
+                // A partial payment on an overdue invoice leaves it overdue; only full payment ends that state.
+                'status' => $fullyPaid ? Invoice::STATUS_PAID : ($invoice->status === Invoice::STATUS_OVERDUE ? Invoice::STATUS_OVERDUE : Invoice::STATUS_PARTIALLY_PAID),
                 'paid_at' => $fullyPaid ? now() : $invoice->paid_at,
             ]);
 

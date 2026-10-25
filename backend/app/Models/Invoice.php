@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'invoice_number', 'billing_id', 'customer_id', 'tenant_id', 'subscription_id',
     'issue_date', 'due_date', 'currency', 'subtotal', 'discount_total', 'tax_total',
     'adjustment_total', 'total', 'balance_due', 'status', 'issued_at', 'paid_at',
-    'cancelled_at', 'metadata',
+    'cancelled_at', 'metadata', 'due_reminder_sent_at',
 ])]
 class Invoice extends Model
 {
@@ -56,6 +56,7 @@ class Invoice extends Model
             'issued_at' => 'datetime',
             'paid_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'due_reminder_sent_at' => 'datetime',
             'metadata' => 'array',
         ];
     }

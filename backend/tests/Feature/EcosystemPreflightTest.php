@@ -101,4 +101,17 @@ class EcosystemPreflightTest extends TestCase
 
         $this->artisan('ecosystem:preflight')->assertSuccessful()->expectsOutputToContain('invitation, credential and operational e-mails will not reach anyone');
     }
+
+    public function test_postmark_without_the_bounce_webhook_is_a_warning(): void
+    {
+        $this->app['env'] = 'production';
+        config(['oidc.issuer' => 'https://nexus.example.test', 'app.debug' => false, 'queue.default' => 'database', 'mail.default' => 'smtp',
+            'mail.mailers.smtp.host' => 'smtp.postmarkapp.com', 'mail.from.address' => 'notify@example.org', 'app.key' => 'base64:'.base64_encode(random_bytes(32)),
+            'notifications.postmark_webhook' => ['username' => null, 'password' => null]]);
+
+        $this->artisan('ecosystem:preflight')->assertSuccessful()->expectsOutputToContain('bounces and spam complaints are not fed back');
+
+        config(['notifications.postmark_webhook' => ['username' => 'postmark', 'password' => 'long-random']]);
+        $this->artisan('ecosystem:preflight')->assertSuccessful()->doesntExpectOutputToContain('bounces and spam complaints are not fed back');
+    }
 }

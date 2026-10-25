@@ -62,6 +62,11 @@ class EcosystemPreflight extends Command
         } else {
             $results[] = ['Mail', 'OK', "MAIL_MAILER='{$mailer}'"];
         }
+        // Without the bounce webhook OptiNexus keeps mailing addresses the provider already rejected, which hurts the sender reputation.
+        if (! in_array($mailer, ['log', 'array', 'null'], true) && str_contains((string) config('mail.mailers.smtp.host'), 'postmarkapp.com')
+            && (! config('notifications.postmark_webhook.username') || ! config('notifications.postmark_webhook.password'))) {
+            $results[] = ['Mail bounces', 'WARN', 'POSTMARK_WEBHOOK_USERNAME/PASSWORD are not set: bounces and spam complaints are not fed back (docs/OPERATIONAL_EMAIL.md)'];
+        }
 
         if ($production && config('app.debug')) {
             $results[] = ['APP_DEBUG', 'FAIL', 'must be false in production'];

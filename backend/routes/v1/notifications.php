@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Api\V1\EmailSuppressionController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NotificationRuleController;
 use App\Http\Controllers\Api\V1\NotificationTemplateController;
+use App\Http\Controllers\Api\V1\PostmarkWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'ecosystem'])->group(function () {
@@ -28,3 +30,11 @@ Route::middleware(['auth:sanctum', 'ecosystem'])->group(function () {
         Route::post('/{notification}/cancel', [NotificationController::class, 'cancel'])->middleware('permission:cgo.notification.delivery.retry,notification')->name('cancel');
     });
 });
+
+Route::middleware(['auth:sanctum', 'ecosystem'])->prefix('email-suppressions')->name('email-suppressions.')->group(function () {
+    Route::get('/', [EmailSuppressionController::class, 'index'])->middleware('permission:cgo.notification.delivery.view')->name('index');
+    Route::post('/{emailSuppression}/release', [EmailSuppressionController::class, 'release'])->middleware('permission:cgo.notification.delivery.retry')->name('release');
+});
+
+// Mail provider callbacks (machine-to-machine, credentials checked in the controller).
+Route::post('/webhooks/postmark', PostmarkWebhookController::class)->middleware('throttle:120,1')->name('webhooks.postmark');

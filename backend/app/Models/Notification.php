@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'tenant_id', 'application_id', 'notification_rule_id', 'notification_template_id',
     'recipient_user_id', 'channel_target', 'channel', 'subject', 'body', 'status',
     'correlation_id', 'causation_id', 'attempt_count', 'last_error_code', 'last_error_message',
-    'next_retry_at', 'sent_at', 'created_by',
+    'next_retry_at', 'sent_at', 'created_by', 'body_html',
 ])]
 class Notification extends Model
 {

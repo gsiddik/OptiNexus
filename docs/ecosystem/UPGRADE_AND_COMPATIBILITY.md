@@ -24,7 +24,7 @@ the Alpine image build (see `ECOSYSTEM_AUDIT_STATUS.md` section 6).
 1. **Nexus** (provider of every contract): deploy, `php artisan migrate --force`, catalog seed (the container does it in `catalog` mode). Re-import each product's
    manifest (`ecosystem:import-manifest`): until then nothing is delegable (`permissions.delegable` defaults to false) and no product is seat-controlled. Existing service
    accounts keep `allowed_scopes = NULL` (unrestricted, as before); narrow them deliberately. Start the queue worker (invitation mail) and the scheduler
-   (`invitations:expire`, `oidc:reconcile-access`). Run `ecosystem:preflight`; set a real mail transport and `TRUSTED_PROXIES` (`deploy/ecosystem/README.md`).
+   (`invitations:expire`, `oidc:reconcile-access`). Run `ecosystem:preflight`; set a real mail transport and `TRUSTED_PROXIES` (`deploy/optiecosystem/README.md`).
 2. **Entry** and **Fleet** in either order, after Nexus: `php artisan migrate --force`; Entry also `optientry:sync-permissions`. Enable Fleet's accounting feed backfill
    only once Entry is on the new version (an old Entry would auto-process quarantined backfill events).
 3. Switch features on per tenant, never globally: Fleet `governance_mode` stays `LOCAL` until `optinexus:governance:enable <tenant> --check` passes; an Entry connection to Fleet is created, mapped

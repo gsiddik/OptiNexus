@@ -1,48 +1,55 @@
-# Opti ecosystem on one machine (Windows Podman Desktop, Docker, Linux, macOS)
+# OptiEcosystem: the Opti platform on one machine (Windows Podman Desktop, Docker, Linux, macOS)
 
-`ecosystem.ps1` runs OptiNexus (always) plus any subset of OptiFleet, OptiRadar and OptiEntry. Each product keeps its own Compose project,
+Step-by-step guide in Indonesian for Podman Desktop, including the OptiRadar map inside OptiDeli: [PANDUAN_PODMAN_DESKTOP.md](PANDUAN_PODMAN_DESKTOP.md).
+
+`optiecosystem.ps1` runs OptiNexus (always) plus any subset of OptiFleet, OptiRadar, OptiEntry and OptiDeli. Each product keeps its own Compose project,
 images and volumes, defined in **its own repository**; this folder only adds what they share. It is the one canonical place for cross-repo
 deployment tooling (there is no sixth repository).
 
 | Combination (R04) | Command |
 | --- | --- |
-| Fleet | `.\ecosystem.ps1 up -Products fleet` |
-| Radar | `.\ecosystem.ps1 up -Products radar` |
-| Entry | `.\ecosystem.ps1 up -Products entry` |
-| Fleet + Radar | `.\ecosystem.ps1 up -Products fleet,radar` |
-| Fleet + Entry | `.\ecosystem.ps1 up -Products fleet,entry` |
-| Fleet + Radar + Entry | `.\ecosystem.ps1 up -Products fleet,radar,entry` |
+| Fleet | `.\optiecosystem.ps1 up -Products fleet` |
+| Radar | `.\optiecosystem.ps1 up -Products radar` |
+| Entry | `.\optiecosystem.ps1 up -Products entry` |
+| Fleet + Radar | `.\optiecosystem.ps1 up -Products fleet,radar` |
+| Fleet + Entry | `.\optiecosystem.ps1 up -Products fleet,entry` |
+| Fleet + Radar + Entry | `.\optiecosystem.ps1 up -Products fleet,radar,entry` |
+| Deli + Radar (OptiRadar map inside OptiDeli) | `.\optiecosystem.ps1 up -Products deli,radar` |
+| Everything | `.\optiecosystem.ps1 up -Products all` |
 
 Any subset works (the product list is the only catalogue; add a product by adding an overlay and an env template in the script). Products that
 are not listed are not started. A product never waits for a peer: each one has its own bootstrap job and its own health checks, and the
-integrations between products (Radar to Fleet, Fleet to Entry) are switched on per tenant inside the products, not here.
+integrations between products (Radar to Fleet, Fleet to Entry, Deli to Entry, the Radar map in Deli) are switched on per tenant inside the products, not here.
 
 ## What you need
 
 * PowerShell 7 (`winget install Microsoft.PowerShell`; Windows PowerShell 5.1 also works), Git, and **Podman Desktop with a running machine** or Docker.
   Podman: `podman machine init --cpus 4 --memory 8192 --disk-size 60` then `podman machine start`. Rootless or rootful are both fine.
   A Compose provider is needed: Podman Desktop ships `docker-compose`/`podman compose`; plain `podman-compose` works with limits (it may
-  ignore `service_completed_successfully`). `ecosystem.ps1 preflight` detects the machine, connection, provider, free ports and memory.
-* Memory advice (machine total): Nexus 1 GB + Fleet 2.5 GB + Entry 1.3 GB + Radar 1.5 GB + 0.5 GB headroom, so about 7 GB for everything.
-* Browser names: `nexus.localtest.me`, `fleet.localtest.me`, `entry.localtest.me`, `radar.localtest.me` resolve to 127.0.0.1 through public
+  ignore `service_completed_successfully`). `optiecosystem.ps1 preflight` detects the machine, connection, provider, free ports and memory.
+* Memory advice (machine total): Nexus 1 GB + Fleet 2.5 GB + Entry 1.3 GB + Radar 1.5 GB + Deli 0.8 GB + 0.5 GB headroom, so about 8 GB for everything
+  (Nexus + Deli + Radar alone: about 4 GB).
+* Browser names: `nexus.localtest.me`, `nexus-console.localtest.me`, `fleet.localtest.me`, `entry.localtest.me`, `radar.localtest.me`, `deli.localtest.me` resolve to 127.0.0.1 through public
   DNS. Offline, add them to the hosts file instead (Windows, as administrator: `C:\Windows\System32\drivers\etc\hosts`).
 
 ## Clone to first smoke test
 
 ```powershell
 mkdir C:\opti; cd C:\opti
-git clone https://github.com/gsiddik/OptiNexus.git
-git clone https://github.com/gsiddik/OptiFleet-v2.git
-git clone https://github.com/gsiddik/OptiAccounting.git        # product name OptiEntry
-git clone https://github.com/gsiddik/OptiRadar.git
-git clone https://github.com/gsiddik/OptiRadar-web.git
+# -c core.autocrlf=false: shell scripts run inside Linux containers and need LF line ends, also on Windows.
+git clone -c core.autocrlf=false https://github.com/gsiddik/OptiNexus.git
+git clone -c core.autocrlf=false https://github.com/gsiddik/OptiFleet-v2.git
+git clone -c core.autocrlf=false https://github.com/gsiddik/OptiAccounting.git        # product name OptiEntry
+git clone -c core.autocrlf=false https://github.com/gsiddik/OptiRadar.git
+git clone -c core.autocrlf=false https://github.com/gsiddik/OptiRadar-web.git
+git clone -c core.autocrlf=false https://github.com/gsiddik/OptiDeli.git
 # check out the branch that carries the container package in each repository (see REVISIONS in the pull requests), then:
-cd OptiNexus\deploy\ecosystem
-.\ecosystem.ps1 init                                  # writes .state\*.env with generated secrets (never printed, never committed)
-.\ecosystem.ps1 preflight -Products fleet,entry
-.\ecosystem.ps1 build -Products fleet,entry           # first time only, or after pulling new code
-.\ecosystem.ps1 up -Products fleet,entry              # Nexus first, then the products; waits for health
-.\ecosystem.ps1 smoke -Products fleet,entry
+cd OptiNexus\deploy\optiecosystem
+.\optiecosystem.ps1 init                                  # writes .state\*.env with generated secrets (never printed, never committed)
+.\optiecosystem.ps1 preflight -Products fleet,entry
+.\optiecosystem.ps1 build -Products fleet,entry           # first time only, or after pulling new code
+.\optiecosystem.ps1 up -Products fleet,entry              # Nexus first, then the products; waits for health
+.\optiecosystem.ps1 smoke -Products fleet,entry
 ```
 
 Repositories are looked up next to OptiNexus (`OPTI_ROOT` overrides the parent folder; folder names are matched case-insensitively).
@@ -56,17 +63,36 @@ URLs and ports (all published on 127.0.0.1 only; to change one, see Troubleshoot
 | OptiFleet | 5173 (also serves `/api`, `/storage`) | 8000 | `http://fleet.localtest.me:5173` |
 | OptiEntry | 5190 (also serves `/api`) | 8200 | `http://entry.localtest.me:5190` |
 | OptiRadar + Web | 8082 | 8082 | `http://radar.localtest.me:8082`; device ports only through `docker-compose.devices.yml` |
+| OptiDeli | 5200 (also serves `/api`) | 8300 | `http://deli.localtest.me:5200`; map page `/radar` frames OptiRadar Web |
 
-**One issuer URL.** Every container listens on the port it publishes and joins the `opti-ecosystem` network under the product's public
+**One issuer URL.** Every container listens on the port it publishes and joins the `optiecosystem` network under the product's public
 name, so `http://nexus.localtest.me:8100` works from the browser (published port) and from inside any product container (network alias). Nothing
 sends a browser to an internal container name, and `OIDC_REQUIRE_PUBLIC_ISSUER=true` makes OptiNexus refuse a loopback issuer.
+
+## Names
+
+New installations use the OptiEcosystem names: network `optiecosystem`, Compose projects `optiecosystem-nexus`, `optiecosystem-fleet`,
+`optiecosystem-entry`, `optiecosystem-radar`, `optiecosystem-deli` (so containers are `optiecosystem-nexus-api-1` and so on, volumes
+`optiecosystem-nexus_nexus_postgres_data` and so on, and Podman Desktop groups them per product under those names).
+
+**Existing installations keep their names and data.** The folder was `deploy/ecosystem` before; the first command run from
+`deploy/optiecosystem` copies the old `.state` here (the original stays). `init` only adds missing keys, so an env file that already
+existed keeps its network (`opti-ecosystem`) and has no `COMPOSE_PROJECT_NAME`, which means the old project names (`optinexus`,
+`optifleet-v2`, `optiaccounting`, `optiradar`) and their volumes stay in use. Products added later (for example OptiDeli) get the new names.
+
+Switching an existing installation to the new names, per product (data moves through a backup; nothing is deleted):
+`backup -Products <p>` → `down -Products <p>` → add `COMPOSE_PROJECT_NAME=optiecosystem-<p>` to `.state\<p>.env` (and, for every
+product at once, `ECOSYSTEM_NETWORK=optiecosystem` in `.state\*.env`) → `up -Products <p>` (new, empty volumes) →
+`restore -Products <p> -Backup <folder> -ConfirmReplace`. The old volumes remain until you remove them yourself in Podman Desktop.
 
 ## Connecting the products to OptiNexus (onboarding)
 
 `init` creates every product in "OptiNexus is the authority" mode with empty client credentials. Register each product in OptiNexus (application,
 OIDC client with the exact redirect URIs `<console URL>/api/v1/auth/sso/callback` for Fleet/Entry and `<radar URL>/api/session/openid/callback`
-for Radar, service account), put the resulting client ids and secrets into `.state\<product>.env`, and run `ecosystem.ps1 up` again (containers are re-created,
-nothing is rebuilt). Per-product steps: OptiEntry `docs/integration/OPTINEXUS_ONBOARDING.md`, OptiFleet `docs/status/OPTINEXUS_INTEGRATION_STATUS.md`, OptiRadar `docs/optinexus-sso.md`.
+for Radar, service account), put the resulting client ids and secrets into `.state\<product>.env`, and run `optiecosystem.ps1 up` again (containers are re-created,
+nothing is rebuilt). Per-product steps: OptiEntry `docs/integration/OPTINEXUS_ONBOARDING.md`, OptiFleet `docs/status/OPTINEXUS_INTEGRATION_STATUS.md`, OptiRadar `docs/optinexus-sso.md`,
+OptiDeli `docs/architecture/OPTINEXUS_ADAPTER.md`. The order for the Deli/Entry feed and the Radar map in Deli is `docs/ecosystem/ACTIVATION_RUNBOOK.md`;
+the container version of it (which `exec` command, which env file) is in [PANDUAN_PODMAN_DESKTOP.md](PANDUAN_PODMAN_DESKTOP.md).
 
 ## Behind a proxy or a TLS edge (OptiNexus)
 
@@ -130,15 +156,15 @@ is accepted, revoked or expired. Every way of adding someone (invitation, delega
 
 | Task | Command | Notes |
 | --- | --- | --- |
-| Status | `.\ecosystem.ps1 status` | which products run, health of each endpoint |
-| Stop / start | `.\ecosystem.ps1 stop -Products entry`, `start -Products entry` | OptiNexus is touched only when named (`-Products all` for everything); data and keys persist |
-| Remove containers | `.\ecosystem.ps1 down -Products all` | containers and network only; **volumes and `.state` are never deleted** |
-| Backup | `.\ecosystem.ps1 backup -Products fleet,entry` | PostgreSQL dumps (all products incl. Nexus), Nexus signing keys, Fleet MongoDB and uploads, Entry uploads, with SHA-256 manifest, in `backups\` |
-| Restore | `.\ecosystem.ps1 restore -Products fleet,entry -Backup <folder> -ConfirmReplace` | without `-ConfirmReplace` it only prints what would be replaced; it verifies checksums and takes a `pre-restore` backup first |
-| Upgrade | `git pull` in each repository, then `.\ecosystem.ps1 upgrade -Products fleet,entry` | backup, rebuild, re-create; migrations are additive and run once in each product's bootstrap job |
-| Roll back a settings change | `.\ecosystem.ps1 rollback-config` (list) / `-To <name>` | every `init` snapshots `.state\*.env`; then `up` |
+| Status | `.\optiecosystem.ps1 status` | which products run, health of each endpoint |
+| Stop / start | `.\optiecosystem.ps1 stop -Products entry`, `start -Products entry` | OptiNexus is touched only when named (`-Products all` for everything); data and keys persist |
+| Remove containers | `.\optiecosystem.ps1 down -Products all` | containers and network only; **volumes and `.state` are never deleted** |
+| Backup | `.\optiecosystem.ps1 backup -Products fleet,entry` | PostgreSQL dumps (all products incl. Nexus), Nexus signing keys, Fleet MongoDB and uploads, Entry uploads, with SHA-256 manifest, in `backups\` |
+| Restore | `.\optiecosystem.ps1 restore -Products fleet,entry -Backup <folder> -ConfirmReplace` | without `-ConfirmReplace` it only prints what would be replaced; it verifies checksums and takes a `pre-restore` backup first |
+| Upgrade | `git pull` in each repository, then `.\optiecosystem.ps1 upgrade -Products fleet,entry` | backup, rebuild, re-create; migrations are additive and run once in each product's bootstrap job |
+| Roll back a settings change | `.\optiecosystem.ps1 rollback-config` (list) / `-To <name>` | every `init` snapshots `.state\*.env`; then `up` |
 | Roll back code | `git checkout <previous commit>` in the repository, `build`, `up` | additive migrations are not reversed; restore a backup if data must go back |
-| Record revisions | `.\ecosystem.ps1 manifest` | writes `REVISIONS.lock.json` (branch + commit of every repository) |
+| Record revisions | `.\optiecosystem.ps1 manifest` | writes `REVISIONS.lock.json` (branch + commit of every repository) |
 
 Site-specific Compose tweaks (registry mirrors, memory limits) go in `.state\<product>.override.yaml`; it is appended automatically.
 `COMPOSE_PROJECT_NAME` in a product env file renames its Compose project (a disposable test copy; the default names keep existing volumes).
@@ -147,9 +173,12 @@ Site-specific Compose tweaks (registry mirrors, memory limits) go in `.state\<pr
 
 * `preflight` FAIL "Engine reachable": Podman: `podman machine start`; Docker: start Docker Desktop.
 * Port in use: change the port in `.state\ecosystem.env` and the same value in that product's `.state\<product>.env` (and the matching `*_PUBLIC_URL`s), then `up`.
-* `smoke` "reaches the issuer" FAIL: the container cannot read `http://nexus.<domain>:8100`; check that OptiNexus is up and both sit on `opti-ecosystem`.
+* `smoke` "reaches the issuer" FAIL: the container cannot read `http://nexus.<domain>:8100`; check that OptiNexus is up and both sit on the network named in `.state\ecosystem.env`.
 * A bootstrap that fails prints its reason and the compose command stops; fix the setting and run `up` again. Waits are bounded (90 s database, 300 s schema).
 * No autoheal and no Docker socket mount is used anywhere; `restart: unless-stopped` plus health checks are enough on a workstation.
+
+* `smoke` "OptiRadar frame-ancestors" FAIL: `WEB_FRAME_ANCESTORS` in `.state\radar.env` must name the OptiDeli console origin exactly
+  (`http://deli.localtest.me:5200`); then `up -Products radar`.
 
 ## What was and was not exercised
 
@@ -157,4 +186,7 @@ See `docs/ecosystem/ECOSYSTEM_AUDIT_STATUS.md`. In short: the PowerShell script 
 Fleet, Entry and Fleet + Entry (preflight, up, smoke, stop/start, down/up, backup, restore, key persistence). **Not run:** Windows, Podman Desktop and
 `podman compose`/`podman-compose`; the Alpine production images (the build sandbox blocked the Alpine mirror, an Ubuntu php-fpm image was used
 with the same compose files, entrypoints and nginx templates); anything with OptiRadar (its image needs Maven Central and npm from inside the
-build, unavailable there).
+build, unavailable there). Added with OptiDeli (2026-10-25): `docker compose config` of every product with its overlay; the OptiDeli
+bootstrap steps (migrate, sync-access, platform administrator, DemoSeeder, twice) and the runtime config/route cache against PostgreSQL
+with PHP 8.3; **not run**: the OptiDeli images, `optiecosystem.ps1` itself (no PowerShell in the sandbox), Podman, the OptiRadar image
+and the iframe in a browser.

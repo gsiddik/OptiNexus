@@ -1,0 +1,25 @@
+# Joins OptiDeli to the shared OptiEcosystem network. The console (which proxies /api) answers at http://deli.<domain>:<ui port>, the URL
+# the browser, OptiNexus (back-channel logout, event webhooks) and OptiEntry (feed) use; the PHP roles join the network to reach the
+# OptiNexus issuer by its public name.
+# The console reaches its API through a name that exists only in this product's own network: the generic service name `web` would also
+# match OptiNexus's web container once both sit on the shared network.
+services:
+  web:
+    networks:
+      default:
+        aliases: ["deli-web"]
+  ui:
+    environment:
+      API_UPSTREAM: http://deli-web:${DELI_API_PORT:-8300}
+    networks:
+      default: {}
+      ecosystem:
+        aliases: ["deli.${ECOSYSTEM_DOMAIN:-localtest.me}"]
+  api:
+    networks: [default, ecosystem]
+  bootstrap:
+    networks: [default, ecosystem]
+networks:
+  ecosystem:
+    name: ${ECOSYSTEM_NETWORK:-optiecosystem}
+    external: true

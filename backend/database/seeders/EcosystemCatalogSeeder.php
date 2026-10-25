@@ -145,7 +145,7 @@ class EcosystemCatalogSeeder extends Seeder
                     'name' => $definition['name'],
                     'description' => $definition['description'],
                     'schema_version' => '1',
-                    'payload_schema' => ApplicationEventCatalogSeeder::PAYLOAD_SCHEMA,
+                    'payload_schema' => PlatformEvents::PAYLOAD_SCHEMA,
                     'status' => EventCatalogEntry::STATUS_ACTIVE,
                 ],
             );

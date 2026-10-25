@@ -65,9 +65,15 @@ class SubscriptionApplicationService
     private function announce(Tenant $tenant, array $assigned, array $removed): void
     {
         foreach ([PlatformEvents::TENANT_APPLICATION_ASSIGNED => $assigned, PlatformEvents::TENANT_APPLICATION_REMOVED => $removed] as $key => $ids) {
-            foreach (Application::query()->whereIn('id', $ids)->get() as $application) {
-                try {
-                    app(EventDispatchService::class)->publishPlatform($key, $tenant, [
+            if ($ids === []) {
+                continue;
+            }
+
+            try {
+                foreach (Application::query()->whereIn('id', $ids)->get() as $application) {
+                    // A savepoint of its own: this runs after the commit but possibly inside the caller's outer transaction, and a failed
+                    // statement would otherwise abort that whole transaction (PostgreSQL) and take the caller's work with it.
+                    DB::transaction(fn () => app(EventDispatchService::class)->publishPlatform($key, $tenant, [
                         'aggregate_type' => 'tenant',
                         'aggregate_id' => $tenant->id,
                         'payload' => [
@@ -76,10 +82,10 @@ class SubscriptionApplicationService
                             'tenant_code' => $tenant->tenant_code,
                             'tenant_name' => $tenant->name,
                         ],
-                    ]);
-                } catch (\Throwable $e) {
-                    report($e);
+                    ]));
                 }
+            } catch (\Throwable $e) {
+                report($e);
             }
         }
     }

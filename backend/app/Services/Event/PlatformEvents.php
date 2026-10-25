@@ -13,6 +13,17 @@ namespace App\Services\Event;
  */
 final class PlatformEvents
 {
+    /** The shared event envelope (the same as ApplicationEventCatalogSeeder::PAYLOAD_SCHEMA), used for the catalog entries of platform events. */
+    public const PAYLOAD_SCHEMA = [
+        'required' => ['aggregate_type', 'aggregate_id', 'payload'],
+        'properties' => [
+            'aggregate_type' => ['type' => 'string'],
+            'aggregate_id' => ['type' => 'string'],
+            'correlation' => ['type' => 'object'],
+            'payload' => ['type' => 'object'],
+        ],
+    ];
+
     /** An application was assigned to a tenant (its subscription now covers it). A receiver can prepare the tenant, for example OptiRadar creates the tenant's group. */
     public const TENANT_APPLICATION_ASSIGNED = 'cgo.tenant.application_assigned';
 

@@ -114,6 +114,19 @@ class EventDispatchService
      */
     public function publishPlatform(string $eventKey, Tenant $tenant, array $data): Event
     {
+        $definition = PlatformEvents::catalog()[$eventKey] ?? throw new \InvalidArgumentException("[{$eventKey}] is not a platform event.");
+
+        // `events.event_key` references the catalog. EcosystemCatalogSeeder registers the keys, but an installation that was not
+        // seeded (or seeded before this release) must not fail here, so the entry is made sure of.
+        EventCatalogEntry::query()->firstOrCreate(['event_key' => $eventKey], [
+            'application_id' => null,
+            'name' => $definition['name'],
+            'description' => $definition['description'],
+            'schema_version' => '1',
+            'payload_schema' => PlatformEvents::PAYLOAD_SCHEMA,
+            'status' => EventCatalogEntry::STATUS_ACTIVE,
+        ]);
+
         $id = (string) Str::uuid();
         $event = Event::create([
             'id' => $id,

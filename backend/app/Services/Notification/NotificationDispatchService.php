@@ -2,13 +2,14 @@
 
 namespace App\Services\Notification;
 
+use App\Jobs\SendNotification;
+use App\Models\EmailSuppression;
 use App\Models\Notification;
 use App\Models\NotificationPreference;
 use App\Models\NotificationRule;
 use App\Models\NotificationTemplate;
 use App\Models\User;
 use App\Services\Integration\SsrfSafeHttpClient;
-use App\Jobs\SendNotification;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -87,6 +88,13 @@ class NotificationDispatchService
             throw new \RuntimeException('NOTIFICATION_RECIPIENT_DENIED: recipient opted out.');
         }
 
+        if ($notification->channel === NotificationTemplate::CHANNEL_EMAIL && $notification->recipient?->email
+            && EmailSuppression::blocks($notification->recipient->email)) {
+            $this->markCancelled($notification, 'EMAIL_SUPPRESSED: the mail provider reported this address as undeliverable (bounce or spam complaint).');
+
+            throw new \RuntimeException('EMAIL_SUPPRESSED: recipient address is suppressed.');
+        }
+
         $notification->update(['status' => Notification::STATUS_PROCESSING]);
 
         match ($notification->channel) {
@@ -159,6 +167,16 @@ class NotificationDispatchService
         $email = $notification->recipient?->email;
         if (! $email) {
             throw new \RuntimeException('Recipient has no email address on file.');
+        }
+
+        if ($notification->body_html) {
+            // Multipart: HTML plus the plain-text body (better inbox placement than HTML alone).
+            Mail::send([], [], function ($message) use ($notification, $email) {
+                $message->to($email)->subject($notification->subject ?? 'Notification')
+                    ->html($notification->body_html)->text($notification->body);
+            });
+
+            return;
         }
 
         Mail::raw($notification->body, function ($message) use ($notification, $email) {

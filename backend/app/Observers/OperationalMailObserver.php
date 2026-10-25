@@ -8,6 +8,7 @@ use App\Models\Price;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Notification\Operational\OperationalMailComposer;
 use App\Services\Notification\OperationalMailService;
 use Illuminate\Database\Eloquent\Model;
 
@@ -33,16 +34,16 @@ class OperationalMailObserver
             return;
         }
         $mail = app(OperationalMailService::class);
+        $compose = app(OperationalMailComposer::class);
+        $previous = $model->getOriginal('status');
         if ($model instanceof Invoice && $model->status !== 'DRAFT') {
-            $mail->send([$model->tenant_id], 'cgo.invoice.view', "Invoice {$model->invoice_number}: {$model->status}",
-                "Invoice {$model->invoice_number} changed from {$model->getOriginal('status')} to {$model->status}.\nTenant: ".$model->tenant?->name."\nAmount: {$model->currency} {$model->total}\nReview the invoice and follow up in OptiNexus or your tenant application.");
+            $mail->send([$model->tenant_id], 'cgo.invoice.view', $compose->invoiceStatus($model, $previous));
         } elseif ($model instanceof Customer && in_array($model->status, ['SUSPENDED', 'TERMINATED'], true)) {
-            $mail->send($model->tenants()->pluck('id')->all(), 'cgo.customer.view', "Customer {$model->customer_code}: {$model->status}",
-                "Customer {$model->legal_name} is now {$model->status}. Contact your OptiNexus administrator for follow-up.");
+            $mail->send($model->tenants()->pluck('id')->all(), 'cgo.customer.view', $compose->customerStatus($model, $previous));
         } elseif ($model instanceof Tenant && in_array($model->status, ['SUSPENDED', 'TERMINATED'], true)) {
-            $mail->send([$model->id], 'cgo.tenant.view', "Tenant {$model->name}: {$model->status}", "Tenant {$model->name} is now {$model->status}. Contact your OptiNexus administrator for follow-up.");
+            $mail->send([$model->id], 'cgo.tenant.view', $compose->tenantStatus($model, $previous));
         } elseif ($model instanceof User && in_array($model->status, ['SUSPENDED', 'DISABLED'], true)) {
-            $mail->send($model->tenantMemberships()->pluck('tenant_id')->all(), 'cgo.user.view', "User {$model->name}: {$model->status}", "User {$model->name} ({$model->email}) is now {$model->status}. Review account access in OptiNexus.");
+            $mail->send($model->tenantMemberships()->pluck('tenant_id')->all(), 'cgo.user.view', $compose->userStatus($model, $previous));
         }
     }
 
@@ -61,11 +62,8 @@ class OperationalMailObserver
             return;
         }
         // One tenant per message: a tenant administrator never receives another tenant's commercial context.
-        foreach ($tenantIds as $tenantId) {
-            app(OperationalMailService::class)->send([$tenantId], 'cgo.pricing.view', 'Subscription pricing changed',
-                'Pricing for '.($price->plan?->name ?? $price->addon?->name).' has changed. Type: '.$price->price_type
-                ."\nCurrency: {$price->currency}\nUnit amount: ".($price->unit_amount ?? 'See pricing tiers')
-                ."\nEffective from: ".$price->effective_from?->format('d/m/Y, H:i:s')."\nReview the applicable price and follow up with your administrator. Existing issued invoices remain unchanged.");
+        foreach (Tenant::whereIn('id', $tenantIds)->get() as $tenant) {
+            app(OperationalMailService::class)->send([$tenant->id], 'cgo.pricing.view', app(OperationalMailComposer::class)->priceChanged($price, $tenant));
         }
     }
 }

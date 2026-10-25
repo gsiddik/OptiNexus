@@ -25,3 +25,8 @@ Schedule::command('oidc:reconcile-access')
 Schedule::command('invitations:expire')
     ->hourly()
     ->withoutOverlapping();
+
+// Invoice due dates: OVERDUE marking and the one-time reminder before the due date (each sends an operational e-mail).
+Schedule::command('invoices:process-due-dates')
+    ->hourly()
+    ->withoutOverlapping();

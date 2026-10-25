@@ -107,7 +107,10 @@ class LifecycleNotificationsTest extends TestCase
         $this->makeFlatPrice($subscription->plan, ['tenant_id' => $other->id]);
         $this->assertSame(0, Notification::where('recipient_user_id', $admin->id)->count());
         $this->makeFlatPrice($subscription->plan, ['unit_amount' => '250000.00']);
-        $this->assertSame(1, Notification::where('recipient_user_id', $admin->id)->where('subject', 'Subscription pricing changed')->count());
+        $mail = Notification::where('recipient_user_id', $admin->id)->sole();
+        $this->assertSame('Perubahan harga '.$subscription->plan->name, $mail->subject);
+        $this->assertStringContainsString('Harga satuan: IDR 250.000,00', $mail->body);
+        $this->assertStringContainsString('Invoice yang sudah diterbitkan tidak berubah.', $mail->body);
     }
 
     public function test_subscription_selection_assigns_only_included_apps_and_rejects_unrelated_apps(): void

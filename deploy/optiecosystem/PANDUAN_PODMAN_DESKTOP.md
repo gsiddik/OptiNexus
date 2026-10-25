@@ -180,6 +180,22 @@ Salin nilai `EVENT_WEBHOOK_SECRET` dari `.state\radar.whsec` ke `OPTINEXUS_WEBHO
 pada instalasi lama lalu `up -Products nexus`) mengizinkan alamat http lokal; di luar uji lokal pakai https. Grup yang sudah ada tidak diubah,
 dan grup tidak pernah dihapus saat aplikasi dicabut dari tenant.
 
+#### Tenant Deli otomatis (webhook OptiNexus ke OptiDeli)
+
+Dengan cara yang sama, tenant Deli dibuat OptiDeli sendiri begitu OptiDeli ditetapkan ke sebuah tenant Nexus (langganan tenant mencakup OptiDeli),
+sudah tertaut ke UUID tenant Nexus itu; langkah 5.4.2 (menautkan tenant di konsol Superadmin) tidak diperlukan untuk tenant baru. Slug diambil
+dari nama tenant (akhiran angka bila bentrok). **Deli harus berjalan dalam mode `saas`** (`OPTIDELI_DEPLOYMENT_MODE=saas` di `.state\deli.env`):
+mode `standalone` hanya melayani satu tenant tetap (`demo`), jadi tidak ada tenant yang dibuat dan tenant lain tidak bisa login. Sekali per instalasi:
+
+```powershell
+nexus php artisan ecosystem:register-event-subscription optideli cgo.tenant.application_assigned --url=http://deli.localtest.me:5200/api/v1/integration/optinexus/events --secret-file=/tmp/deli.whsec
+podman cp optiecosystem-nexus-api-1:/tmp/deli.whsec .state\deli.whsec
+nexus rm /tmp/deli.whsec
+```
+
+Salin `EVENT_WEBHOOK_SECRET` dari `.state\deli.whsec` ke `OPTINEXUS_EVENT_WEBHOOK_SECRET` di `.state\deli.env`, hapus `deli.whsec`, lalu
+`.\optiecosystem.ps1 up -Products deli` (restart `web` dan `ui` Deli bila perlu). Tenant yang sudah ada tidak diubah.
+
 ### 5.3 OptiNexus: token embed
 
 Isi `OPTIRADAR_EMBED_TOKEN=<nilai $radarToken>` di `.state\nexus.env`, lalu `.\optiecosystem.ps1 up -Products deli,radar`.

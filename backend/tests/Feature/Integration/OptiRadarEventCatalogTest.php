@@ -76,6 +76,7 @@ class OptiRadarEventCatalogTest extends TestCase
             'optiradar.geofence.exited',
             'optiradar.device.overspeed',
             'optiradar.vehicle.upserted',
+            'optiradar.driver.upserted',
         ], $entries->pluck('event_key')->all());
         $this->assertTrue($entries->every(fn ($entry) => $entry->isActive()));
     }

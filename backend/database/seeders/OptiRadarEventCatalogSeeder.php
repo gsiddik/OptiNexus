@@ -43,6 +43,10 @@ class OptiRadarEventCatalogSeeder extends ApplicationEventCatalogSeeder
             'name' => 'Vehicle telematics data changed',
             'description' => 'A device with a registration number was saved in OptiRadar (master data sync, docs/integration/MASTER_DATA_SYNC.md). aggregate_type is vehicle, aggregate_id the device. payload: key, registration_number, version, changed_at (UTC), telematics{device_ref, device_name}. Only the telematics group is for OptiRadar to send.',
         ],
+        'optiradar.driver.upserted' => [
+            'name' => 'Driver telematics data changed',
+            'description' => 'A driver with a licence number (driver attribute licenseNumber) was saved in OptiRadar by a user of one tenant (master data sync stage 4). aggregate_type is driver, aggregate_id the driver. payload: key (normalised licence number), license_number, name, version, changed_at (UTC), telematics{tag_id}. Only the identification tag is for OptiRadar to send; OptiDeli takes it and creates a draft driver when it does not know the licence number.',
+        ],
     ];
 
     protected function applicationCode(): string

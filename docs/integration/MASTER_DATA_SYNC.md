@@ -1,6 +1,6 @@
 # Vehicle and driver master data across the platforms
 
-Status: stage 1 (contract), stage 2 (OptiDeli <-> OptiFleet vehicles) and stage 3 (OptiRadar -> OptiFleet) are implemented; drivers (stage 4) are not. The flows that existed before are listed under "Today".
+Status: stage 1 (contract), stage 2 (OptiDeli <-> OptiFleet vehicles) stage 3 (OptiRadar -> OptiFleet) and stage 4 (drivers) are implemented. The flows that existed before are listed under "Today".
 
 ## Goal
 A tenant keys a vehicle or a driver once, in whichever platform it is working in; the other platforms receive what each of them needs.
@@ -68,7 +68,7 @@ own row, the key matches, and each applies the other's groups.
 1. This contract, the event catalog entries in OptiNexus, and the shared key normaliser.
 2. OptiDeli <-> OptiFleet: publishers, receivers, OptiFleet draft status, backfill command (`master:publish --all`).
 3. OptiRadar: telematics group out (done: OptiRadar publishes, OptiFleet keeps it; the existing gateway keeps linking odometer readings).
-4. Drivers end to end, including data for predictive maintenance.
+4. Drivers: OptiDeli owns them; OptiFleet reads the history of who drove a vehicle; OptiRadar's drivers come into OptiDeli as drafts (see below).
 
 ## Stage 2 as built (vehicles, OptiDeli <-> OptiFleet)
 - **OptiDeli** queues `optideli.vehicle.upserted` (transport group) in `master_events` when a vehicle of its own fleet is registered or its
@@ -95,7 +95,6 @@ own row, the key matches, and each applies the other's groups.
 
 Screens: OptiDeli, Armada > vehicle row "Lengkapi data angkutan" (PUT `fleet/vehicles/{id}/transport`); OptiFleet, vehicle list, filter Draft, row button "Lengkapi" (branch, category, brand, model; shows the OptiDeli transport data).
 
-Not yet: drivers.
 
 ## Stage 3 as built (OptiRadar -> OptiFleet)
 - **OptiRadar** queues `optiradar.vehicle.upserted` (telematics group: `device_ref` = the device's unique id, `device_name`) in its existing
@@ -109,3 +108,23 @@ Not yet: drivers.
 - Operator steps: seed the catalog (`OptiRadarEventCatalogSeeder`), `optiradar` already has `event.write`; register
   `ecosystem:register-event-subscription optifleet "optiradar.vehicle.*" --url=<fleet-api>/api/v1/integration/optinexus/events`; OptiFleet has one receiver secret, so
   the new subscription carries the same secret as its other one (set it in OptiNexus after creating it).
+
+## Stage 4 as built (drivers)
+Owner decision: **OptiDeli owns the drivers.** OptiFleet keeps no driver register and has nothing to add, change or complete; it only reads the
+history of who drove each vehicle. This replaces the earlier idea of a shared person group.
+
+- **OptiDeli -> OptiFleet**: `optideli.vehicle.driver_assigned` is queued when a trip of the own fleet **leaves** (SPM trip `IN_TRANSIT`, or an
+  order trip) and when a day of a vehicle contract is recorded as `PRESENT` with a driver. Payload: `key` + `registration_number` of the vehicle,
+  `assigned_at` (UTC), `reference{type SPM_TRIP|ORDER_TRIP|ATTENDANCE, id, number}`, `driver{name, phone, license_masked}`. The licence number is masked to its
+  last four characters; date of birth and address are never shared. Vendor vehicles and drivers are never published. It is a fact, not a versioned master:
+  OptiFleet stores one row per `(reference.type, reference.id)`, so repeats are harmless and order does not matter.
+- **OptiFleet** shows the facts as **periods per vehicle** (the same driver on consecutive facts is one period) in the **Drivers** tab of the vehicle, and the
+  driver who last had the vehicle before a work order was opened as information on the work order (no link between a driver and a vehicle is kept
+  there). Both exist **only for a tenant that OptiNexus says has bought OptiDeli** (`CentralGovernance::commercial()['applications']`, cached with the
+  usual TTL, decided by the backend; the endpoint answers 404 otherwise). The history is matched to a vehicle by plate key when read, so a fact that arrives before the
+  vehicle's own event is not lost.
+- **OptiRadar -> OptiDeli**: `optiradar.driver.upserted` (key = normalised licence number from the driver attribute `licenseNumber`; group `telematics{tag_id}`).
+  OptiDeli creates a **draft driver** (source `OPTIRADAR`, cannot be allocated: dispatch refuses it) when it does not know the licence number, or only attaches
+  the tag to a known one; staff complete licence validity and eligibility in the Pengemudi screen (`PUT fleet/drivers/{id}/profile`). A vendor's driver is never touched.
+- Operator steps: seed the catalog (`OptiDeliEventCatalogSeeder`, `OptiRadarEventCatalogSeeder`); the existing `optifleet <- optideli.vehicle.*` subscription already
+  carries the new OptiDeli event; add `optideli <- optiradar.driver.*` (OptiDeli has one receiver secret, so the new subscription carries the same one).

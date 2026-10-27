@@ -1,6 +1,6 @@
 # Joins OptiDeli to the shared OptiEcosystem network. The console (which proxies /api) answers at http://deli.<domain>:<ui port>, the URL
-# the browser, OptiNexus (back-channel logout, event webhooks) and OptiEntry (feed) use; the PHP roles (the scheduler too: it relays master data to OptiNexus) join the network to reach the
-# OptiNexus issuer by its public name.
+# the browser, OptiNexus (back-channel logout, event webhooks) and OptiEntry (feed) use; the PHP roles join the network to reach the
+# OptiNexus issuer by its public name (the scheduler too: it relays master data to OptiNexus).
 # The console reaches its API through a name that exists only in this product's own network: the generic service name `web` would also
 # match OptiNexus's web container once both sit on the shared network.
 services:

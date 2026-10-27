@@ -495,15 +495,16 @@ function Repair-StaleNat {
 valid=""
 for c in $(podman ps --format '{{.Names}}'); do
   ips=$(podman inspect "$c" --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}')
-  ports=$(podman inspect "$c" --format '{{range $p, $b := .NetworkSettings.Ports}}{{range $b}}{{.HostPort}} {{end}}{{end}}')
-  for ip in $ips; do for p in $ports; do valid="$valid $ip:$p"; done; done
+  ports=$(podman inspect "$c" --format '{{range $p, $b := .NetworkSettings.Ports}}{{$p}} {{end}}')
+  for ip in $ips; do for p in $ports; do valid="$valid $ip:${p%%/*}"; done; done
 done
 valid=$(echo $valid | tr ' ' '\n' | sort -u)
+[ -n "$valid" ] || exit 0
 for chain in $(nft list table inet netavark 2>/dev/null | grep -oE 'chain nv_[a-z0-9_]+_dnat' | awk '{print $2}'); do
   nft -a list chain inet netavark "$chain" | grep -E 'dnat ip to [0-9.]+:[0-9]+ # handle [0-9]+' | while read -r line; do
     target=$(echo "$line" | sed -E 's/.*dnat ip to ([0-9.]+:[0-9]+).*/\1/')
     handle=$(echo "$line" | sed -E 's/.*# handle ([0-9]+).*/\1/')
-    echo "$valid" | grep -qx "$target" || nft delete rule inet netavark "$chain" handle "$handle" && echo "removed $target"
+    if ! echo "$valid" | grep -qx "$target"; then nft delete rule inet netavark "$chain" handle "$handle" && echo "removed $target"; fi
   done
 done
 '@

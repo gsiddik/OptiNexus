@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             OptiRadarApplicationSeeder::class,
             CommercialDemoDataSeeder::class,
             // After the applications exist; each does nothing (with a warning) when its application is not registered yet.
+            OptiDeliEventCatalogSeeder::class,
             OptiFleetEventCatalogSeeder::class,
             OptiRadarEventCatalogSeeder::class,
         ]);

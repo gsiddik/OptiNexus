@@ -29,6 +29,7 @@ class ProductionSeeder extends Seeder
             PlatformIntegrationRoleSeeder::class,
             AdminUserSeeder::class,
             OptiRadarApplicationSeeder::class,
+            OptiDeliEventCatalogSeeder::class,
             OptiFleetEventCatalogSeeder::class,
             OptiRadarEventCatalogSeeder::class,
         ]);

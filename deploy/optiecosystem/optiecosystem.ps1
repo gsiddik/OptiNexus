@@ -191,7 +191,7 @@ function Get-Defaults([string]$Product, $Eco) {
                 APP_KEY = (New-AppKey); DB_PASSWORD = (New-Password); FLEET_PUBLIC_URL = "http://fleet.$d`:$($Eco['FLEET_UI_PORT'])"
                 FLEET_API_PORT = $Eco['FLEET_API_PORT']; FLEET_UI_PORT = $Eco['FLEET_UI_PORT']; FLEET_SEED = 'catalog'
                 OPTINEXUS_ENABLED = 'true'; OPTINEXUS_BASE_URL = $nexusUrl; OPTINEXUS_SSO_CLIENT_ID = ''; OPTINEXUS_SSO_CLIENT_SECRET = ''
-                OPTINEXUS_EVENTS_ENABLED = 'false'; OPTINEXUS_GATEWAY_CLIENT_ID = ''; OPTINEXUS_GATEWAY_CLIENT_SECRET = '' } }
+                OPTINEXUS_EVENTS_ENABLED = 'false'; OPTINEXUS_EVENTS_WEBHOOK_SECRET = ''; OPTINEXUS_GATEWAY_CLIENT_ID = ''; OPTINEXUS_GATEWAY_CLIENT_SECRET = '' } }
         'entry' { return [ordered]@{} + $common + [ordered]@{
                 APP_KEY = (New-AppKey); DB_PASSWORD = (New-Password); ENTRY_PUBLIC_URL = "http://entry.$d`:$($Eco['ENTRY_UI_PORT'])"
                 ENTRY_API_PORT = $Eco['ENTRY_API_PORT']; ENTRY_UI_PORT = $Eco['ENTRY_UI_PORT']
@@ -481,6 +481,39 @@ function Invoke-Build {
     }
 }
 
+# After the Podman machine (re)starts, netavark can keep port-forward rules that still point at the previous addresses of containers, so a
+# published port answers "empty reply" although its container is healthy. This removes every dnat rule whose address:port is not that of a
+# running container. It only runs on a Podman machine (a VM with nftables); anything unexpected is a warning, never a failure.
+function Repair-StaleNat {
+    $eng = Get-Engine
+    if ($eng.Name -ne 'podman') { return }
+    $ml = Invoke-Quiet $eng.Exe @('machine', 'list', '--format', 'json')
+    if ($ml.Code -ne 0) { return }
+    try { $m = @(($ml.Text | ConvertFrom-Json) | Where-Object { $_.Running }) } catch { return }
+    if ($m.Count -eq 0) { return }
+    $sh = @'
+valid=""
+for c in $(podman ps --format '{{.Names}}'); do
+  ips=$(podman inspect "$c" --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}')
+  ports=$(podman inspect "$c" --format '{{range $p, $b := .NetworkSettings.Ports}}{{range $b}}{{.HostPort}} {{end}}{{end}}')
+  for ip in $ips; do for p in $ports; do valid="$valid $ip:$p"; done; done
+done
+valid=$(echo $valid | tr ' ' '\n' | sort -u)
+for chain in $(nft list table inet netavark 2>/dev/null | grep -oE 'chain nv_[a-z0-9_]+_dnat' | awk '{print $2}'); do
+  nft -a list chain inet netavark "$chain" | grep -E 'dnat ip to [0-9.]+:[0-9]+ # handle [0-9]+' | while read -r line; do
+    target=$(echo "$line" | sed -E 's/.*dnat ip to ([0-9.]+:[0-9]+).*/\1/')
+    handle=$(echo "$line" | sed -E 's/.*# handle ([0-9]+).*/\1/')
+    echo "$valid" | grep -qx "$target" || nft delete rule inet netavark "$chain" handle "$handle" && echo "removed $target"
+  done
+done
+'@
+    $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($sh -replace "`r`n", "`n")))
+    $r = Invoke-Quiet $eng.Exe @('machine', 'ssh', $m[0].Name, "echo $b64 | base64 -d | sh")
+    if ($r.Code -ne 0) { Add-Result WARN 'Stale port forwards' "could not check inside the Podman machine (exit $($r.Code))"; return }
+    $n = @($r.Text -split "`n" | Where-Object { $_ -like 'removed *' }).Count
+    if ($n -gt 0) { Add-Result PASS 'Stale port forwards' "$n outdated rule(s) removed" }
+}
+
 function Invoke-Up {
     $sel = @(Resolve-Products); $eng = Get-Engine
     Invoke-Preflight
@@ -490,6 +523,7 @@ function Invoke-Up {
         Say "== up $($Catalog[$p].Title)"
         if ($p -eq 'radar' -and $Build) { Invoke-Build }
         Invoke-Compose $p $(if ($p -eq 'radar') { @('up', '-d', '--no-build') } else { $upArgs })
+        Repair-StaleNat
         foreach ($u in $Catalog[$p].Urls) {
             $url = Get-LocalUrl $p $u
             if (Wait-Url $url 300) { Add-Result PASS "$($Catalog[$p].Title) $($u.Name)" "ready at $url" }
@@ -577,7 +611,9 @@ function Invoke-Start {
     $sel = @(Resolve-Products -NexusOnlyWhenNamed)
     Ensure-Network
     foreach ($p in $sel) { Say "== start $($Catalog[$p].Title)"; Invoke-Compose $p @('up', '-d', '--no-build') }
+    Repair-StaleNat
     Show-Urls $sel
+    Complete-Checks
 }
 function Invoke-Down {
     $sel = @(Resolve-Products -NexusOnlyWhenNamed); $eng = Get-Engine

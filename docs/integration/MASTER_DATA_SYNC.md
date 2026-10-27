@@ -51,7 +51,7 @@ and `eligibility` (OptiDeli: verified until, vendor).
   fleet; known key -> take `asset` fields (brand, model, year, VIN). The planner still needs the transport group, which stays OptiDeli's.
 - OptiRadar: uses the key to link a device; never creates from an event except the optional device-linked placeholder.
 - A tenant that is not linked to OptiNexus (standalone) is unaffected: no events, no drafts.
-- Vendor-owned vehicles in OptiDeli are never published: they are not the tenant's assets.
+- Vendor-owned vehicles in OptiDeli are never published to OptiFleet: they are not the tenant's assets and it does not maintain them. They go to OptiRadar only (stage 4).
 
 ## What stage 2 must change in OptiFleet (found while reading the code)
 `vehicles` requires `branch_id`, `vehicle_category_id`, `brand` and `model` (NOT NULL) and `status` has no draft value. A draft vehicle
@@ -116,7 +116,7 @@ history of who drove each vehicle. This replaces the earlier idea of a shared pe
 - **OptiDeli -> OptiFleet**: `optideli.vehicle.driver_assigned` is queued when a trip of the own fleet **leaves** (SPM trip `IN_TRANSIT`, or an
   order trip) and when a day of a vehicle contract is recorded as `PRESENT` with a driver. Payload: `key` + `registration_number` of the vehicle,
   `assigned_at` (UTC), `reference{type SPM_TRIP|ORDER_TRIP|ATTENDANCE, id, number}`, `driver{name, phone, license_masked}`. The licence number is masked to its
-  last four characters; date of birth and address are never shared. Vendor vehicles and drivers are never published. It is a fact, not a versioned master:
+  last four characters; date of birth and address are never shared. Vendor vehicles and drivers are not part of it (OptiFleet never hears of them). It is a fact, not a versioned master:
   OptiFleet stores one row per `(reference.type, reference.id)`, so repeats are harmless and order does not matter.
 - **OptiFleet** shows the facts as **periods per vehicle** (the same driver on consecutive facts is one period) in the **Drivers** tab of the vehicle, and the
   driver who last had the vehicle before a work order was opened as information on the work order (no link between a driver and a vehicle is kept
@@ -126,5 +126,12 @@ history of who drove each vehicle. This replaces the earlier idea of a shared pe
 - **OptiRadar -> OptiDeli**: `optiradar.driver.upserted` (key = normalised licence number from the driver attribute `licenseNumber`; group `telematics{tag_id}`).
   OptiDeli creates a **draft driver** (source `OPTIRADAR`, cannot be allocated: dispatch refuses it) when it does not know the licence number, or only attaches
   the tag to a known one; staff complete licence validity and eligibility in the Pengemudi screen (`PUT fleet/drivers/{id}/profile`). A vendor's driver is never touched.
+- **Vendors go to OptiRadar only.** A vendor's vehicle may carry a GPS or IoT unit that has to be monitored in OptiRadar (and later shown in OptiDeli); the
+  tenant does not maintain it, so OptiFleet must not hear of it. Verified vendor vehicles and drivers (published when the tenant verifies or (de)activates them)
+  have keys of their own, `optideli.vendor_vehicle.upserted` and `optideli.vendor_driver.upserted`, which only OptiRadar subscribes to; the own fleet keeps
+  `optideli.vehicle.*` for OptiFleet. OptiRadar keeps the latest version per tenant and key and marks the matching device (registration number) or driver
+  (licence number) with the attributes `ownership=VENDOR`, `vendorCode`, `vendorName`, `carrierType`, `vendorActive`; a record that arrives before its device is applied
+  when the device is saved. OptiRadar creates nothing from a record (it cannot invent a tracker's identifier) and publishes nothing back.
 - Operator steps: seed the catalog (`OptiDeliEventCatalogSeeder`, `OptiRadarEventCatalogSeeder`); the existing `optifleet <- optideli.vehicle.*` subscription already
-  carries the new OptiDeli event; add `optideli <- optiradar.driver.*` (OptiDeli has one receiver secret, so the new subscription carries the same one).
+  carries the new OptiDeli driver fact; add `optideli <- optiradar.driver.*` (OptiDeli has one receiver secret, so the new subscription carries the same one) and
+  `optiradar <- optideli.vendor_vehicle.*` and `optiradar <- optideli.vendor_driver.*` (OptiRadar has one webhook secret, same rule).

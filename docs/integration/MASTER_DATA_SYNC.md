@@ -93,4 +93,6 @@ own row, the key matches, and each applies the other's groups.
    put each secret in the receiver's environment (`OPTINEXUS_EVENTS_WEBHOOK_SECRET` in OptiFleet, `OPTINEXUS_EVENT_WEBHOOK_SECRET` in OptiDeli).
 4. Run both backfill commands once for tenants that already have vehicles.
 
-Not yet: screens (OptiDeli: complete a transport draft; OptiFleet: complete a draft), OptiRadar, drivers.
+Screens: OptiDeli, Armada > vehicle row "Lengkapi data angkutan" (PUT `fleet/vehicles/{id}/transport`); OptiFleet, vehicle list, filter Draft, row button "Lengkapi" (branch, category, brand, model; shows the OptiDeli transport data).
+
+Not yet: OptiRadar, drivers.

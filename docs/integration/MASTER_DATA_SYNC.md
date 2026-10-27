@@ -1,6 +1,6 @@
 # Vehicle and driver master data across the platforms
 
-Status: stage 1 (contract) and stage 2 (OptiDeli <-> OptiFleet vehicles) are implemented; OptiRadar (stage 3) and drivers (stage 4) are not. The flows that existed before are listed under "Today".
+Status: stage 1 (contract), stage 2 (OptiDeli <-> OptiFleet vehicles) and stage 3 (OptiRadar -> OptiFleet) are implemented; drivers (stage 4) are not. The flows that existed before are listed under "Today".
 
 ## Goal
 A tenant keys a vehicle or a driver once, in whichever platform it is working in; the other platforms receive what each of them needs.
@@ -37,7 +37,7 @@ the keys: event catalog seeders of each product (same pattern as `OptiFleetEvent
 { "key": "B1234XY", "registration_number": "B 1234 XY", "version": 12, "changed_at": "UTC",
   "asset": { "brand": "...", "model": "...", "year": 2021, "vin": "...", "chassis_number": "...", "engine_number": "...", "fuel_type": "..." },
   "transport": { "carrier_type_code": "CDD", "capacity_g": 2500000, "length_mm": 4200, "width_mm": 2000, "height_mm": 2000 },
-  "telematics": { "device_ref": "...", "last_seen_at": "UTC" } }
+  "telematics": { "device_ref": "...", "device_name": "..." } }
 ```
 A producer sends only the groups it owns (OptiDeli: `transport`; OptiFleet: `asset`; OptiRadar: `telematics`) plus the key. A group that is
 absent means "not mine to say", never "empty". `version` increases per vehicle per producer; a consumer ignores a version older than the one
@@ -67,7 +67,7 @@ own row, the key matches, and each applies the other's groups.
 ## Stages
 1. This contract, the event catalog entries in OptiNexus, and the shared key normaliser.
 2. OptiDeli <-> OptiFleet: publishers, receivers, OptiFleet draft status, backfill command (`master:publish --all`).
-3. OptiRadar: telematics group out, key-based linking; Java change.
+3. OptiRadar: telematics group out (done: OptiRadar publishes, OptiFleet keeps it; the existing gateway keeps linking odometer readings).
 4. Drivers end to end, including data for predictive maintenance.
 
 ## Stage 2 as built (vehicles, OptiDeli <-> OptiFleet)
@@ -95,4 +95,17 @@ own row, the key matches, and each applies the other's groups.
 
 Screens: OptiDeli, Armada > vehicle row "Lengkapi data angkutan" (PUT `fleet/vehicles/{id}/transport`); OptiFleet, vehicle list, filter Draft, row button "Lengkapi" (branch, category, brand, model; shows the OptiDeli transport data).
 
-Not yet: OptiRadar, drivers.
+Not yet: drivers.
+
+## Stage 3 as built (OptiRadar -> OptiFleet)
+- **OptiRadar** queues `optiradar.vehicle.upserted` (telematics group: `device_ref` = the device's unique id, `device_name`) in its existing
+  OptiNexus outbox when a device is saved and carries a registration number (device attribute `registrationNumber`, or `plate`; the name alone
+  never counts) and belongs to a tenant. The device form has a "Nomor polisi" field for it. `POST /api/optinexus/vehicles/publish`
+  (administrator) queues every qualifying device again (first start-up, outage). OptiRadar consumes nothing: it owns no attribute that depends on another
+  platform's data, so no event can loop.
+- **OptiFleet** keeps the group in `vehicle_telematics_profiles` (read-only); an unknown vehicle becomes a `DRAFT` (source `OPTIRADAR`), completed by
+  staff like one from OptiDeli. The same receiver, `master_versions` per producer and the owner check (an event only counts for the group its
+  producer owns) apply.
+- Operator steps: seed the catalog (`OptiRadarEventCatalogSeeder`), `optiradar` already has `event.write`; register
+  `ecosystem:register-event-subscription optifleet "optiradar.vehicle.*" --url=<fleet-api>/api/v1/integration/optinexus/events`; OptiFleet has one receiver secret, so
+  the new subscription carries the same secret as its other one (set it in OptiNexus after creating it).

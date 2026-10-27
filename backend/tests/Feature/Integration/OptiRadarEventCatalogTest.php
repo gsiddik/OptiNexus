@@ -63,7 +63,7 @@ class OptiRadarEventCatalogTest extends TestCase
         ], $override);
     }
 
-    public function test_the_seeder_registers_the_five_optiradar_events_once_and_is_repeatable(): void
+    public function test_the_seeder_registers_the_optiradar_events_once_and_is_repeatable(): void
     {
         $this->seed(OptiRadarEventCatalogSeeder::class);
         $this->seed(OptiRadarEventCatalogSeeder::class);
@@ -75,6 +75,7 @@ class OptiRadarEventCatalogTest extends TestCase
             'optiradar.geofence.entered',
             'optiradar.geofence.exited',
             'optiradar.device.overspeed',
+            'optiradar.vehicle.upserted',
         ], $entries->pluck('event_key')->all());
         $this->assertTrue($entries->every(fn ($entry) => $entry->isActive()));
     }
@@ -100,7 +101,7 @@ class OptiRadarEventCatalogTest extends TestCase
             $this->withToken($token)->postJson('/api/v1/events', $envelope)->assertStatus(200);
         }
 
-        $this->assertSame(5, Event::query()->count());
+        $this->assertSame(count(OptiRadarEventCatalogSeeder::EVENTS), Event::query()->count());
         $event = Event::query()->where('event_key', 'optiradar.device.overspeed')->sole();
         $this->assertSame($this->radar->id, $event->source_application_id);
         $this->assertSame($this->tenant->id, $event->tenant_id);

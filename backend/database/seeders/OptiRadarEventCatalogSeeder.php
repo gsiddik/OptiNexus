@@ -39,6 +39,10 @@ class OptiRadarEventCatalogSeeder extends ApplicationEventCatalogSeeder
             'name' => 'Device overspeed',
             'description' => 'A device kept above its speed limit for longer than the minimal duration. payload: device_id, device_name, unique_id, speed_kmh, speed_limit_kmh, latitude, longitude, fix_time, event_time, and geofence_id and geofence_name when a geofence limit applied.',
         ],
+        'optiradar.vehicle.upserted' => [
+            'name' => 'Vehicle telematics data changed',
+            'description' => 'A device with a registration number was saved in OptiRadar (master data sync, docs/integration/MASTER_DATA_SYNC.md). aggregate_type is vehicle, aggregate_id the device. payload: key, registration_number, version, changed_at (UTC), telematics{device_ref, device_name}. Only the telematics group is for OptiRadar to send.',
+        ],
     ];
 
     protected function applicationCode(): string

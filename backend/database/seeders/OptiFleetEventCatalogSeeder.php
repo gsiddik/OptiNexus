@@ -45,6 +45,10 @@ class OptiFleetEventCatalogSeeder extends ApplicationEventCatalogSeeder
             'name' => 'Vehicle availability changed',
             'description' => 'A vehicle moved between AVAILABLE, IN_USE and ON_HOLD (workshop start, release, breakdown). aggregate_type is vehicle_availability_change and aggregate_id is this occurrence (a vehicle changes many times). payload: vehicle_id, registration_number, operational_status, previous_operational_status, status, changed_at (UTC). Subscribe a transport system with ecosystem:register-event-subscription.',
         ],
+        'optifleet.vehicle.upserted' => [
+            'name' => 'Vehicle asset data changed',
+            'description' => 'A vehicle was created or its asset data changed in OptiFleet (master data sync, docs/integration/MASTER_DATA_SYNC.md). aggregate_type is vehicle, aggregate_id the vehicle. payload: key, registration_number, version, changed_at (UTC), asset{brand, model, year, vin, chassis_number, engine_number, fuel_type}. Only the asset group is for OptiFleet to send.',
+        ],
     ];
 
     protected function applicationCode(): string

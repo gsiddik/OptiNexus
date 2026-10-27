@@ -57,7 +57,7 @@ class UsageEventController extends Controller
             $query->where('period_end', '<=', $to);
         }
 
-        $paginator = $query->orderByDesc('usage_timestamp')->paginate((int) $request->query('per_page', 25));
+        $paginator = $query->orderByDesc('usage_timestamp')->orderByDesc('id')->paginate((int) $request->query('per_page', 25));
 
         return $this->paginated($paginator, UsageEventResource::class);
     }

@@ -31,7 +31,7 @@ class EventCatalogController extends Controller
             $query->where(fn ($q) => $q->where('event_key', 'ilike', "%{$search}%")->orWhere('name', 'ilike', "%{$search}%"));
         }
 
-        $paginator = $query->orderBy('event_key')->paginate((int) $request->query('per_page', 25));
+        $paginator = $query->orderBy('event_key')->orderBy('id')->paginate((int) $request->query('per_page', 25));
 
         return $this->paginated($paginator, EventCatalogEntryResource::class);
     }

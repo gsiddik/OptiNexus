@@ -36,7 +36,7 @@ class EventSubscriptionController extends Controller
             }
         }
 
-        return $this->paginated($query->orderBy('event_key_pattern')->paginate(min(100, (int) $request->query('per_page', 25))), EventSubscriptionResource::class);
+        return $this->paginated($query->orderBy('event_key_pattern')->orderBy('id')->paginate(min(100, (int) $request->query('per_page', 25))), EventSubscriptionResource::class);
     }
 
     public function show(EventSubscription $subscription): JsonResponse

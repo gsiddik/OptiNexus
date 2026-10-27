@@ -37,7 +37,8 @@ class PermissionController extends Controller
             $query->where('permission_key', 'ilike', "%{$key}%");
         }
 
-        $paginator = $query->orderByDesc('created_at')->paginate((int) $request->query('per_page', 20));
+        // id breaks ties: a catalog is seeded in a few seconds, and without it the pages overlap and skip rows.
+        $paginator = $query->orderByDesc('created_at')->orderByDesc('id')->paginate((int) $request->query('per_page', 20));
 
         return $this->paginated($paginator, PermissionResource::class);
     }

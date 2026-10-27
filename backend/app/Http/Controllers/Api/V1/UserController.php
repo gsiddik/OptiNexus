@@ -60,7 +60,7 @@ class UserController extends Controller
             $query->whereHas('tenantMemberships', fn ($q) => $q->where('tenant_id', $tenantId));
         }
 
-        $paginator = $query->orderByDesc('created_at')->paginate((int) $request->query('per_page', 20));
+        $paginator = $query->orderByDesc('created_at')->orderByDesc('id')->paginate((int) $request->query('per_page', 20));
 
         return $this->paginated($paginator, UserResource::class);
     }

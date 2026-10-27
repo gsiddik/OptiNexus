@@ -36,7 +36,7 @@ class PlanController extends Controller
             }
         }
 
-        $paginator = $query->orderByDesc('created_at')->paginate((int) $request->query('per_page', 15));
+        $paginator = $query->orderByDesc('created_at')->orderByDesc('id')->paginate((int) $request->query('per_page', 15));
 
         return $this->paginated($paginator, PlanResource::class);
     }

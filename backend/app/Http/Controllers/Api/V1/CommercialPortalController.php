@@ -65,7 +65,7 @@ class CommercialPortalController extends Controller
                 ->whereDoesntHave('payments', fn ($q) => $q->where('status', 'SUBMITTED'));
         }
 
-        return $this->paginated($q->latest()->paginate(min(100, max(1, $request->integer('per_page', 20)))), InvoiceResource::class);
+        return $this->paginated($q->latest()->latest('id')->paginate(min(100, max(1, $request->integer('per_page', 20)))), InvoiceResource::class);
     }
 
     public function invoiceShow(Request $request, Tenant $tenant, string $invoice)
@@ -83,7 +83,7 @@ class CommercialPortalController extends Controller
             $q->where('status', $status);
         }
 
-        return $this->paginated($q->with('invoice')->latest()->paginate(min(100, max(1, $request->integer('per_page', 20)))), InvoicePaymentResource::class);
+        return $this->paginated($q->with('invoice')->latest()->latest('id')->paginate(min(100, max(1, $request->integer('per_page', 20)))), InvoicePaymentResource::class);
     }
 
     public function paymentShow(Request $request, Tenant $tenant, string $payment)

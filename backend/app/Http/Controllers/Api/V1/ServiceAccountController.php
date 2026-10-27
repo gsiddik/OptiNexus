@@ -38,7 +38,7 @@ class ServiceAccountController extends Controller
             }
         }
 
-        $paginator = $query->orderByDesc('created_at')->paginate((int) $request->query('per_page', 20));
+        $paginator = $query->orderByDesc('created_at')->orderByDesc('id')->paginate((int) $request->query('per_page', 20));
 
         return $this->paginated($paginator, ServiceAccountResource::class);
     }

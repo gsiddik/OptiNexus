@@ -37,7 +37,7 @@ class IntegrationController extends Controller
             }
         }
 
-        $paginator = $query->orderByDesc('created_at')->paginate((int) $request->query('per_page', 20));
+        $paginator = $query->orderByDesc('created_at')->orderByDesc('id')->paginate((int) $request->query('per_page', 20));
 
         return $this->paginated($paginator, IntegrationResource::class);
     }
@@ -150,7 +150,7 @@ class IntegrationController extends Controller
 
     public function logs(Request $request, Integration $integration): JsonResponse
     {
-        $paginator = $integration->logs()->orderByDesc('created_at')->paginate((int) $request->query('per_page', 25));
+        $paginator = $integration->logs()->orderByDesc('created_at')->orderByDesc('id')->paginate((int) $request->query('per_page', 25));
 
         return $this->paginated($paginator, IntegrationLogResource::class);
     }

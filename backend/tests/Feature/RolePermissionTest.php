@@ -92,4 +92,22 @@ class RolePermissionTest extends TestCase
         $this->postJson("/api/v1/roles/{$role->id}/disable")
             ->assertStatus(403);
     }
+
+    public function test_the_permission_list_pages_without_skipping_or_repeating_rows_that_share_a_timestamp(): void
+    {
+        $this->actingAsSuperAdmin();
+        $application = $this->makeApplication();
+        $at = now();
+        for ($i = 1; $i <= 30; $i++) {
+            Permission::create(['application_id' => $application->id, 'permission_key' => $application->application_code.".thing{$i}.view", 'name' => "Thing {$i}", 'status' => 'ACTIVE', 'created_at' => $at, 'updated_at' => $at]);
+        }
+
+        $keys = [];
+        foreach ([1, 2, 3] as $page) {
+            $keys = array_merge($keys, collect($this->getJson("/api/v1/permissions?application_id={$application->id}&per_page=10&page={$page}")->assertOk()->json('data'))->pluck('permission_key')->all());
+        }
+
+        $this->assertCount(30, $keys);
+        $this->assertCount(30, array_unique($keys));
+    }
 }

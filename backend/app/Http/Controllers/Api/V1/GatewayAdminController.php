@@ -66,7 +66,7 @@ class GatewayAdminController extends Controller
 
     public function logs(Request $request, Tenant $tenant): JsonResponse
     {
-        $paginator = GatewayRequestLog::query()->where('tenant_id', $tenant->id)->orderByDesc('created_at')->paginate((int) $request->query('per_page', 50));
+        $paginator = GatewayRequestLog::query()->where('tenant_id', $tenant->id)->orderByDesc('created_at')->orderByDesc('id')->paginate((int) $request->query('per_page', 50));
 
         return $this->paginated($paginator);
     }

@@ -43,7 +43,7 @@ class CustomerController extends Controller
             $query->orderBy($column, $direction);
         }
 
-        $paginator = $query->paginate((int) $request->query('per_page', 15));
+        $paginator = $query->orderByDesc('created_at')->orderByDesc('id')->paginate((int) $request->query('per_page', 15));
 
         return $this->paginated($paginator, CustomerResource::class);
     }

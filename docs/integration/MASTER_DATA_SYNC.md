@@ -135,3 +135,19 @@ history of who drove each vehicle. This replaces the earlier idea of a shared pe
 - Operator steps: seed the catalog (`OptiDeliEventCatalogSeeder`, `OptiRadarEventCatalogSeeder`); the existing `optifleet <- optideli.vehicle.*` subscription already
   carries the new OptiDeli driver fact; add `optideli <- optiradar.driver.*` (OptiDeli has one receiver secret, so the new subscription carries the same one) and
   `optiradar <- optideli.vendor_vehicle.*` and `optiradar <- optideli.vendor_driver.*` (OptiRadar has one webhook secret, same rule).
+
+## Vehicles in OptiRadar (tenant and vendor)
+Every vehicle OptiDeli knows reaches OptiRadar, so it is there to be tracked without a second entry: the tenant's own fleet as `optideli.fleet_vehicle.upserted`
+(when its transport data is complete) and a vendor's verified vehicles as `optideli.vendor_vehicle.upserted`. OptiFleet subscribes to neither. Both carry
+`active` and the optional `tracker_id`, a field on the OptiDeli vehicle forms: the identifier the tracker reports to the server (the IMEI of a GPS tracker, a serial
+number or another ID, exactly as OptiRadar's device form calls it). One tracker identifier belongs to one vehicle of a tenant.
+
+OptiRadar's rules (a device needs a unique identifier, which OptiDeli may not know):
+1. A device of the tenant that already carries the registration number is only marked (`ownership` TENANT or VENDOR, vendor, carrier type, `vendorActive`); no second one is made.
+2. Else a device is made in the tenant group: name = the plate, attribute `registrationNumber`, identifier = `tracker_id`, else the placeholder `BELUM-<key>`.
+3. A placeholder is completed (its identifier replaced) when `tracker_id` arrives later; an operator may also replace it in the device form. A placeholder is never shared
+   with OptiFleet or anybody else (`optiradar.vehicle.upserted` is not sent for it).
+4. An inactive vehicle switches its device off; it is switched on again when the vehicle is active again. A device is never deleted (its history stays).
+5. A `tracker_id` that belongs to a device of another tenant is never taken over (the placeholder is used); one that belongs to an unregistered device of the same tenant is adopted.
+6. A tenant without a group in OptiRadar gets nothing made (no error).
+Operator step: seed the catalog and add `optiradar <- optideli.fleet_vehicle.*` (same webhook secret as OptiRadar's other subscriptions).

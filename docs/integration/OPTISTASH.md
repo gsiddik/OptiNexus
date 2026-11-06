@@ -22,9 +22,11 @@ Sent by OptiStash when a shipment is dispatched and the tenant's transport mode 
 `shipment_number`, `warehouse{code,name,address,city}` (the place only, never its zones, aisles, racks or bins) and
 `items[]{product_code,product_name,quantity,uom}`. The event id is stable, so a retry never makes a second request.
 
-OptiDeli does not consume it yet (it ignores unknown events), so **no subscription is registered**. When OptiDeli can turn it into a
-pickup job: `ecosystem:register-event-subscription optideli "optistash.pickup.*" --url=<deli-api>/api/v1/integration/optinexus/events`
-(OptiDeli has one receiver secret: the subscription carries the same one).
+OptiDeli consumes it (`OptiDeli/docs/integration/PICKUP_REQUESTS.md`): it lands in the inbox **Permintaan jemput** and becomes an order and an SPM
+once the warehouse is linked and the tenant's defaults are known. Subscription, once per installation:
+`ecosystem:register-event-subscription optideli "optistash.pickup.*" --url=<deli-api>/api/v1/integration/optinexus/events --secret-file=...`.
+OptiDeli has **one** receiver secret (`OPTINEXUS_EVENT_WEBHOOK_SECRET`), so after creating the subscription its `signing_secret` is set to that same
+value (the secret OptiNexus generates is discarded); otherwise OptiDeli answers 401 to the delivery.
 
 ## Operator steps for SaaS use
 

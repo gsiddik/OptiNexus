@@ -36,6 +36,19 @@ class EcosystemCatalogSeederTest extends TestCase
         $this->assertTrue(EventCatalogEntry::query()->where('event_key', 'like', 'optiaccounting.%')->exists());
     }
 
+    public function test_optistash_is_registered_with_its_modules_and_the_pickup_event(): void
+    {
+        $this->seed(EcosystemCatalogSeeder::class);
+        $this->seed(\Database\Seeders\OptiStashEventCatalogSeeder::class);
+
+        $app = Application::query()->where('application_code', 'optistash')->firstOrFail();
+        $this->assertEqualsCanonicalizing(['optistash.analysis', 'optistash.iot', 'optistash.quality', 'optistash.supplier_portal'], Capability::query()->where('application_id', $app->id)->pluck('code')->all());
+        $this->assertTrue(Permission::query()->where('application_id', $app->id)->where('permission_key', 'optistash.wave.approve')->exists());
+        $event = EventCatalogEntry::query()->where('event_key', 'optistash.pickup.requested')->firstOrFail();
+        $this->assertSame($app->id, $event->application_id);
+        $this->assertSame(EventCatalogEntry::STATUS_ACTIVE, $event->status);
+    }
+
     public function test_the_suite_plan_holds_every_capability_so_a_tenant_can_be_provisioned(): void
     {
         $this->seed(EcosystemCatalogSeeder::class);

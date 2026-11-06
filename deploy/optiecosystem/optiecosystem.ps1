@@ -48,13 +48,15 @@ $Catalog = [ordered]@{
         Urls = @(@{ Name = 'API'; Port = 'ENTRY_API_PORT'; Path = '/up' }, @{ Name = 'Console'; Port = 'ENTRY_UI_PORT'; Path = '/nginx-health' }); Public = 'ENTRY_PUBLIC_URL' }
     deli = @{ Title = 'OptiDeli'; Dirs = @('OptiDeli'); Overlay = 'deli.yaml'; ComposeFile = 'docker-compose.container.yml'; PhpService = 'api'; Postgres = 'postgres'; Storage = '/var/www/html/storage/app'
         Urls = @(@{ Name = 'API'; Port = 'DELI_API_PORT'; Path = '/up' }, @{ Name = 'Console'; Port = 'DELI_UI_PORT'; Path = '/nginx-health' }); Public = 'DELI_PUBLIC_URL' }
+    stash = @{ Title = 'OptiStash'; Dirs = @('OptiStash'); Overlay = 'stash.yaml'; ComposeFile = 'docker-compose.container.yml'; PhpService = 'api'; Postgres = 'postgres'; Storage = '/var/www/html/storage/app'
+        Urls = @(@{ Name = 'API'; Port = 'STASH_API_PORT'; Path = '/up' }, @{ Name = 'Console'; Port = 'STASH_UI_PORT'; Path = '/nginx-health' }); Public = 'STASH_PUBLIC_URL' }
     radar = @{ Title = 'OptiRadar'; Dirs = @('OptiRadar', 'optiradar'); WebDirs = @('OptiRadar-web', 'optiradar-web'); Overlay = 'radar.yaml'; PhpService = $null; Postgres = 'database'
         Urls = @(@{ Name = 'Server + Web'; Port = 'RADAR_PORT'; Path = '/api/health' }); Public = 'RADAR_PUBLIC_URL' }
 }
 # Repositories fetched by `sync` (folder name = GitHub repository name). OPTI_GIT_BASE overrides the base URL, for example a fork.
-$Repos = [ordered]@{ nexus = 'OptiNexus'; fleet = 'OptiFleet-v2'; entry = 'OptiAccounting'; radar = 'OptiRadar'; 'radar-web' = 'OptiRadar-web'; deli = 'OptiDeli' }
+$Repos = [ordered]@{ nexus = 'OptiNexus'; fleet = 'OptiFleet-v2'; entry = 'OptiAccounting'; radar = 'OptiRadar'; 'radar-web' = 'OptiRadar-web'; deli = 'OptiDeli'; stash = 'OptiStash' }
 $GitBase = if ($env:OPTI_GIT_BASE) { $env:OPTI_GIT_BASE.TrimEnd('/') } else { 'https://github.com/gsiddik' }
-$MinMemoryMb = @{ nexus = 1024; fleet = 2560; entry = 1280; radar = 1536; deli = 768 }
+$MinMemoryMb = @{ nexus = 1024; fleet = 2560; entry = 1280; radar = 1536; deli = 768; stash = 768 }
 # Every product keeps its compose file in its own repository; docker-compose.yml unless the catalog names another one.
 function Get-ComposeFile([string]$Product) { if ($Catalog[$Product].ComposeFile) { return $Catalog[$Product].ComposeFile } return 'docker-compose.yml' }
 
@@ -202,6 +204,17 @@ function Get-Defaults([string]$Product, $Eco) {
                 OPTINEXUS_BASE_URL = $nexusUrl; OPTINEXUS_SSO_CLIENT_ID = ''; OPTINEXUS_SSO_CLIENT_SECRET = ''; OPTINEXUS_EVENTS_ENABLE = 'false'; OPTINEXUS_WEBHOOK_SECRET = ''
                 OPTINEXUS_SERVICE_CLIENT_ID = ''; OPTINEXUS_SERVICE_CLIENT_SECRET = ''; OPTINEXUS_ENTITLEMENTS_ENFORCE = 'false'
                 WEB_FRAME_ANCESTORS = "http://deli.$d`:$($Eco['DELI_UI_PORT'])" } }
+        # OptiStash (WMS): same local trial defaults as OptiDeli. Mail for supplier invitations stays on the log mailer until a real SMTP provider
+        # (Postmark, see OPERATIONAL_EMAIL.md) is put in .state/stash.env; without it an invitation is refused outside APP_ENV=local.
+        'stash' { return [ordered]@{} + $common + [ordered]@{
+                APP_ENV = 'local'; APP_KEY = (New-AppKey); DB_PASSWORD = (New-Password); STASH_PUBLIC_URL = "http://stash.$d`:$($Eco['STASH_UI_PORT'])"
+                STASH_API_PORT = $Eco['STASH_API_PORT']; STASH_UI_PORT = $Eco['STASH_UI_PORT']
+                OPTISTASH_DEPLOYMENT_MODE = 'standalone'; OPTISTASH_STANDALONE_TENANT = 'demo'; OPTISTASH_IDENTITY_MODE = 'local'
+                OPTISTASH_SEED = 'demo'; OPTISTASH_DEMO_PASSWORD = (New-Password); OPTISTASH_OUTBOX_SECRET = (New-Password)
+                OPTISTASH_PLATFORM_ADMIN_EMAIL = 'superadmin@optistash.local'; OPTISTASH_PLATFORM_ADMIN_PASSWORD = (New-AdminPassword)
+                OPTINEXUS_BASE_URL = $nexusUrl; OPTINEXUS_SSO_CLIENT_ID = ''; OPTINEXUS_SSO_CLIENT_SECRET = ''
+                OPTINEXUS_SERVICE_CLIENT_ID = ''; OPTINEXUS_SERVICE_CLIENT_SECRET = ''; OPTINEXUS_EVENT_WEBHOOK_SECRET = ''
+                MAIL_MAILER = 'log'; MAIL_HOST = ''; MAIL_PORT = '587'; MAIL_SCHEME = ''; MAIL_USERNAME = ''; MAIL_PASSWORD = ''; MAIL_FROM_ADDRESS = 'hello@example.com' } }
         # Local trial defaults: APP_ENV=local plus OPTIDELI_SEED=demo gives the demo tenant and accounts (DemoSeeder refuses anything else).
         # Identity stays local until OptiDeli is registered in OptiNexus; the service account alone is enough for the OptiRadar map.
         'deli' { return [ordered]@{} + $common + [ordered]@{
@@ -439,7 +452,7 @@ function Invoke-Init {
     # keeps its network opti-ecosystem; a new one gets optiecosystem.
     $defaults = [ordered]@{ ECOSYSTEM_DOMAIN = 'localtest.me'; ECOSYSTEM_NETWORK = 'optiecosystem'; BIND_ADDRESS = '127.0.0.1'
         NEXUS_API_PORT = '8100'; NEXUS_UI_PORT = '5180'; FLEET_API_PORT = '8000'; FLEET_UI_PORT = '5173'; ENTRY_API_PORT = '8200'; ENTRY_UI_PORT = '5190'; RADAR_PORT = '8082'
-        DELI_API_PORT = '8300'; DELI_UI_PORT = '5200' }
+        DELI_API_PORT = '8300'; DELI_UI_PORT = '5200'; STASH_API_PORT = '8400'; STASH_UI_PORT = '5210' }
     $added = 0
     foreach ($k in $defaults.Keys) { if (-not $eco.Contains($k)) { $eco[$k] = $defaults[$k]; $added++ } }
     Write-EnvFile $ecoFile $eco 'Shared ecosystem settings (domain, network, bind address, ports)'

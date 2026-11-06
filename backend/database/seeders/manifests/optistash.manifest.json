@@ -1,0 +1,307 @@
+{
+    "manifest_version": "2.0",
+    "revision": "r59df4ab23af5",
+    "application_code": "optistash",
+    "application": {
+        "application_code": "optistash",
+        "name": "OptiStash",
+        "description": "Warehouse management: master data, inbound and QC, inventory, outbound, quality (CAPA, ISO 9001) and IoT integration.",
+        "frontend_url": "http://stash.localtest.me:5210"
+    },
+    "capabilities": [
+        {
+            "type": "MODULE",
+            "code": "optistash.analysis",
+            "name": "Inventory analysis",
+            "description": "FSN, ABC, VED, HML, SDE, XYZ and EOQ analysis with combined matrices.",
+            "sort_order": 10,
+            "parent_code": null
+        },
+        {
+            "type": "MODULE",
+            "code": "optistash.quality",
+            "name": "Quality management (ISO 9001)",
+            "description": "Non-conformance, CAPA, calibration control, audit trail and controlled documents.",
+            "sort_order": 20,
+            "parent_code": null
+        },
+        {
+            "type": "MODULE",
+            "code": "optistash.iot",
+            "name": "IoT gateway",
+            "description": "Telemetry ingestion, environmental monitoring and sensor binding.",
+            "sort_order": 30,
+            "parent_code": null
+        },
+        {
+            "type": "MODULE",
+            "code": "optistash.supplier_portal",
+            "name": "Supplier portal",
+            "description": "External supplier self-service for purchase orders and ASNs.",
+            "sort_order": 40,
+            "parent_code": null
+        }
+    ],
+    "permissions": [
+        {
+            "permission_key": "optistash.access.role.manage",
+            "name": "Access: access.role.manage",
+            "description": "Create, change and delete custom roles",
+            "capability_code": null,
+            "delegable": false
+        },
+        {
+            "permission_key": "optistash.access.role.view",
+            "name": "Access: access.role.view",
+            "description": "View roles and permissions",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.access.user.manage",
+            "name": "Access: access.user.manage",
+            "description": "Assign roles to members",
+            "capability_code": null,
+            "delegable": false
+        },
+        {
+            "permission_key": "optistash.asn.approve",
+            "name": "Inbound: asn.approve",
+            "description": "Confirm and schedule ASNs and approve receiving exceptions",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.asn.manage",
+            "name": "Inbound: asn.manage",
+            "description": "Create, change and upload ASNs (also for a supplier)",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.audit.view",
+            "name": "Quality: audit.view",
+            "description": "Search the immutable audit trail",
+            "capability_code": "optistash.quality",
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.calibration.manage",
+            "name": "Quality: calibration.manage",
+            "description": "Manage measuring equipment and its calibration",
+            "capability_code": "optistash.quality",
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.capa.manage",
+            "name": "Quality: capa.manage",
+            "description": "Register non-conformances and manage CAPA with root-cause analysis",
+            "capability_code": "optistash.quality",
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.dock.manage",
+            "name": "Inbound: dock.manage",
+            "description": "Book docks and record gate-in and gate-out of trucks",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.inbound.view",
+            "name": "Inbound: inbound.view",
+            "description": "View ASNs, dock bookings, receipts and putaway tasks",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.integration.manage",
+            "name": "Integration: integration.manage",
+            "description": "Configure transport integration, standalone mode and force a sync",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.integration.view",
+            "name": "Integration: integration.view",
+            "description": "View integration status (OptiNexus, TMS, IoT)",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.inventory.analysis.configure",
+            "name": "Inventory: inventory.analysis.configure",
+            "description": "Configure and run inventory analysis and combined matrices",
+            "capability_code": "optistash.analysis",
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.inventory.analysis.view",
+            "name": "Inventory: inventory.analysis.view",
+            "description": "View inventory analysis results (FSN, ABC, VED, HML, SDE, XYZ, EOQ)",
+            "capability_code": "optistash.analysis",
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.inventory.lock",
+            "name": "Inventory: inventory.lock",
+            "description": "Lock and unlock stock (audit hold, quality quarantine)",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.inventory.view",
+            "name": "Inventory: inventory.view",
+            "description": "View stock, locations content and the stock map",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.iot.manage",
+            "name": "Integration: iot.manage",
+            "description": "Manage IoT gateways, devices and telemetry alerts",
+            "capability_code": "optistash.iot",
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.location.block",
+            "name": "Master data: location.block",
+            "description": "Block and unblock storage locations (a location with stock needs a reason)",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.master.manage",
+            "name": "Master data: master.manage",
+            "description": "Create and change warehouses, storage topology, products, packaging and partners",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.master.view",
+            "name": "Master data: master.view",
+            "description": "View warehouses, storage topology, products, packaging and partners",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.outbound.execute",
+            "name": "Outbound: outbound.execute",
+            "description": "Pick, pack and dispatch",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.outbound.manage",
+            "name": "Outbound: outbound.manage",
+            "description": "Create outbound orders, run allocation and plan waves",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.outbound.view",
+            "name": "Outbound: outbound.view",
+            "description": "View outbound orders, waves, pick tasks and dispatches",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.partner.provision",
+            "name": "Master data: partner.provision",
+            "description": "Provision supplier portal accounts",
+            "capability_code": "optistash.supplier_portal",
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.putaway.execute",
+            "name": "Inbound: putaway.execute",
+            "description": "Confirm putaway tasks and override a recommended location",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.qc.inspect",
+            "name": "Inbound: qc.inspect",
+            "description": "Inspect received goods and decide conforming, quarantine or reject",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.quality.view",
+            "name": "Quality: quality.view",
+            "description": "View non-conformances, CAPA, calibration and controlled documents",
+            "capability_code": "optistash.quality",
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.receiving.execute",
+            "name": "Inbound: receiving.execute",
+            "description": "Receive goods against an ASN (scan, lot, expiry, labels)",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.sop.manage",
+            "name": "Quality: sop.manage",
+            "description": "Manage controlled SOP documents and their versions",
+            "capability_code": "optistash.quality",
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.stocktake.approve",
+            "name": "Inventory: stocktake.approve",
+            "description": "Approve count discrepancies and stock adjustments (never your own)",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.stocktake.manage",
+            "name": "Inventory: stocktake.manage",
+            "description": "Plan and execute cycle counts and stock takes",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.supplier.portal",
+            "name": "Supplier portal: supplier.portal",
+            "description": "Use the supplier portal (requires a supplier-bound membership)",
+            "capability_code": "optistash.supplier_portal",
+            "delegable": false
+        },
+        {
+            "permission_key": "optistash.wave.approve",
+            "name": "Outbound: wave.approve",
+            "description": "Approve waves and partial shipments",
+            "capability_code": null,
+            "delegable": true
+        },
+        {
+            "permission_key": "optistash.wms.access",
+            "name": "Warehouse: wms.access",
+            "description": "Use the warehouse application (baseline of every internal user)",
+            "capability_code": null,
+            "delegable": true
+        }
+    ],
+    "service_account": {
+        "scopes": [
+            "authorization.check",
+            "commercial.read",
+            "event.write"
+        ]
+    },
+    "oidc_client": {
+        "redirect_uris": [
+            "http://localhost/api/v1/auth/sso/callback"
+        ],
+        "post_logout_redirect_uris": [
+            "http://stash.localtest.me:5210/"
+        ],
+        "backchannel_logout_uri": "http://localhost/api/v1/integration/optinexus/backchannel-logout",
+        "launch_url": "http://stash.localtest.me:5210",
+        "scopes": [
+            "openid",
+            "profile",
+            "email"
+        ]
+    }
+}

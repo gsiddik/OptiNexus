@@ -32,6 +32,7 @@ class ProductionSeeder extends Seeder
             OptiDeliEventCatalogSeeder::class,
             OptiFleetEventCatalogSeeder::class,
             OptiRadarEventCatalogSeeder::class,
+            OptiStashEventCatalogSeeder::class,
         ]);
     }
 }

@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
             OptiDeliEventCatalogSeeder::class,
             OptiFleetEventCatalogSeeder::class,
             OptiRadarEventCatalogSeeder::class,
+            OptiStashEventCatalogSeeder::class,
         ]);
     }
 }

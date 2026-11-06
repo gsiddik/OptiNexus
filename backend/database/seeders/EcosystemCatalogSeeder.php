@@ -17,7 +17,7 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Registers the products of the Opti platform in OptiNexus so that all of them can be governed from here: for OptiFleet (optifleet),
- * OptiEntry (optiaccounting), OptiDeli (optideli) and OptiRadar (optiradar) it creates the application, imports its modules, features
+ * OptiEntry (optiaccounting), OptiDeli (optideli), OptiRadar (optiradar) and OptiStash (optistash) it creates the application, imports its modules, features
  * and permissions from the manifest in database/seeders/manifests, registers the events it reports, and puts every capability of the
  * four into one sellable product and plan ("Opti Suite") so that a tenant can be subscribed, provisioned and activated.
  *
@@ -30,7 +30,7 @@ use Illuminate\Validation\ValidationException;
  * so that the platform roles pick up the imported permissions ("every permission" is resolved when SystemRoleSeeder runs).
  *
  * To refresh a manifest after a product release, replace its file (the product prints it: `optifleet` `optinexus:manifest`,
- * `optiaccounting` `optientry:nexus:manifest --pretty`, `optideli` `optideli:nexus:manifest`) and seed again.
+ * `optiaccounting` `optientry:nexus:manifest --pretty`, `optideli` `optideli:nexus:manifest`, `optistash` `optistash:nexus:manifest`) and seed again.
  *
  * Run: php artisan db:seed --class=EcosystemCatalogSeeder
  */
@@ -42,6 +42,7 @@ class EcosystemCatalogSeeder extends Seeder
         'optiaccounting' => 'optiaccounting.manifest.json',
         'optideli' => 'optideli.manifest.json',
         'optiradar' => 'optiradar.manifest.json',
+        'optistash' => 'optistash.manifest.json',
     ];
 
     public const SUITE_PRODUCT_CODE = 'OPTI-SUITE';

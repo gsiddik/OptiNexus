@@ -2,7 +2,7 @@
 
 Step-by-step guide in Indonesian for Podman Desktop, including the OptiRadar map inside OptiDeli: [PANDUAN_PODMAN_DESKTOP.md](PANDUAN_PODMAN_DESKTOP.md).
 
-`optiecosystem.ps1` runs OptiNexus (always) plus any subset of OptiFleet, OptiRadar, OptiEntry and OptiDeli. Each product keeps its own Compose project,
+`optiecosystem.ps1` runs OptiNexus (always) plus any subset of OptiFleet, OptiRadar, OptiEntry, OptiDeli and OptiStash. Each product keeps its own Compose project,
 images and volumes, defined in **its own repository**; this folder only adds what they share. It is the one canonical place for cross-repo
 deployment tooling (there is no sixth repository).
 
@@ -15,6 +15,7 @@ deployment tooling (there is no sixth repository).
 | Fleet + Entry | `.\optiecosystem.ps1 up -Products fleet,entry` |
 | Fleet + Radar + Entry | `.\optiecosystem.ps1 up -Products fleet,radar,entry` |
 | Deli + Radar (OptiRadar map inside OptiDeli) | `.\optiecosystem.ps1 up -Products deli,radar` |
+| Deli + Stash (WMS pickups for the TMS) | `.\optiecosystem.ps1 up -Products deli,stash` |
 | Everything | `.\optiecosystem.ps1 up -Products all` |
 
 Any subset works (the product list is the only catalogue; add a product by adding an overlay and an env template in the script). Products that
@@ -43,6 +44,7 @@ git clone -c core.autocrlf=false https://github.com/gsiddik/OptiAccounting.git  
 git clone -c core.autocrlf=false https://github.com/gsiddik/OptiRadar.git
 git clone -c core.autocrlf=false https://github.com/gsiddik/OptiRadar-web.git
 git clone -c core.autocrlf=false https://github.com/gsiddik/OptiDeli.git
+git clone -c core.autocrlf=false https://github.com/gsiddik/OptiStash.git        # optional: warehouse management
 # check out the branch that carries the container package in each repository (see REVISIONS in the pull requests), then:
 cd OptiNexus\deploy\optiecosystem
 .\optiecosystem.ps1 init                                  # writes .state\*.env with generated secrets (never printed, never committed)
@@ -64,6 +66,7 @@ URLs and ports (all published on 127.0.0.1 only; to change one, see Troubleshoot
 | OptiEntry | 5190 (also serves `/api`) | 8200 | `http://entry.localtest.me:5190` |
 | OptiRadar + Web | 8082 | 8082 | `http://radar.localtest.me:8082`; device ports only through `docker-compose.devices.yml` |
 | OptiDeli | 5200 (also serves `/api`) | 8300 | `http://deli.localtest.me:5200`; map page `/radar` frames OptiRadar Web |
+| OptiStash | 5210 (also serves `/api`) | 8400 | `http://stash.localtest.me:5210`; WMS. Supplier invitations need a real SMTP provider in `.state\stash.env` (`MAIL_*`, see `OPERATIONAL_EMAIL.md`) |
 
 **One issuer URL.** Every container listens on the port it publishes and joins the `optiecosystem` network under the product's public
 name, so `http://nexus.localtest.me:8100` works from the browser (published port) and from inside any product container (network alias). Nothing

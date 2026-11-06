@@ -282,6 +282,9 @@
             "delegable": true
         }
     ],
+    "entitlement_limit_keys": [
+        "user_limit"
+    ],
     "service_account": {
         "scopes": [
             "authorization.check",

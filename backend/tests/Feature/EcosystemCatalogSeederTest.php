@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\Role;
 use App\Models\Tenant;
 use Database\Seeders\EcosystemCatalogSeeder;
+use Database\Seeders\OptiStashEventCatalogSeeder;
 use Database\Seeders\ProductionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -39,7 +40,7 @@ class EcosystemCatalogSeederTest extends TestCase
     public function test_optistash_is_registered_with_its_modules_and_the_pickup_event(): void
     {
         $this->seed(EcosystemCatalogSeeder::class);
-        $this->seed(\Database\Seeders\OptiStashEventCatalogSeeder::class);
+        $this->seed(OptiStashEventCatalogSeeder::class);
 
         $app = Application::query()->where('application_code', 'optistash')->firstOrFail();
         $this->assertEqualsCanonicalizing(['optistash.analysis', 'optistash.iot', 'optistash.quality', 'optistash.supplier_portal'], Capability::query()->where('application_id', $app->id)->pluck('code')->all());

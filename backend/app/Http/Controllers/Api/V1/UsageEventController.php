@@ -11,6 +11,7 @@ use App\Models\ServiceAccount;
 use App\Models\Tenant;
 use App\Models\UsageEvent;
 use App\Services\AuditService;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -120,7 +121,7 @@ class UsageEventController extends Controller
                 'idempotency_key' => $data['idempotency_key'] ?? null,
                 'metadata' => $data['metadata'] ?? null,
             ]);
-        } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+        } catch (UniqueConstraintViolationException) {
             // Lost a race against a concurrent request with the same
             // idempotency key: treat it as the same success, not an error.
             $existing = UsageEvent::query()

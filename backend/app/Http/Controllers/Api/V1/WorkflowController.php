@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Concerns\ApiResponses;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\StoreWorkflowRequest;
 use App\Http\Requests\V1\UpdateWorkflowRequest;
+use App\Http\Resources\V1\WorkflowInstanceResource;
 use App\Http\Resources\V1\WorkflowResource;
 use App\Models\Workflow;
 use App\Models\WorkflowVersion;
@@ -239,7 +240,7 @@ class WorkflowController extends Controller
 
         [$instance, $error] = $this->execution->trigger(
             $workflow,
-            \App\Models\Workflow::TRIGGER_MANUAL,
+            Workflow::TRIGGER_MANUAL,
             $validated['payload'] ?? [],
             $validated['correlation_id'] ?? null,
             null,
@@ -251,6 +252,6 @@ class WorkflowController extends Controller
             return $this->fail($error, 'The workflow could not be triggered.', self::EXECUTE_ERROR_STATUS[$error] ?? 422);
         }
 
-        return $this->created(new \App\Http\Resources\V1\WorkflowInstanceResource($instance));
+        return $this->created(new WorkflowInstanceResource($instance));
     }
 }

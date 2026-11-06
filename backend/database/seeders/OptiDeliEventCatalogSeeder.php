@@ -34,6 +34,10 @@ class OptiDeliEventCatalogSeeder extends ApplicationEventCatalogSeeder
             'name' => 'Vendor driver verified or changed',
             'description' => 'A driver of a vendor was verified by the tenant, or (de)activated (master data sync stage 4). For OptiRadar only. aggregate_type is driver, aggregate_id the driver. payload: key (normalised licence number), license_number, name, version, changed_at (UTC), active, vendor{code, name}.',
         ],
+        'optideli.pickup.status_changed' => [
+            'name' => 'Pickup request status changed',
+            'description' => 'What happened to a pickup request OptiStash sent (docs/integration/PICKUP_REQUESTS.md in OptiDeli). For OptiStash only. aggregate_type is shipment, aggregate_id the pickup request. payload: shipment_number (the OptiStash shipment), status (ACCEPTED, REJECTED, PICKED_UP, DELIVERED or CANCELLED), occurred_at (UTC), reason (a rejection only). The SPM, its prices and its internal reasons never leave OptiDeli.',
+        ],
     ];
 
     protected function applicationCode(): string

@@ -39,3 +39,10 @@ value (the secret OptiNexus generates is discarded); otherwise OptiDeli answers 
 4. Assign the application to a tenant in OptiNexus; OptiStash provisions the tenant from the assignment event.
 
 Deployment: `deploy/optiecosystem` knows the product `stash` (`up -Products deli,stash`, console 5210, API 8400).
+
+## Event `optideli.pickup.status_changed`
+
+The way back (OptiDeli to OptiStash): `shipment_number`, `status` (`ACCEPTED`, `REJECTED`, `PICKED_UP`, `DELIVERED`, `CANCELLED`), `occurred_at`, and a `reason`
+for a rejection only. OptiStash shows the latest status on the shipment and keeps every event as a history. It is information: stock and the shipment's own
+status do not change. Subscription, once per installation: `ecosystem:register-event-subscription optistash "optideli.pickup.*" --url=<stash console>/api/v1/integration/optinexus/events --secret-file=...`.
+OptiStash has one receiver secret (`OPTINEXUS_EVENT_WEBHOOK_SECRET`), so, as for OptiDeli, the new subscription's `signing_secret` is set to that value.

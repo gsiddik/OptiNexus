@@ -17,12 +17,20 @@ Local only: the commands refuse to run unless `APP_ENV` is `local`/`testing` or 
    OptiEntry and OptiRadar, and the tenant administrator `admin@demo-ekosistem.test`. The temporary password goes to
    `deploy/optiecosystem/.state/demo-ecosystem.txt` only (it expires in two days; run again with `-Reissue`).
    The assignment events provision the tenant in OptiDeli and OptiStash.
-2. **OptiDeli** `php artisan ecosystem:demo-data`: regions, cities, two customers, warehouses/stores/pool, two fleet types, the units;
+2. **OptiFleet** `php artisan ecosystem:demo-data --nexus-tenant-id=<id>`: the tenant linked to OptiNexus (as the administrator's first
+   sign-in would create it), two branches with a workshop and a warehouse each. The vehicles are not typed in: they arrive from OptiDeli
+   (step 4) as **drafts to complete**, through the real master events.
+3. **OptiEntry** `php artisan ecosystem:demo-data --nexus-tenant-id=<id>`: the organization (two branches, business units), the chart of
+   accounts, an opening balance, posted and pending journals through the approval workflow, payables, expenses, cash and bank, and
+   receivables. The tenant is linked to OptiNexus, the bundle's own entitlements are retired and the entitlements are projected from
+   OptiNexus, so the administrator's first sign-in finds the books. (The OA4-OA6 demo extras -- budget, fixed assets, tax, reports -- are
+   not loaded.)
+4. **OptiDeli** `php artisan ecosystem:demo-data`: regions, cities, two customers, warehouses/stores/pool, two fleet types, the units;
    two own vehicles (with tracker ids) and two drivers; the transporter *CV Transporter Demo* with a verified vehicle; the transporter
    price mapping of the own fleet and of the vendor (unit and margin per row), a customer margin and a contract tariff; four orders:
    priced by the mapping and confirmed (price locked), a contract customer, the vendor's vehicle to Surabaya, and a drum with no row in
    the matrix (manual price waiting for approval). The vehicles are announced by the real master events: OptiRadar gets a device for each.
-3. **OptiStash** `php artisan ecosystem:demo-data`: a warehouse with its structure, products, a supplier and a customer, a received and
+5. **OptiStash** `php artisan ecosystem:demo-data`: a warehouse with its structure, products, a supplier and a customer, a received and
    put-away delivery, an outbound order that is allocated, picked, packed and dispatched for **OptiDeli** (the pickup request arrives in
    the *Permintaan jemput* inbox of OptiDeli, ready to be turned into an order), a shipment still being loaded, a CAPA, an instrument, a
    document, a stocktake and an IoT gateway.
@@ -32,8 +40,8 @@ people who "did" the steps.
 
 ## What is not in this version
 
-* **OptiFleet and OptiEntry** create the tenant when the administrator signs in for the first time, so there is nothing to load before
-  that, and their demo data is not part of this version.
+* **OptiFleet** has no maintenance data (work orders, tires, inventory): its existing demo seeders belong to fixed demo tenants.
+* **OptiEntry** has no OA4-OA6 demo extras.
 * **OptiRadar** receives the devices through the sync; positions need a real tracker or a device simulator.
 
 ## After the first sign-in

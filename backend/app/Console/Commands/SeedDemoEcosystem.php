@@ -145,6 +145,8 @@ class SeedDemoEcosystem extends Command
         }
 
         $this->info("Done. Tenant code {$tenant['tenant_code']}; applications: ".implode(', ', $codes).'.');
+        // Machine-readable, for the scripts that go on with the demo data of the products that need the tenant id.
+        $this->line('NEXUS_TENANT_ID='.$tenant['id']);
 
         return self::SUCCESS;
     }

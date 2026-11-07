@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -26,8 +28,8 @@ class SeedDemoEcosystemTest extends TestCase
 
     public function test_it_stops_when_a_requested_application_is_not_in_the_catalog(): void
     {
-        $operator = \App\Models\User::query()->create(['email' => 'seed.operator@test.local', 'name' => 'Seed Operator', 'password' => 'Seed-operator-passw0rd!', 'status' => \App\Models\User::STATUS_ACTIVE]);
-        $role = \App\Models\Role::query()->where('code', 'SUPERADMIN')->whereNull('tenant_id')->first();
+        $operator = User::query()->create(['email' => 'seed.operator@test.local', 'name' => 'Seed Operator', 'password' => 'Seed-operator-passw0rd!', 'status' => User::STATUS_ACTIVE]);
+        $role = Role::query()->where('code', 'SUPERADMIN')->whereNull('tenant_id')->first();
         if ($role === null) {
             $this->markTestSkipped('The system roles are not seeded in this database.');
         }
